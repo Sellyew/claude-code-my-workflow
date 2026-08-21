@@ -2245,6 +2245,94 @@ For econometrics, see Christensen & Miguel (2018) on transparency in development
 
 ---
 
+### Pattern 17: Vaccinate Your Reviewers {#pattern-17-vaccinate}
+
+**The problem.** You have built a review pipeline. It reports findings, it looks thorough, and
+you have no idea whether it works. Twenty planted bugs once produced a clean bill of health from
+a review fleet — and nothing in the output distinguished that from a genuinely clean run.
+
+**The pattern.** Before a check or reviewer is allowed to clear anything, show it a defect you
+planted and confirm it goes red.
+
+```
+/vaccinate check-model-versions.sh
+```
+
+1. Name the failure class. "Catches problems" is not a class.
+2. Seed it into a **copy**, plus at least one **clean control**.
+3. Run the checker blind, one variant per run, fresh context.
+4. Score **recall** and **false-positive rate**. A finding on the clean control counts against
+   the checker only when it is *factually wrong*, not merely unwelcome.
+5. Beat a simpler baseline, or the complexity is cost rather than assurance.
+6. Write the ledger row.
+
+**Two failure modes worth knowing before you try it.** A seed the artifact already permits
+creates no defect, so the checker correctly passes and looks broken. And a gate tuned only for
+detection over-fires — always qualify in **both** directions.
+
+**When to reach for it.** Before a referee simulation informs a submission decision; after
+changing any checker; on a schedule for gates guarding load-bearing claims.
+
+---
+
+### Pattern 18: The External Oracle {#pattern-18-external-oracle}
+
+**The problem.** Your reviewers share your model's blind spots. A forked subagent is
+independent in *context*, not in *training* — it fails the way you fail.
+
+**The pattern.** Bring in a different vendor's frontier model as a referee, and treat what it
+returns as **candidates**, never verdicts.
+
+- **Brief first** — question, scope, what is HELD (standing rulings not to relitigate),
+  completion criteria, required evidence, escalation triggers.
+- **Assign coverage** — a statement inventory and a cross-round ledger, so union coverage
+  reaches 100% instead of drifting toward whatever is easiest to read.
+- **Force evidence** — every objection carries a location, a one-sentence defect, and a
+  **failing case**. Classify it; say which credibility question it concerns; compute what is
+  computable.
+- **Adjudicate** — CONFIRMED / REFUTED / DOWNGRADED, mechanical checks first.
+- **Batch the fixes**, then run at most one confirmation round.
+
+> **The limit, stated as loudly as the appeal:** agreement is not confirmation. Different
+> models correlate on the same wrong answer. An external oracle is advisory; a mechanical check
+> outranks it.
+
+Run exhaustive in-house coverage *first*, so the oracle is **confirmation, not discovery** —
+cheaper, and the answers are sharper.
+
+---
+
+### Pattern 19: Challenge Your Own Result {#pattern-19-challenge}
+
+**The problem.** A single specification is one draw from a distribution you never looked at.
+And review will not save you here: in a controlled study, AI peer review left cross-analyst
+variance essentially unchanged. Review catches errors; robustness is a different question.
+
+**The pattern.** Enumerate the forks a competent analyst could have taken *before* running
+anything, run the grid, and report the distribution.
+
+```
+/challenge scripts/R/03_analyze.R --forks 64 --dry-run
+```
+
+- **Label each fork `estimand` or `estimate`.** In staggered DiD, comparison group, base
+  period, and aggregation change *what is being estimated* — averaging over them is
+  meaningless.
+- **A fork belongs in the grid only if you would defend either branch in a seminar.** Padding
+  with indefensible alternatives dilutes the fragile cells.
+- **Report which fork drives the spread.** "Robust except to the choice between dollar and
+  share volume" is worth more than a robustness paragraph.
+- **Then attack the identifying assumption** with a named, computable statistic — E-value,
+  Cinelli–Hazlett RV, Oster δ, Rosenbaum Γ, Rambachan–Roth honest DiD. Never a naive pre-test.
+- **Pre-commit the interpretation.** Write what would support and what would weaken the claim
+  *before* the grid runs.
+
+**A wide curve is a finding, not a failure.** Publish it and say what drives it. The strongest
+sentence in a robustness section is usually the one that retires your own preferred reading.
+
+---
+
+
 # The Ecosystem: What Others Have Built {#sec-ecosystem}
 
 This repository provides the foundation --- the infrastructure patterns (plan-first, orchestrator, quality gates, adversarial review, context survival) that work for any academic task. Others have taken these patterns further, building specialized workflows for specific needs. Here are the principles these projects share and how to apply them:

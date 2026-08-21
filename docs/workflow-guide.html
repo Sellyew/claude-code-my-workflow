@@ -2475,6 +2475,9 @@ window.Quarto = {
   <li><a href="#pattern-14-rhetoric-of-decks" id="toc-pattern-14-rhetoric-of-decks" class="nav-link" data-scroll-target="#pattern-14-rhetoric-of-decks"><span class="header-section-number">5.10.2</span> Pattern 14: The Rhetoric of Decks</a></li>
   <li><a href="#pattern-15-sequential-audits" id="toc-pattern-15-sequential-audits" class="nav-link" data-scroll-target="#pattern-15-sequential-audits"><span class="header-section-number">5.10.3</span> Pattern 15: Sequential Adversarial Audits</a></li>
   <li><a href="#pattern-16-preregistration" id="toc-pattern-16-preregistration" class="nav-link" data-scroll-target="#pattern-16-preregistration"><span class="header-section-number">5.10.4</span> Pattern 16: Preregistration and Submission Discipline</a></li>
+  <li><a href="#pattern-17-vaccinate" id="toc-pattern-17-vaccinate" class="nav-link" data-scroll-target="#pattern-17-vaccinate"><span class="header-section-number">5.10.5</span> Pattern 17: Vaccinate Your Reviewers</a></li>
+  <li><a href="#pattern-18-external-oracle" id="toc-pattern-18-external-oracle" class="nav-link" data-scroll-target="#pattern-18-external-oracle"><span class="header-section-number">5.10.6</span> Pattern 18: The External Oracle</a></li>
+  <li><a href="#pattern-19-challenge" id="toc-pattern-19-challenge" class="nav-link" data-scroll-target="#pattern-19-challenge"><span class="header-section-number">5.10.7</span> Pattern 19: Challenge Your Own Result</a></li>
   </ul></li>
   </ul></li>
   <li><a href="#sec-ecosystem" id="toc-sec-ecosystem" class="nav-link" data-scroll-target="#sec-ecosystem"><span class="header-section-number">6</span> The Ecosystem: What Others Have Built</a>
@@ -6110,6 +6113,55 @@ research-spec.md  ─────────────→  preregistration-dr
 <hr>
 </section>
 </section>
+<section id="pattern-17-vaccinate" class="level3" data-number="5.10.5">
+<h3 data-number="5.10.5" class="anchored" data-anchor-id="pattern-17-vaccinate"><span class="header-section-number">5.10.5</span> Pattern 17: Vaccinate Your Reviewers</h3>
+<p><strong>The problem.</strong> You have built a review pipeline. It reports findings, it looks thorough, and you have no idea whether it works. Twenty planted bugs once produced a clean bill of health from a review fleet — and nothing in the output distinguished that from a genuinely clean run.</p>
+<p><strong>The pattern.</strong> Before a check or reviewer is allowed to clear anything, show it a defect you planted and confirm it goes red.</p>
+<pre><code>/vaccinate check-model-versions.sh</code></pre>
+<ol type="1">
+<li>Name the failure class. “Catches problems” is not a class.</li>
+<li>Seed it into a <strong>copy</strong>, plus at least one <strong>clean control</strong>.</li>
+<li>Run the checker blind, one variant per run, fresh context.</li>
+<li>Score <strong>recall</strong> and <strong>false-positive rate</strong>. A finding on the clean control counts against the checker only when it is <em>factually wrong</em>, not merely unwelcome.</li>
+<li>Beat a simpler baseline, or the complexity is cost rather than assurance.</li>
+<li>Write the ledger row.</li>
+</ol>
+<p><strong>Two failure modes worth knowing before you try it.</strong> A seed the artifact already permits creates no defect, so the checker correctly passes and looks broken. And a gate tuned only for detection over-fires — always qualify in <strong>both</strong> directions.</p>
+<p><strong>When to reach for it.</strong> Before a referee simulation informs a submission decision; after changing any checker; on a schedule for gates guarding load-bearing claims.</p>
+<hr>
+</section>
+<section id="pattern-18-external-oracle" class="level3" data-number="5.10.6">
+<h3 data-number="5.10.6" class="anchored" data-anchor-id="pattern-18-external-oracle"><span class="header-section-number">5.10.6</span> Pattern 18: The External Oracle</h3>
+<p><strong>The problem.</strong> Your reviewers share your model’s blind spots. A forked subagent is independent in <em>context</em>, not in <em>training</em> — it fails the way you fail.</p>
+<p><strong>The pattern.</strong> Bring in a different vendor’s frontier model as a referee, and treat what it returns as <strong>candidates</strong>, never verdicts.</p>
+<ul>
+<li><strong>Brief first</strong> — question, scope, what is HELD (standing rulings not to relitigate), completion criteria, required evidence, escalation triggers.</li>
+<li><strong>Assign coverage</strong> — a statement inventory and a cross-round ledger, so union coverage reaches 100% instead of drifting toward whatever is easiest to read.</li>
+<li><strong>Force evidence</strong> — every objection carries a location, a one-sentence defect, and a <strong>failing case</strong>. Classify it; say which credibility question it concerns; compute what is computable.</li>
+<li><strong>Adjudicate</strong> — CONFIRMED / REFUTED / DOWNGRADED, mechanical checks first.</li>
+<li><strong>Batch the fixes</strong>, then run at most one confirmation round.</li>
+</ul>
+<blockquote class="blockquote">
+<p><strong>The limit, stated as loudly as the appeal:</strong> agreement is not confirmation. Different models correlate on the same wrong answer. An external oracle is advisory; a mechanical check outranks it.</p>
+</blockquote>
+<p>Run exhaustive in-house coverage <em>first</em>, so the oracle is <strong>confirmation, not discovery</strong> — cheaper, and the answers are sharper.</p>
+<hr>
+</section>
+<section id="pattern-19-challenge" class="level3" data-number="5.10.7">
+<h3 data-number="5.10.7" class="anchored" data-anchor-id="pattern-19-challenge"><span class="header-section-number">5.10.7</span> Pattern 19: Challenge Your Own Result</h3>
+<p><strong>The problem.</strong> A single specification is one draw from a distribution you never looked at. And review will not save you here: in a controlled study, AI peer review left cross-analyst variance essentially unchanged. Review catches errors; robustness is a different question.</p>
+<p><strong>The pattern.</strong> Enumerate the forks a competent analyst could have taken <em>before</em> running anything, run the grid, and report the distribution.</p>
+<pre><code>/challenge scripts/R/03_analyze.R --forks 64 --dry-run</code></pre>
+<ul>
+<li><strong>Label each fork <code>estimand</code> or <code>estimate</code>.</strong> In staggered DiD, comparison group, base period, and aggregation change <em>what is being estimated</em> — averaging over them is meaningless.</li>
+<li><strong>A fork belongs in the grid only if you would defend either branch in a seminar.</strong> Padding with indefensible alternatives dilutes the fragile cells.</li>
+<li><strong>Report which fork drives the spread.</strong> “Robust except to the choice between dollar and share volume” is worth more than a robustness paragraph.</li>
+<li><strong>Then attack the identifying assumption</strong> with a named, computable statistic — E-value, Cinelli–Hazlett RV, Oster δ, Rosenbaum Γ, Rambachan–Roth honest DiD. Never a naive pre-test.</li>
+<li><strong>Pre-commit the interpretation.</strong> Write what would support and what would weaken the claim <em>before</em> the grid runs.</li>
+</ul>
+<p><strong>A wide curve is a finding, not a failure.</strong> Publish it and say what drives it. The strongest sentence in a robustness section is usually the one that retires your own preferred reading.</p>
+<hr>
+</section>
 </section>
 </section>
 <section id="sec-ecosystem" class="level1" data-number="6">
@@ -6285,20 +6337,20 @@ research-spec.md  ─────────────→  preregistration-dr
 </ul>
 <p><strong>When to use it:</strong> You are running iterative computational experiments (Monte Carlo simulations, hyperparameter searches, model comparisons) and want Claude to explore the space semi-autonomously within defined constraints.</p>
 <p><strong>Example:</strong> Adapting the <code>program.md</code> pattern for a Monte Carlo study:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb44"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># program.md — Monte Carlo Experiment Constraints</span></span>
-<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a><span class="fu">## What You CAN Modify</span></span>
-<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>DGP parameters (sample sizes, effect sizes, correlation structures)</span>
-<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Estimator implementations (new methods, tuning parameters)</span>
-<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Number of replications (up to 10,000)</span>
-<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a><span class="fu">## What You CANNOT Modify</span></span>
-<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>prepare_data.R (data generation is frozen)</span>
-<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>evaluation metric (RMSE of ATT, lower is better)</span>
-<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Output format (results.tsv with columns: method, n, rmse, coverage)</span>
-<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a><span class="fu">## Success Metric</span></span>
-<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a>RMSE of ATT estimate. Lower is better. Report coverage rate alongside.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb46"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># program.md — Monte Carlo Experiment Constraints</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="fu">## What You CAN Modify</span></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>DGP parameters (sample sizes, effect sizes, correlation structures)</span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Estimator implementations (new methods, tuning parameters)</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Number of replications (up to 10,000)</span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a><span class="fu">## What You CANNOT Modify</span></span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>prepare_data.R (data generation is frozen)</span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>evaluation metric (RMSE of ATT, lower is better)</span>
+<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Output format (results.tsv with columns: method, n, rmse, coverage)</span>
+<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a><span class="fu">## Success Metric</span></span>
+<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>RMSE of ATT estimate. Lower is better. Report coverage rate alongside.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="stata-mcp-mcp-server-for-stata-execution" class="level2" data-number="6.7">
 <h2 data-number="6.7" class="anchored" data-anchor-id="stata-mcp-mcp-server-for-stata-execution"><span class="header-section-number">6.7</span> stata-mcp: MCP server for Stata execution</h2>
@@ -6371,23 +6423,23 @@ research-spec.md  ─────────────→  preregistration-dr
 <p>The knowledge base (<code>.claude/rules/knowledge-base-template.md</code>) is the most domain-specific component — it’s a <a href="#rules---domain-knowledge-that-auto-loads">path-scoped rule</a> that loads automatically when Claude works on your content files. It provides skeleton tables for notation conventions, lecture progression, applications, design principles, anti-patterns, and R code pitfalls. Fill them in as you develop your project — you don’t need everything upfront.</p>
 <section id="notation-registry" class="level3" data-number="7.1.1">
 <h3 data-number="7.1.1" class="anchored" data-anchor-id="notation-registry"><span class="header-section-number">7.1.1</span> Notation Registry</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb45"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Symbol <span class="pp">|</span> Meaning <span class="pp">|</span> Introduced <span class="pp">|</span> Anti-Pattern <span class="pp">|</span></span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="pp">|--------|---------|------------|-------------|</span></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $\beta$ <span class="pp">|</span> Regression coefficient <span class="pp">|</span> Lecture 1 <span class="pp">|</span> Don&#39;t use $b$ <span class="pp">|</span></span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $\hat{\theta}$ <span class="pp">|</span> Estimator <span class="pp">|</span> Lecture 2 <span class="pp">|</span> Don&#39;t use $\hat{\beta}$ for different estimand <span class="pp">|</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb47"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Symbol <span class="pp">|</span> Meaning <span class="pp">|</span> Introduced <span class="pp">|</span> Anti-Pattern <span class="pp">|</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="pp">|--------|---------|------------|-------------|</span></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $\beta$ <span class="pp">|</span> Regression coefficient <span class="pp">|</span> Lecture 1 <span class="pp">|</span> Don&#39;t use $b$ <span class="pp">|</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> $\hat{\theta}$ <span class="pp">|</span> Estimator <span class="pp">|</span> Lecture 2 <span class="pp">|</span> Don&#39;t use $\hat{\beta}$ for different estimand <span class="pp">|</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="applications-database" class="level3" data-number="7.1.2">
 <h3 data-number="7.1.2" class="anchored" data-anchor-id="applications-database"><span class="header-section-number">7.1.2</span> Applications Database</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb46"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Application <span class="pp">|</span> Paper <span class="pp">|</span> Dataset <span class="pp">|</span> Package <span class="pp">|</span> Lecture <span class="pp">|</span></span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="pp">|------------|-------|---------|---------|--------|</span></span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Minimum Wage <span class="pp">|</span> Card &amp; Krueger (1994) <span class="pp">|</span> NJ/PA fast food <span class="pp">|</span> <span class="in">`fixest`</span> <span class="pp">|</span> 3 <span class="pp">|</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb48"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Application <span class="pp">|</span> Paper <span class="pp">|</span> Dataset <span class="pp">|</span> Package <span class="pp">|</span> Lecture <span class="pp">|</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="pp">|------------|-------|---------|---------|--------|</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Minimum Wage <span class="pp">|</span> Card &amp; Krueger (1994) <span class="pp">|</span> NJ/PA fast food <span class="pp">|</span> <span class="in">`fixest`</span> <span class="pp">|</span> 3 <span class="pp">|</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="validated-design-principles" class="level3" data-number="7.1.3">
 <h3 data-number="7.1.3" class="anchored" data-anchor-id="validated-design-principles"><span class="header-section-number">7.1.3</span> Validated Design Principles</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb47"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Principle <span class="pp">|</span> Evidence <span class="pp">|</span> Lectures Applied <span class="pp">|</span></span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="pp">|-----------|----------|-----------------|</span></span>
-<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Motivation before formalism <span class="pp">|</span> DA challenge: &quot;students lost&quot; <span class="pp">|</span> All <span class="pp">|</span></span>
-<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Max 3 new symbols per slide <span class="pp">|</span> Pedagogy review caught overload <span class="pp">|</span> 2, 4 <span class="pp">|</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb49"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Principle <span class="pp">|</span> Evidence <span class="pp">|</span> Lectures Applied <span class="pp">|</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="pp">|-----------|----------|-----------------|</span></span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Motivation before formalism <span class="pp">|</span> DA challenge: &quot;students lost&quot; <span class="pp">|</span> All <span class="pp">|</span></span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Max 3 new symbols per slide <span class="pp">|</span> Pedagogy review caught overload <span class="pp">|</span> 2, 4 <span class="pp">|</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="step-2-create-your-domain-reviewer" class="level2" data-number="7.2">
@@ -6416,27 +6468,27 @@ research-spec.md  ─────────────→  preregistration-dr
 <section id="skill-structure" class="level3" data-number="7.4.2">
 <h3 data-number="7.4.2" class="anchored" data-anchor-id="skill-structure"><span class="header-section-number">7.4.2</span> Skill Structure</h3>
 <p>Each skill is a directory in <code>.claude/skills/</code> with a <code>SKILL.md</code> file:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb48"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="an">name:</span><span class="co"> your-skill-name</span></span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="an">description:</span><span class="co"> [What it does] + [When to use] + [Key capabilities]</span></span>
-<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="an">argument-hint:</span><span class="co"> &quot;[brief hint for user]&quot;</span></span>
-<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a><span class="an">allowed-tools:</span><span class="co"> [&quot;Read&quot;, &quot;Write&quot;, &quot;Edit&quot;, &quot;Bash&quot;, &quot;Task&quot;]</span></span>
-<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a><span class="fu"># Your Skill Name</span></span>
-<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a><span class="fu">## Instructions</span></span>
-<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>Step 1: <span class="co">[</span><span class="ot">First action with details</span><span class="co">]</span></span>
-<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a>Step 2: <span class="co">[</span><span class="ot">Second action</span><span class="co">]</span></span>
-<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a>...</span>
-<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a><span class="fu">## Examples</span></span>
-<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a>Example 1: <span class="co">[</span><span class="ot">Common scenario</span><span class="co">]</span></span>
-<span id="cb48-17"><a href="#cb48-17" aria-hidden="true" tabindex="-1"></a>...</span>
-<span id="cb48-18"><a href="#cb48-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-19"><a href="#cb48-19" aria-hidden="true" tabindex="-1"></a><span class="fu">## Troubleshooting</span></span>
-<span id="cb48-20"><a href="#cb48-20" aria-hidden="true" tabindex="-1"></a>Error: <span class="co">[</span><span class="ot">Common error</span><span class="co">]</span></span>
-<span id="cb48-21"><a href="#cb48-21" aria-hidden="true" tabindex="-1"></a>Solution: <span class="co">[</span><span class="ot">How to fix</span><span class="co">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb50"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="an">name:</span><span class="co"> your-skill-name</span></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="an">description:</span><span class="co"> [What it does] + [When to use] + [Key capabilities]</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="an">argument-hint:</span><span class="co"> &quot;[brief hint for user]&quot;</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="an">allowed-tools:</span><span class="co"> [&quot;Read&quot;, &quot;Write&quot;, &quot;Edit&quot;, &quot;Bash&quot;, &quot;Task&quot;]</span></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a><span class="fu"># Your Skill Name</span></span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a><span class="fu">## Instructions</span></span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>Step 1: <span class="co">[</span><span class="ot">First action with details</span><span class="co">]</span></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>Step 2: <span class="co">[</span><span class="ot">Second action</span><span class="co">]</span></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a><span class="fu">## Examples</span></span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>Example 1: <span class="co">[</span><span class="ot">Common scenario</span><span class="co">]</span></span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a><span class="fu">## Troubleshooting</span></span>
+<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>Error: <span class="co">[</span><span class="ot">Common error</span><span class="co">]</span></span>
+<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>Solution: <span class="co">[</span><span class="ot">How to fix</span><span class="co">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="skill-frontmatter" class="level3" data-number="7.4.3">
 <h3 data-number="7.4.3" class="anchored" data-anchor-id="skill-frontmatter"><span class="header-section-number">7.4.3</span> Complete Frontmatter Reference</h3>
@@ -6604,10 +6656,10 @@ research-spec.md  ─────────────→  preregistration-dr
 </tbody>
 </table>
 <p><strong>Dynamic context injection</strong> with <code>`!command`</code> syntax:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb49"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">## Context</span></span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>Current git status: <span class="in">`!git status --short`</span></span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>Recent changes: <span class="in">`!git log --oneline -5`</span></span>
-<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>Available lectures: <span class="in">`!ls Slides/*.tex`</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb51"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">## Context</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>Current git status: <span class="in">`!git status --short`</span></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>Recent changes: <span class="in">`!git log --oneline -5`</span></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>Available lectures: <span class="in">`!ls Slides/*.tex`</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>When Claude loads the skill, it runs these commands and injects the live output into the skill text. This is powerful for skills that need to adapt to the current project state.</p>
 </section>
 <section id="writing-effective-trigger-descriptions" class="level3" data-number="7.4.5">
@@ -6621,23 +6673,23 @@ research-spec.md  ─────────────→  preregistration-dr
 </ol>
 <p><strong>Example: refactoring a weak description into an A-grade one.</strong></p>
 <p>Before (weak — the skill exists but Claude won’t auto-pick it):</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb50"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Run the proofreading protocol on lecture files. Checks grammar, typos, overflow, consistency.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb52"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Run the proofreading protocol on lecture files. Checks grammar, typos, overflow, consistency.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>After (strong — Claude will match this from cold prompts):</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb51"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Read-only proofreading pass over lecture .tex or .qmd files.</span></span>
-<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="at">  Checks grammar, typos, overflow, terminology consistency, and academic</span></span>
-<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a><span class="at">  writing quality; produces a report without editing. Use when user says</span></span>
-<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="st">&quot;proofread&quot;</span><span class="at">, &quot;check for typos&quot;, &quot;look for grammar issues&quot;, &quot;copy-edit</span></span>
-<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a><span class="at">  this&quot;, &quot;any writing errors?&quot;, or before a lecture release.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb53"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Read-only proofreading pass over lecture .tex or .qmd files.</span></span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="at">  Checks grammar, typos, overflow, terminology consistency, and academic</span></span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a><span class="at">  writing quality; produces a report without editing. Use when user says</span></span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="st">&quot;proofread&quot;</span><span class="at">, &quot;check for typos&quot;, &quot;look for grammar issues&quot;, &quot;copy-edit</span></span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a><span class="at">  this&quot;, &quot;any writing errors?&quot;, or before a lecture release.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>The test:</strong> imagine a teammate who has never seen your skill list types <code>&quot;can you look for writing errors in Lecture 3?&quot;</code>. Does your description contain enough lexical overlap that Claude would match it against competing skills? If not, add more trigger phrases.</p>
 <p><strong>Another good example (disambiguation):</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb52"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Interactive interview that formalizes a fuzzy research idea into</span></span>
-<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="at">  a structured spec (RQ, hypotheses, identification, data needs, empirical</span></span>
-<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a><span class="at">  strategy). Use when user says &quot;interview me&quot;, &quot;help me think through this</span></span>
-<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a><span class="at">  idea&quot;, &quot;I have a half-baked idea&quot;. Multi-turn Q&amp;A; saves spec to disk.</span></span>
-<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a><span class="at">  NOT for lit review (/lit-review) or ideation from scratch (/research-ideation).</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb54"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Interactive interview that formalizes a fuzzy research idea into</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="at">  a structured spec (RQ, hypotheses, identification, data needs, empirical</span></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a><span class="at">  strategy). Use when user says &quot;interview me&quot;, &quot;help me think through this</span></span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a><span class="at">  idea&quot;, &quot;I have a half-baked idea&quot;. Multi-turn Q&amp;A; saves spec to disk.</span></span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a><span class="at">  NOT for lit review (/lit-review) or ideation from scratch (/research-ideation).</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The final sentence — “NOT for X, use /Y instead” — is the disambiguation clause. Two skills with overlapping descriptions will split Claude’s routing probability; the explicit “not for” resolves the tie.</p>
 <p><strong>Bad (too vague — will never auto-invoke):</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb53"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Helps with citations</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb55"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">description</span><span class="kw">:</span><span class="at"> Helps with citations</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Checklist before shipping a new skill:</strong></p>
 <ul class="task-list">
 <li><label><input type="checkbox">Starts with a verb + object.</label></li>
@@ -6677,8 +6729,8 @@ research-spec.md  ─────────────→  preregistration-dr
 <h3 data-number="7.4.7" class="anchored" data-anchor-id="quick-start"><span class="header-section-number">7.4.7</span> Quick Start</h3>
 <ol type="1">
 <li><p><strong>Copy the template:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb54"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> .claude/skills/your-skill-name</span>
-<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> templates/skill-template.md .claude/skills/your-skill-name/SKILL.md</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb56"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> .claude/skills/your-skill-name</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> templates/skill-template.md .claude/skills/your-skill-name/SKILL.md</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 <li><p><strong>Customize for your domain:</strong></p>
 <ul>
 <li>Replace trigger phrases with your field’s terminology</li>
@@ -7525,9 +7577,9 @@ research-spec.md  ─────────────→  preregistration-dr
 <h3 data-number="8.5.8" class="anchored" data-anchor-id="plans-saved-to-wrong-directory"><span class="header-section-number">8.5.8</span> Plans Saved to Wrong Directory</h3>
 <p><strong>Symptom:</strong> Plans save to <code>~/.claude/plans/</code> instead of your project directory. Can’t track plans in git.</p>
 <p><strong>Fix:</strong> Add to <code>.claude/settings.json</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb55"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;plansDirectory&quot;</span><span class="fu">:</span> <span class="st">&quot;quality_reports/plans&quot;</span></span>
-<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb57"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;plansDirectory&quot;</span><span class="fu">:</span> <span class="st">&quot;quality_reports/plans&quot;</span></span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This tells Claude Code to save plans inside your project where they can be version-controlled.</p>
 <hr>
 </section>
