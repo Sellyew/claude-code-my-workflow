@@ -45,3 +45,29 @@ Then read the page-range files one at a time, building understanding progressive
 1. Check if Ghostscript is installed: `gs --version`
 2. Try alternative: `pdftk paper.pdf burst output paper_%03d.pdf`
 3. If all else fails, ask the user to upload specific page ranges manually
+
+## Many documents is a different problem from one document
+
+The guidance above is for **one** paper: read it directly, page through it, the context window
+holds it comfortably.
+
+**It does not scale by multiplication.** Loading ~10 large PDFs at once has repeatedly produced
+`Prompt is too long` and forced a session reset — after partial work was already done and lost.
+
+For any task spanning **more than two or three documents** — style profiling across a corpus,
+triaging reviewer findings across a bundle, a literature sweep — use the **one-subagent-per-
+document** pattern:
+
+1. Spawn **one subagent per document**, each with `context: fork`.
+2. Each agent reads **only its own file** and writes a short structured note to disk
+   (`notes/<name>.md`) — 300 words, a fixed schema.
+3. Each returns **only the filename**, not the content.
+4. The main session then reads **only the notes** and synthesizes.
+
+The main context never holds more than one document's worth of material, and a failure costs
+one agent rather than the session.
+
+> **Check the count before starting.** If the task names more documents than you can read in
+> two or three requests, the answer is subagents — decided up front, not after the first
+> overflow. And confirm the corpus size against disk: a task that says "my papers" and turns
+> out to be eleven of them is a different task from four.

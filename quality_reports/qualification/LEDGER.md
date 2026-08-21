@@ -21,6 +21,15 @@ Verdicts: **PASS** (detects its named class at the stated threshold) · **FAIL**
 | 2026-08-21 | `scripts/backtest.sh` — **full stress test, all 7 gates** | `README.md`, `CLAUDE.md`, `docs/index.html`, `scripts/`, a skill | count drift (compound) · count drift (template verb) · superseded model · broken link · broken anchor · superlative · stale auto-mode claim · root scratch file · draft copy · undeclared tool | 10 | **10/10** | **0/1** on the clean-repo control | n/a (composite) | **PASS** |
 | 2026-08-21 | `check-surface-sync.py` coverage of `docs/index.html` | landing page | count drift on the published page | 1 | 1/1 | 0/0 | n/a | **PASS** (see note) |
 
+## Skill evals — not yet run
+
+Distinct from gate qualification. `/vaccinate` asks *can this checker detect a planted defect?*
+Evals ask *does this skill produce better work than not having it?* A skill can pass evals and
+still be a useless reviewer — well-formed, plausible findings that miss real defects. Run both.
+
+**No skill in this template has been eval'd.** Method and priority order:
+[`.claude/skills/vaccinate/evals/README.md`](../../.claude/skills/vaccinate/evals/README.md).
+
 ## Not yet qualified
 
 These are relied upon and have **never been measured**. Until they have a row, treat their

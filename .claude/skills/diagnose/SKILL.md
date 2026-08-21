@@ -176,6 +176,40 @@ The usual-suspects model is illustrated in R but the bug *classes* are language-
 
 - `--no-fix` — Diagnose only: run through naming the root cause (Phases 0–4) and write the report, but make **no** edit to source. Use when you want to apply the fix yourself, or when the file is shared/load-bearing and an automated edit is inappropriate.
 
+## Step 0 — State the contract before touching anything
+
+Before proposing or writing **any** fix, state in 3–5 bullets and **stop for confirmation**:
+
+1. What the function's or pipeline's **documented contract** is.
+2. What the reporter claims is broken.
+3. Whether the reported scenario is even **in contract** — a caller violating the contract is
+   not a bug in the callee.
+4. What the **correct behaviour** would be.
+5. What evidence would settle it.
+
+This costs thirty seconds and prevents the most expensive class of wasted work: a confident fix
+to a misunderstood contract. In one logged case the same semantic point had to be corrected
+**twice** before a fix was scoped right, because the agent asserted a stance on the contract
+rather than restating it and asking.
+
+> **Severity follows the contract.** A scenario outside the documented contract is at most a
+> documentation or validation issue, never a high-severity correctness bug. Inflating it
+> because it *looks* wrong is how a fix ends up changing behaviour users depend on.
+
+## Separate the audit pass from the repair pass
+
+The strongest outcomes in the logged sessions began as **investigations**, not fix requests.
+The messier ones mixed auditing with editing.
+
+**Phase 1 — read-only.** Produce a findings table: `severity | file:line | claim | evidence I
+actually ran | proposed fix`. Mark anything not verified by execution as **UNVERIFIED**. Edit
+nothing.
+
+**Phase 2 — repair, on approved rows only.** The user picks which findings get fixed. This is
+what makes declining a finding cheap, and declining findings is how scope stays bounded.
+
+`--no-fix` runs Phase 1 alone.
+
 ## Cross-references
 
 - [`.claude/skills/review-r/SKILL.md`](../review-r/SKILL.md) — code-quality review with no specific symptom (diagnose is symptom-driven).

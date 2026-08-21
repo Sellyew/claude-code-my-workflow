@@ -11,6 +11,20 @@
 
 ---
 
+## Scope Discipline
+
+**Do exactly what was asked — nothing adjacent.** Do not add README files, build scripts,
+`.gitignore` edits, helper utilities, or extra tooling that was not requested. If an addition
+looks valuable, **list it as a suggestion at the end** and let the user decide.
+
+A request for a codebook is a request for a codebook. Delivering a codebook plus a README plus
+build scripts plus gitignore edits means the user now has to review four things to accept one,
+and the usual outcome is that all four get thrown away.
+
+**Before adding anything not named in the request, ask.** One line is cheaper than a revert.
+
+---
+
 ## Core Principles
 
 - **Plan first** -- enter plan mode before non-trivial tasks; save plans to `quality_reports/plans/`
