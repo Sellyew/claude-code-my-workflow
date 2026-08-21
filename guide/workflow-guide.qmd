@@ -155,13 +155,13 @@ Most of the time, you just describe what you want and Claude handles the rest. E
 ::: {.callout-important}
 ## The Bottom Line
 
-**You talk, Claude orchestrates.** The 18 agents, 60 skills, and 37 rules exist so you don't have to think about them. Describe your goal, approve the plan, and let the system work.
+**You talk, Claude orchestrates.** The 18 agents, 61 skills, and 37 rules exist so you don't have to think about them. Describe your goal, approve the plan, and let the system work.
 :::
 
 ::: {.callout-note}
 ## You Don't Need All of This on Day One
 
-This guide describes the full system --- 18 agents, 60 skills, 37 rules. That is the ceiling, not the floor. **Start with just CLAUDE.md and 2--3 skills** (`/compile-latex`, `/proofread`, `/commit`). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you're ready.
+This guide describes the full system --- 18 agents, 61 skills, 37 rules. That is the ceiling, not the floor. **Start with just CLAUDE.md and 2--3 skills** (`/compile-latex`, `/proofread`, `/commit`). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you're ready.
 :::
 
 ---
@@ -813,7 +813,7 @@ argument-hint: "[filename without .tex extension]"
 ::: {.callout-note}
 ## Built-In Skills
 
-Claude Code ships with built-in skills beyond this template's 60: `/batch` orchestrates parallel refactoring across your codebase (using git worktrees for isolation), `/simplify` runs 3-agent code review and applies fixes, and `/debug` helps troubleshoot sessions. These complement the academic skills above.
+Claude Code ships with built-in skills beyond this template's 61: `/batch` orchestrates parallel refactoring across your codebase (using git worktrees for isolation), `/simplify` runs 3-agent code review and applies fixes, and `/debug` helps troubleshoot sessions. These complement the academic skills above.
 :::
 
 ## Agents --- Specialized Reviewers {#agents---specialized-reviewers}
@@ -2595,7 +2595,7 @@ The template includes matching LaTeX and Quarto palettes. To customize:
 
 ## Step 4: Creating Custom Skills {#sec-create-skills}
 
-The guide includes 60 [skills](#skills---reusable-slash-commands) for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.
+The guide includes 61 [skills](#skills---reusable-slash-commands) for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.
 
 ### When to Create a Skill
 
@@ -2890,6 +2890,7 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | `/differential-audit` | `.claude/skills/differential-audit/` | Compare two implementations — a port, a replication, a refactor, a version upgrade — so that agreement means something |
 | `/oracle-review` | `.claude/skills/oracle-review/` | Run an external frontier-model referee (Claude Code → GPT-5.6 Sol Pro) and adjudicate what comes back |
 | `/verify-artifact` | `.claude/skills/verify-artifact/` | Prove the file you are about to send IS the thing you mean — rebuild, verify integrity, diff against source |
+| `/voice-profile` | `.claude/skills/voice-profile/` | Extract a written voice profile from your own prior papers, then audit drafts against it — the positive counterpart to `/humanize`, which only detects AI tells |
 | `/validate-bib` | `.claude/skills/validate-bib/` | Bibliography validation |
 | `/devils-advocate` | `.claude/skills/devils-advocate/` | Design challenge questions |
 | `/create-lecture` | `.claude/skills/create-lecture/` | Full lecture creation |

@@ -189,7 +189,7 @@ This workflow is designed as a **single hub for an entire research program** —
 ## What's Included
 
 <details>
-<summary><strong>18 agents, 60 skills, 37 rules, 7 hooks</strong> (click to expand)</summary>
+<summary><strong>18 agents, 61 skills, 37 rules, 7 hooks</strong> (click to expand)</summary>
 
 ### Agents (`.claude/agents/`)
 
@@ -237,6 +237,7 @@ This workflow is designed as a **single hub for an entire research program** —
 | `/differential-audit` | Compare two implementations — a port, a replication, a refactor, a version upgrade — so that agreement means something |
 | `/oracle-review` | Run an external frontier-model referee (Claude Code → GPT-5.6 Sol Pro) and adjudicate what comes back |
 | `/verify-artifact` | Prove the file you are about to send IS the thing you mean — rebuild, verify integrity, diff against source |
+| `/voice-profile` | Extract a written voice profile from your own prior papers, then audit drafts against it — the positive counterpart to `/humanize`, which only detects AI tells |
 | `/validate-bib` | Cross-reference citations against bibliography |
 | `/devils-advocate` | Challenge design decisions before committing |
 | `/create-lecture` | Full lecture creation workflow |

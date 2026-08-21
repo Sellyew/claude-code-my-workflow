@@ -204,6 +204,16 @@ If you find yourself reaching for an auto-rewriter, that's the signal to rewrite
 - Summary to the conversation: counts per category, top concentrated paragraphs, action recommendation.
 - **No file edits.** The user reads the report and applies changes manually.
 
+## Respect a documented voice profile
+
+If `voice-profile.md` exists at the repo root, **read it first**. A habit the author has
+declared deliberate — frequent em-dashes, first person, a particular connective — is **not a
+finding**. Flagging a documented preference as an AI tell is a false positive, and false
+positives erode the report's authority faster than misses do.
+
+Build one with [`/voice-profile`](../voice-profile/SKILL.md). This skill says what to remove;
+that one says what to write toward.
+
 ## What this skill cannot do (v2.5)
 
 `/humanize` finds **surface tells** — boilerplate transitions, the AI-cliché lexicon, hedging

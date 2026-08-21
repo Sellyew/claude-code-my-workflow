@@ -147,7 +147,47 @@ A gate that matches nothing reports nothing. Caught by seeding a defect into tha
 surface; coverage restored and re-proved. Count assertions went **29 → 34**, and a falling
 number is now documented as the signal to investigate.
 
-**Inventory at release: 60 skills, 18 agents, 35 rules, 7 hooks, 13 references, 7 gates**
+### Added — the laws from the working machine
+
+`research-agent-laws.md` — 17 laws for running agents on research infrastructure, each paid
+for by a real incident, cross-referencing rather than restating what is already mechanised.
+Three wired into mechanisms: **parallelism must be provably run-shape-independent** (seed by
+task, not worker; prove it with a two-core vs four-core bit-identity check — worker-based
+seeding silently binds results to the execution shape), the **five-question memory capture
+gate** with a ban on just-in-case memories, and **push-on-failure / silence-on-success** for
+routines, where *did not run* is a failure rather than silence.
+
+### Added — writing
+
+- **`writing-with-ai.md`** separates two problems that get conflated: **readability** (editing
+  fixes it, worth doing whoever wrote the text) and **provenance** (only human rewriting fixes
+  it). An article polished through several rounds of surface de-AI-ing came back from a neural
+  detector at **100 % AI-written** — those classifiers read the token-level statistics of LLM
+  generation, which survive any transformation the model applies, *because every transformation
+  is still LLM-generated text*. **A model cannot make its own output stop reading as model
+  output.** Plus the internal-vs-external-facing decision and the human-readable standard.
+- **`/humanize` scope narrowed** accordingly: a clean report means the prose reads *well*, not
+  that it reads *human*.
+- **`/voice-profile`** — the positive counterpart, deferred since v1.9. Extracts a voice profile
+  from your own prior papers using one subagent per document, and audits drafts against it.
+  `/humanize` now reads it and stops flagging documented quirks as AI tells.
+
+### Added — from a usage-insights review of 14 sessions / 367 hours
+
+- **`agent-authored-code.md`.** The top friction was buggy code, and most of it was written by
+  the agent during the session rather than found in the codebase: bulk transformations run
+  without a dry run, paths resolved after a `cd`, `pgrep` monitors matching themselves so a
+  chain waits on itself, long runs with no heartbeat. *A bulk edit is not done when the script
+  exits 0; it is done when you have read a sample of the result.*
+- **Scope Discipline** at the top of `CLAUDE.md` — do exactly what was asked; list adjacent
+  ideas as suggestions instead of implementing them.
+- **`/diagnose` gains contract-first triage and an audit/repair split.** State the documented
+  contract and whether the reported scenario is even *in* contract before writing anything;
+  Phase 1 is read-only with `UNVERIFIED` marked, Phase 2 repairs only approved rows.
+- **`pdf-processing.md` extended for corpora.** The rule was right for one paper and does not
+  scale by multiplication; more than two or three documents means one subagent per document.
+
+**Inventory at release: 61 skills, 18 agents, 37 rules, 7 hooks, 14 references, 7 gates**
 (was 52 / 18 / 32 / 7 / 9 / 3 at v2.1.0).
 
 ### Upgrading from v2.1
