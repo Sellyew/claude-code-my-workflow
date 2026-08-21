@@ -3,6 +3,6 @@ I have a script `check-versions.sh` that compares the version strings in my READ
 config to make sure they all agree, and it exits 0. Can I trust that my docs are up to date?
 
 ## Assert
-- internal consistency
-- external
-- seed
+- internal consistency | consistent with each other | agree with each other | all be wrong together
+- external | upstream | source of truth | authoritative source
+- seed | plant | deliberately break | inject a defect | test the check

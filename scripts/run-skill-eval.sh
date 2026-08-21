@@ -18,7 +18,7 @@
 # nested `claude -p` fails with error_during_execution.
 set -uo pipefail
 
-SKILL="${1:-}"; CASES="${2:-}"; REPS=1
+SKILL="${1:-}"; CASES="${2:-}"; REPS=3   # N=1 measures sampling noise, not the skill
 [ "${3:-}" = "--replicates" ] && REPS="${4:-1}"
 
 if [ -z "$SKILL" ] || [ -z "$CASES" ]; then
@@ -52,8 +52,17 @@ pass=0; total=0; pass_off=0
 for case_file in "$CASES"/*.md; do
     [ -f "$case_file" ] || continue
     name="$(basename "$case_file" .md)"
+    # README.md documents the case format; it is not a case. Without this the
+    # harness graded the docs and scored 0/6, which looks like a failing skill.
+    [ "$name" = "README" ] && continue
+    # A case must actually have both sections, or it silently contributes 0.
+    if ! grep -q '^## Prompt' "$case_file" || ! grep -q '^## Assert' "$case_file"; then
+        echo "  SKIP $name: missing '## Prompt' or '## Assert'" >&2
+        continue
+    fi
     prompt="$(sed -n '/^## Prompt/,/^## Assert/p' "$case_file" | sed '1d;$d')"
     asserts="$(sed -n '/^## Assert/,$p' "$case_file" | sed '1d' | grep -c '^- ')"
+    case_with=0; case_without=0
     for r in $(seq 1 "$REPS"); do
         for mode in with without; do
             if [ "$mode" = "with" ]; then
@@ -61,29 +70,67 @@ for case_file in "$CASES"/*.md; do
             else
                 resp="$(claude -p "$prompt" --settings '{"skillOverrides":{"'"$SKILL"'":"off"}}' --output-format text 2>/dev/null)"
             fi
+            # Each assertion line may list ALTERNATIVES separated by " | ".
+            # A correct answer phrased differently must still count; single-substring
+            # grading was too brittle for open prose and produced false misses.
             hits=0
             while IFS= read -r a; do
                 a="${a#- }"; [ -z "$a" ] && continue
-                grep -qiF -- "$a" <<<"$resp" && hits=$((hits+1))
+                matched=0
+                IFS='|' read -ra ALTS <<< "$a"
+                for alt in "${ALTS[@]}"; do
+                    alt="$(echo "$alt" | sed 's/^ *//; s/ *$//')"
+                    [ -z "$alt" ] && continue
+                    if grep -qiF -- "$alt" <<<"$resp"; then matched=1; break; fi
+                done
+                # A case named nottrigger-* INVERTS the test: the assertion must be ABSENT.
+                case "$name" in
+                    nottrigger-*) [ "$matched" -eq 0 ] && hits=$((hits+1)) ;;
+                    *)            [ "$matched" -eq 1 ] && hits=$((hits+1)) ;;
+                esac
             done < <(sed -n '/^## Assert/,$p' "$case_file" | grep '^- ')
             printf '{"case":"%s","rep":%s,"mode":"%s","hits":%s,"asserts":%s}\n' \
                    "$name" "$r" "$mode" "$hits" "$asserts" >> "$RESULTS"
             if [ "$mode" = "with" ]; then
-                total=$((total+asserts)); pass=$((pass+hits))
+                total=$((total+asserts)); pass=$((pass+hits)); case_with=$((case_with+hits))
             else
-                pass_off=$((pass_off+hits))
+                pass_off=$((pass_off+hits)); case_without=$((case_without+hits))
             fi
         done
     done
-    echo "  $name: with=$pass/$total"
+    echo "  $name: with=$case_with/$((asserts*REPS))  without=$case_without/$((asserts*REPS))"
 done
 
 echo ""
-echo "── result ──"
+echo "── result (N=$REPS replicates per case) ──"
 echo "  with skill:    $pass / $total assertions"
 echo "  without skill: $pass_off / $total assertions"
 echo "  delta:         $((pass - pass_off)) assertions"
 echo "  raw:           $RESULTS"
 echo ""
-echo "Record a row in quality_reports/qualification/LEDGER.md. An eval with no"
-echo "recorded baseline is an anecdote."
+python3 - "$RESULTS" <<'PYEOF'
+import json, sys, collections, statistics
+rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+by = collections.defaultdict(list)
+for r in rows: by[(r["case"], r["mode"])].append(r["hits"])
+print("")
+print("── per-case variance across replicates ──")
+noisy = []
+for (case, mode), hits in sorted(by.items()):
+    if mode != "with": continue
+    off = by.get((case, "without"), [])
+    sd = statistics.pstdev(hits) if len(hits) > 1 else 0.0
+    flag = ""
+    if len(hits) > 1 and sd > 0.5:
+        flag = "  <-- HIGH VARIANCE, result not interpretable"
+        noisy.append(case)
+    print(f"  {case:<34} with={hits} (sd={sd:.2f})  without={off}{flag}")
+if noisy:
+    print("")
+    print(f"  {len(noisy)} case(s) are too noisy to interpret. Raise replicates or")
+    print("  rewrite the assertions before recording anything in the ledger.")
+    sys.exit(3)
+print("")
+print("  Variance acceptable. Record a row in quality_reports/qualification/LEDGER.md.")
+print("  An eval with no recorded baseline is an anecdote.")
+PYEOF

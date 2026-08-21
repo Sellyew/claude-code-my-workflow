@@ -2,4 +2,4 @@
 What is the difference between a fixed-effects and a random-effects estimator?
 
 ## Assert
-- effect
+- seed a defect | qualification ledger | recall and false-positive rate | plant a bug

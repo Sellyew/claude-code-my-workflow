@@ -63,6 +63,32 @@ A skill can pass evals and still be a useless reviewer: it produces well-formed,
 findings that miss real defects. Only `/vaccinate` catches that. And a checker can vaccinate
 cleanly while its skill wrapper triggers on the wrong prompts. Run both.
 
+## The harness is itself a check, and must be qualified
+
+Everything in this repo that clears work has to prove it can detect a failure. **That includes
+the eval harness.** Three defects were found in its first version by running it, not by reading
+it:
+
+| Defect | Symptom | Fix |
+|---|---|---|
+| **N=1 replicate** | the same case scored 3/3 in one run and 1/3 ten minutes later — opposite conclusions from sampling noise | default `--replicates 3`, and a **variance gate** that refuses to report when per-case sd > 0.5 |
+| **`nottrigger` written backwards** | asserted a substring must be *present*, so it scored 1/1 whatever happened and measured nothing | `nottrigger-*` cases now **invert**: the assertion must be **absent** |
+| **single-substring grading** | a correct answer phrased differently scored as a miss | assertions list **alternatives** (`a \| b \| c`); any one counts |
+
+**Assertions are literal substrings on purpose.** A model grading a model reintroduces exactly
+the failure being measured. Alternatives make that tractable without importing a judge.
+
+> **Do not record a ledger row from a high-variance run.** The harness exits 3 and says so.
+> A number that changes between runs is not a measurement, and writing it down as one is worse
+> than having no number — it looks like evidence.
+
+## Cost
+
+Each case costs `2 x replicates` headless runs (with-skill and without-skill), at roughly
+60–90 s each. Nine cases at N=3 is ~54 runs, well over an hour. Budget accordingly, and **do
+not mechanically generate cases to raise coverage** — 180 cases that measure nothing are worse
+than nine that measure something, because the ledger then carries green rows that mean nothing.
+
 ## Recording results
 
 Eval results go in the same ledger as qualification runs
