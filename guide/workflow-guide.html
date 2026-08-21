@@ -2757,7 +2757,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 59 skills, and 33 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
+<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 60 skills, and 33 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled">
@@ -2770,7 +2770,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>This guide describes the full system — 18 agents, 59 skills, 33 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
+<p>This guide describes the full system — 18 agents, 60 skills, 33 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
 </div>
 </div>
 <hr>
@@ -3597,7 +3597,7 @@ APPROVED   NEEDS WORK
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Claude Code ships with built-in skills beyond this template’s 59: <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> runs 3-agent code review and applies fixes, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
+<p>Claude Code ships with built-in skills beyond this template’s 60: <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> runs 3-agent code review and applies fixes, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
 </div>
 </div>
 </section>
@@ -6270,7 +6270,7 @@ research-spec.md  ─────────────→  preregistration-dr
 </section>
 <section id="sec-create-skills" class="level2" data-number="7.4">
 <h2 data-number="7.4" class="anchored" data-anchor-id="sec-create-skills"><span class="header-section-number">7.4</span> Step 4: Creating Custom Skills</h2>
-<p>The guide includes 59 <a href="#skills---reusable-slash-commands">skills</a> for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.</p>
+<p>The guide includes 60 <a href="#skills---reusable-slash-commands">skills</a> for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.</p>
 <section id="when-to-create-a-skill" class="level3" data-number="7.4.1">
 <h3 data-number="7.4.1" class="anchored" data-anchor-id="when-to-create-a-skill"><span class="header-section-number">7.4.1</span> When to Create a Skill</h3>
 <p>Create a skill when: - You repeatedly explain the same 3+ step workflow to Claude - You need domain-specific quality checks (citation style, notation consistency, lab protocols) - You enforce field-specific output formats (thesis structure, journal templates) - You coordinate multi-tool workflows (data → analysis → manuscript)</p>
@@ -6962,66 +6962,71 @@ research-spec.md  ─────────────→  preregistration-dr
 <td>Assemble a submission-ready DCAS / openICPSR replication package; calls <code>/audit-reproducibility</code> and blocks on FAIL (v2.0)</td>
 </tr>
 <tr class="odd">
+<td><code>/challenge</code></td>
+<td><code>.claude/skills/challenge/</code></td>
+<td>Stress-test a finding against the choices you didn’t make — specification curve over the discrete forks, then named sensitivity statistics (E-value, Cinelli–Hazlett RV, Oster δ, honest DiD) against the identifying assumption</td>
+</tr>
+<tr class="even">
 <td><code>/capture-environment</code></td>
 <td><code>.claude/skills/capture-environment/</code></td>
 <td>Snapshot the computational environment (renv.lock / sessionInfo / requirements.txt / uv.lock + optional Dockerfile + seeds) (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/did-event-study</code></td>
 <td><code>.claude/skills/did-event-study/</code></td>
 <td>Staggered DiD / event-study wrapper over canonical packages (Callaway–Sant’Anna <code>did</code>, <code>fixest::sunab</code>, HonestDiD; Stata <code>csdid</code>/<code>eventstudyinteract</code>/<code>honestdid</code>) (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/power-analysis</code></td>
 <td><code>.claude/skills/power-analysis/</code></td>
 <td>Power / required-N / MDE for study design (RCT, clustered/ICC, multi-arm, or simulation-based) + a methods paragraph for <code>/preregister</code> (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/disclosure-check</code></td>
 <td><code>.claude/skills/disclosure-check/</code></td>
 <td>Pre-screen restricted-data outputs for SDL violations (small cells, dominance, PII); gates on any CRITICAL (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/grant-proposal</code></td>
 <td><code>.claude/skills/grant-proposal/</code></td>
 <td>Scaffold a grant proposal (NSF/NIH/ERC/foundation) from an <code>/interview-me</code> spec; delegates DMP + facilities; aims↔︎methods↔︎budget coherence pass (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/data-management-plan</code></td>
 <td><code>.claude/skills/data-management-plan/</code></td>
 <td>Draft a funder-compliant Data Management Plan (NSF/NIH 2023/ERC/Horizon) (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/coauthor-brief</code></td>
 <td><code>.claude/skills/coauthor-brief/</code></td>
 <td>Generate a collaborator handoff brief: git delta, per-artifact state, open questions, reproduce-locally + restricted-data steps (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/triage-inbox</code></td>
 <td><code>.claude/skills/triage-inbox/</code></td>
 <td>Triage academic email + calendar (Gmail/Calendar MCP) into a prioritized digest + referee-obligations tracker; human-gated actions only (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/syllabus</code></td>
 <td><code>.claude/skills/syllabus/</code></td>
 <td>Build a course syllabus from a topic/reading list (schedule, objectives, assessment + rubric, per-week <code>/create-lecture</code> work-list) (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/teach-from-paper</code></td>
 <td><code>.claude/skills/teach-from-paper/</code></td>
 <td>Turn a paper into a lecture outline, teachable results, slide skeleton (→ <code>/create-lecture</code>), discussion questions, exercise brief (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/respond-to-eval</code></td>
 <td><code>.claude/skills/respond-to-eval/</code></td>
 <td>Turn student course evaluations into a classified teaching-improvement plan (Keep/Change/Investigate/Out-of-scope) (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/scaffold-exercises</code></td>
 <td><code>.claude/skills/scaffold-exercises/</code></td>
 <td>Scaffold a graded problem set (analytical/empirical/coding) with worked solutions; clean student set + separate solution key (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/new-skill</code></td>
 <td><code>.claude/skills/new-skill/</code></td>
 <td>Scaffold a convention-compliant skill (interview → write <code>SKILL.md</code> with gate-passing frontmatter) (v2.0)</td>
