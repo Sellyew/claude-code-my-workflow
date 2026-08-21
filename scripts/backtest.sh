@@ -10,6 +10,7 @@
 #   4. links               every relative link and heading anchor resolves
 #   5. spec-conformance    every skill obeys the Agent Skills spec
 #   6. staleness           stale recommendations, source/render divergence, expired currency
+#   7. repo-hygiene       no scratch-as-main, no root clutter, archives documented
 #   +  findings-validator  smoke test, so a review run cannot fail at the last step
 #
 # Every gate runs to completion even if an earlier one fails — you get the whole
@@ -42,6 +43,7 @@ run "model-versions"     "$DIR/check-model-versions.sh"
 run "links"              python3 "$DIR/check-links.py"
 run "spec-conformance"   python3 "$DIR/check-spec-conformance.py"
 run "staleness"          python3 "$DIR/check-staleness.py"
+run "repo-hygiene"       python3 "$DIR/check-repo-hygiene.py"
 
 echo ""
 echo "── findings-validator smoke test ──"

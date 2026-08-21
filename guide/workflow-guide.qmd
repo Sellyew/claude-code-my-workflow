@@ -155,13 +155,13 @@ Most of the time, you just describe what you want and Claude handles the rest. E
 ::: {.callout-important}
 ## The Bottom Line
 
-**You talk, Claude orchestrates.** The 18 agents, 60 skills, and 33 rules exist so you don't have to think about them. Describe your goal, approve the plan, and let the system work.
+**You talk, Claude orchestrates.** The 18 agents, 60 skills, and 35 rules exist so you don't have to think about them. Describe your goal, approve the plan, and let the system work.
 :::
 
 ::: {.callout-note}
 ## You Don't Need All of This on Day One
 
-This guide describes the full system --- 18 agents, 60 skills, 33 rules. That is the ceiling, not the floor. **Start with just CLAUDE.md and 2--3 skills** (`/compile-latex`, `/proofread`, `/commit`). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you're ready.
+This guide describes the full system --- 18 agents, 60 skills, 35 rules. That is the ceiling, not the floor. **Start with just CLAUDE.md and 2--3 skills** (`/compile-latex`, `/proofread`, `/commit`). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you're ready.
 :::
 
 ---
@@ -487,6 +487,98 @@ The defences in this template all assume **model quality drifts**:
 
 Anthropic's post is also a useful reminder that running `/review-paper --variance N` (Pass 2C E) is the empirical answer to "should I trust this output?" — a single point estimate of model quality on a single task hides variance that the template's adversarial-review patterns surface.
 :::
+
+## When the AI checks the math, what checks the AI? {#sec-vaccinate}
+
+The problem at the top of this guide was *"no one checks the math."* Adding checkers answers
+it — and immediately raises the sequel. Every check above is itself a piece of software or a
+model doing a job, and neither announces when it has stopped working.
+
+::: {.callout-important}
+## Twenty planted bugs, and a clean bill of health
+
+Twenty bugs were deliberately planted in a working codebase, and the review agents were asked
+to check it again. **They reported everything was fine.** Recall: 0 out of 20.
+
+Nothing in the output distinguished that from a genuinely clean run. The reviewers were
+confident, fluent, and completely wrong — and there was no way to tell from reading the report.
+:::
+
+Think of it as a **vaccine**: a small, controlled dose of error that strengthens the whole
+system. The rule that follows is the one this template treats as non-negotiable:
+
+> **An unqualified check is not weak evidence. It is none.**
+
+"It passed" is compatible with: the check never ran; it ran on a stale copy; it silently
+skipped what it could not reconcile; its tolerance was widened after the comparison; or it
+simply cannot detect the failure it was written for. *The number of checks is not a measure of
+rigour.*
+
+### Qualifying a check takes about ten minutes
+
+[`/vaccinate`](#all-skills) does it as a protocol:
+
+1. **Name the failure.** "Catches problems" is not a class. "Detects a coefficient in the text
+   that no longer matches its table" is.
+2. **Seed it** into a copy — plus **at least one clean control**.
+3. **Run the checker blind**, one variant per run, in a fresh context.
+4. **Score** recall *and* false-positive rate. A finding on the clean control counts against
+   the checker only when it is *factually wrong*, not merely unwelcome.
+5. **Compare against a simpler baseline.** A five-agent panel that scores no better than
+   `grep -n` has not earned its cost.
+6. **Write a ledger row.** A checker with no row in
+   `quality_reports/qualification/LEDGER.md` is unqualified, and its green light means nothing.
+
+::: {.callout-note}
+## This is not hypothetical — it caught a live bug in this repo
+
+While building v2.5 we ran the repo's own consistency gates against a seeded defect: the
+sentence `This template has NN skills.` — with a count that did not match disk — was added to `README.md`.
+
+**All six gates stayed green.** The count patterns are deliberately compound — they require
+several categories on one line — so that they do not fire on ordinary prose like "start with
+2–3 skills". A count carrying only a template verb fell straight through the gap.
+
+The gate had been **green and wrong**, and only a seeded defect could tell the difference.
+It was fixed and then re-qualified *in both directions*: 3 of 3 seeded drifts caught, 0 of 3
+false alarms on legitimate prose.
+:::
+
+### The five credibility questions
+
+The most common way AI-assisted empirical work goes wrong is not a wrong number. It is
+evidence for one question being read as evidence for another.
+
+| Question | Answered by | Does **not** establish |
+|---|---|---|
+| **Reproducibility** — does the code run and produce the reported numbers? | [`/audit-reproducibility`](#all-skills), the passport | that the estimator is right |
+| **Implementation fidelity** — does the code implement the estimator it claims? | [`/differential-audit`](#all-skills) against a pinned reference | that the estimator performs well |
+| **Statistical performance** — does it behave in finite samples? | [`/simulation-study`](#all-skills), coverage against truth | that the measure is valid |
+| **Measurement validity** — does the variable capture the construct? | domain review, data documentation | that the causal claim holds |
+| **Identification** — is the causal claim warranted? | design, [`/challenge`](#all-skills), falsification | anything about the code |
+
+**Evidence for one never clears another.** A green reproducibility check tells you the
+arithmetic is faithful to the script. It says nothing about whether the script identifies
+anything. When an agent reports "all checks pass", it is almost always speaking about rung one
+and being heard about rung five.
+
+### And review does not substitute for robustness
+
+In a controlled study, 150 autonomous agents were given the same data and the same questions.
+Effect-size interquartile ranges reached about **10.7 %/yr**, and the spread concentrated in
+**discrete measure-choice forks** — dollar versus share volume, trade-level versus Amihud —
+not in estimation noise. Within a measure family, agents agreed to about 0.25 %/yr.
+
+Two results from that study are load-bearing for how this template is designed:
+
+- **AI peer review left the spread essentially unchanged.** Review catches errors. It does not
+  reduce analytical-choice variance. A clean referee report is not robustness.
+- Exposure to exemplar papers collapsed the spread by 80–99 % — **convergence by imitation, not
+  by correctness.** Herding is not agreement.
+
+That is why [`/challenge`](#all-skills) exists and why it is a separate rung: the spread has to
+be *measured*, not reviewed away.
+
 
 ### Submission-readiness: stacking the verification lenses
 
@@ -2623,7 +2715,7 @@ This is the `/learn` lifecycle in action: discover a repeating workflow → extr
 5. **Verify everything.** The verification rule exists for a reason. Never skip compilation or rendering checks.
 6. **Session logs matter.** Document design decisions, not just what changed. Future-you will thank present-you.
 7. **Devil's Advocate early.** Challenge slide structure before you've built 50 slides on a shaky foundation.
-8. **Progressive disclosure.** Start with CLAUDE.md + 2--3 rules. Add more as your workflow matures. Newcomers should not face all 33 rules on day one.
+8. **Progressive disclosure.** Start with CLAUDE.md + 2--3 rules. Add more as your workflow matures. Newcomers should not face all 35 rules on day one.
 9. **Use `CLAUDE.local.md` for personal overrides.** This file is automatically gitignored and loaded alongside `CLAUDE.md`. Put machine-specific paths, personal preferences, and local tool versions here --- they won't pollute the shared repo.
 
 ::: {.callout-note collapse="true"}

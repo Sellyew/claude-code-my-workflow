@@ -2385,11 +2385,17 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#how-scores-are-calculated" id="toc-how-scores-are-calculated" class="nav-link" data-scroll-target="#how-scores-are-calculated"><span class="header-section-number">3.4.1</span> How Scores Are Calculated</a></li>
   <li><a href="#mandatory-verification" id="toc-mandatory-verification" class="nav-link" data-scroll-target="#mandatory-verification"><span class="header-section-number">3.4.2</span> Mandatory Verification</a></li>
-  <li><a href="#submission-readiness-stacking-the-verification-lenses" id="toc-submission-readiness-stacking-the-verification-lenses" class="nav-link" data-scroll-target="#submission-readiness-stacking-the-verification-lenses"><span class="header-section-number">3.4.3</span> Submission-readiness: stacking the verification lenses</a></li>
   </ul></li>
-  <li><a href="#sec-domain-reviewer" id="toc-sec-domain-reviewer" class="nav-link" data-scroll-target="#sec-domain-reviewer"><span class="header-section-number">3.5</span> Creating Your Own Domain Reviewer</a>
+  <li><a href="#sec-vaccinate" id="toc-sec-vaccinate" class="nav-link" data-scroll-target="#sec-vaccinate"><span class="header-section-number">3.5</span> When the AI checks the math, what checks the AI?</a>
   <ul class="collapse">
-  <li><a href="#the-5-lens-framework" id="toc-the-5-lens-framework" class="nav-link" data-scroll-target="#the-5-lens-framework"><span class="header-section-number">3.5.1</span> The 5-Lens Framework</a></li>
+  <li><a href="#qualifying-a-check-takes-about-ten-minutes" id="toc-qualifying-a-check-takes-about-ten-minutes" class="nav-link" data-scroll-target="#qualifying-a-check-takes-about-ten-minutes"><span class="header-section-number">3.5.1</span> Qualifying a check takes about ten minutes</a></li>
+  <li><a href="#the-five-credibility-questions" id="toc-the-five-credibility-questions" class="nav-link" data-scroll-target="#the-five-credibility-questions"><span class="header-section-number">3.5.2</span> The five credibility questions</a></li>
+  <li><a href="#and-review-does-not-substitute-for-robustness" id="toc-and-review-does-not-substitute-for-robustness" class="nav-link" data-scroll-target="#and-review-does-not-substitute-for-robustness"><span class="header-section-number">3.5.3</span> And review does not substitute for robustness</a></li>
+  <li><a href="#submission-readiness-stacking-the-verification-lenses" id="toc-submission-readiness-stacking-the-verification-lenses" class="nav-link" data-scroll-target="#submission-readiness-stacking-the-verification-lenses"><span class="header-section-number">3.5.4</span> Submission-readiness: stacking the verification lenses</a></li>
+  </ul></li>
+  <li><a href="#sec-domain-reviewer" id="toc-sec-domain-reviewer" class="nav-link" data-scroll-target="#sec-domain-reviewer"><span class="header-section-number">3.6</span> Creating Your Own Domain Reviewer</a>
+  <ul class="collapse">
+  <li><a href="#the-5-lens-framework" id="toc-the-5-lens-framework" class="nav-link" data-scroll-target="#the-5-lens-framework"><span class="header-section-number">3.6.1</span> The 5-Lens Framework</a></li>
   </ul></li>
   </ul></li>
   <li><a href="#sec-blocks" id="toc-sec-blocks" class="nav-link" data-scroll-target="#sec-blocks"><span class="header-section-number">4</span> The Building Blocks</a>
@@ -2757,7 +2763,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 60 skills, and 33 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
+<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 60 skills, and 35 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled">
@@ -2770,7 +2776,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>This guide describes the full system — 18 agents, 60 skills, 33 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
+<p>This guide describes the full system — 18 agents, 60 skills, 35 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
 </div>
 </div>
 <hr>
@@ -3288,8 +3294,109 @@ APPROVED   NEEDS WORK
 </div>
 </div>
 </section>
-<section id="submission-readiness-stacking-the-verification-lenses" class="level3" data-number="3.4.3">
-<h3 data-number="3.4.3" class="anchored" data-anchor-id="submission-readiness-stacking-the-verification-lenses"><span class="header-section-number">3.4.3</span> Submission-readiness: stacking the verification lenses</h3>
+</section>
+<section id="sec-vaccinate" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="sec-vaccinate"><span class="header-section-number">3.5</span> When the AI checks the math, what checks the AI?</h2>
+<p>The problem at the top of this guide was <em>“no one checks the math.”</em> Adding checkers answers it — and immediately raises the sequel. Every check above is itself a piece of software or a model doing a job, and neither announces when it has stopped working.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Twenty planted bugs, and a clean bill of health
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Twenty bugs were deliberately planted in a working codebase, and the review agents were asked to check it again. <strong>They reported everything was fine.</strong> Recall: 0 out of 20.</p>
+<p>Nothing in the output distinguished that from a genuinely clean run. The reviewers were confident, fluent, and completely wrong — and there was no way to tell from reading the report.</p>
+</div>
+</div>
+<p>Think of it as a <strong>vaccine</strong>: a small, controlled dose of error that strengthens the whole system. The rule that follows is the one this template treats as non-negotiable:</p>
+<blockquote class="blockquote">
+<p><strong>An unqualified check is not weak evidence. It is none.</strong></p>
+</blockquote>
+<p>“It passed” is compatible with: the check never ran; it ran on a stale copy; it silently skipped what it could not reconcile; its tolerance was widened after the comparison; or it simply cannot detect the failure it was written for. <em>The number of checks is not a measure of rigour.</em></p>
+<section id="qualifying-a-check-takes-about-ten-minutes" class="level3" data-number="3.5.1">
+<h3 data-number="3.5.1" class="anchored" data-anchor-id="qualifying-a-check-takes-about-ten-minutes"><span class="header-section-number">3.5.1</span> Qualifying a check takes about ten minutes</h3>
+<p><a href="#all-skills"><code>/vaccinate</code></a> does it as a protocol:</p>
+<ol type="1">
+<li><strong>Name the failure.</strong> “Catches problems” is not a class. “Detects a coefficient in the text that no longer matches its table” is.</li>
+<li><strong>Seed it</strong> into a copy — plus <strong>at least one clean control</strong>.</li>
+<li><strong>Run the checker blind</strong>, one variant per run, in a fresh context.</li>
+<li><strong>Score</strong> recall <em>and</em> false-positive rate. A finding on the clean control counts against the checker only when it is <em>factually wrong</em>, not merely unwelcome.</li>
+<li><strong>Compare against a simpler baseline.</strong> A five-agent panel that scores no better than <code>grep -n</code> has not earned its cost.</li>
+<li><strong>Write a ledger row.</strong> A checker with no row in <code>quality_reports/qualification/LEDGER.md</code> is unqualified, and its green light means nothing.</li>
+</ol>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>This is not hypothetical — it caught a live bug in this repo
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>While building v2.5 we ran the repo’s own consistency gates against a seeded defect: the sentence <code>This template has NN skills.</code> — with a count that did not match disk — was added to <code>README.md</code>.</p>
+<p><strong>All six gates stayed green.</strong> The count patterns are deliberately compound — they require several categories on one line — so that they do not fire on ordinary prose like “start with 2–3 skills”. A count carrying only a template verb fell straight through the gap.</p>
+<p>The gate had been <strong>green and wrong</strong>, and only a seeded defect could tell the difference. It was fixed and then re-qualified <em>in both directions</em>: 3 of 3 seeded drifts caught, 0 of 3 false alarms on legitimate prose.</p>
+</div>
+</div>
+</section>
+<section id="the-five-credibility-questions" class="level3" data-number="3.5.2">
+<h3 data-number="3.5.2" class="anchored" data-anchor-id="the-five-credibility-questions"><span class="header-section-number">3.5.2</span> The five credibility questions</h3>
+<p>The most common way AI-assisted empirical work goes wrong is not a wrong number. It is evidence for one question being read as evidence for another.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Question</th>
+<th>Answered by</th>
+<th>Does <strong>not</strong> establish</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Reproducibility</strong> — does the code run and produce the reported numbers?</td>
+<td><a href="#all-skills"><code>/audit-reproducibility</code></a>, the passport</td>
+<td>that the estimator is right</td>
+</tr>
+<tr class="even">
+<td><strong>Implementation fidelity</strong> — does the code implement the estimator it claims?</td>
+<td><a href="#all-skills"><code>/differential-audit</code></a> against a pinned reference</td>
+<td>that the estimator performs well</td>
+</tr>
+<tr class="odd">
+<td><strong>Statistical performance</strong> — does it behave in finite samples?</td>
+<td><a href="#all-skills"><code>/simulation-study</code></a>, coverage against truth</td>
+<td>that the measure is valid</td>
+</tr>
+<tr class="even">
+<td><strong>Measurement validity</strong> — does the variable capture the construct?</td>
+<td>domain review, data documentation</td>
+<td>that the causal claim holds</td>
+</tr>
+<tr class="odd">
+<td><strong>Identification</strong> — is the causal claim warranted?</td>
+<td>design, <a href="#all-skills"><code>/challenge</code></a>, falsification</td>
+<td>anything about the code</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Evidence for one never clears another.</strong> A green reproducibility check tells you the arithmetic is faithful to the script. It says nothing about whether the script identifies anything. When an agent reports “all checks pass”, it is almost always speaking about rung one and being heard about rung five.</p>
+</section>
+<section id="and-review-does-not-substitute-for-robustness" class="level3" data-number="3.5.3">
+<h3 data-number="3.5.3" class="anchored" data-anchor-id="and-review-does-not-substitute-for-robustness"><span class="header-section-number">3.5.3</span> And review does not substitute for robustness</h3>
+<p>In a controlled study, 150 autonomous agents were given the same data and the same questions. Effect-size interquartile ranges reached about <strong>10.7 %/yr</strong>, and the spread concentrated in <strong>discrete measure-choice forks</strong> — dollar versus share volume, trade-level versus Amihud — not in estimation noise. Within a measure family, agents agreed to about 0.25 %/yr.</p>
+<p>Two results from that study are load-bearing for how this template is designed:</p>
+<ul>
+<li><strong>AI peer review left the spread essentially unchanged.</strong> Review catches errors. It does not reduce analytical-choice variance. A clean referee report is not robustness.</li>
+<li>Exposure to exemplar papers collapsed the spread by 80–99 % — <strong>convergence by imitation, not by correctness.</strong> Herding is not agreement.</li>
+</ul>
+<p>That is why <a href="#all-skills"><code>/challenge</code></a> exists and why it is a separate rung: the spread has to be <em>measured</em>, not reviewed away.</p>
+</section>
+<section id="submission-readiness-stacking-the-verification-lenses" class="level3" data-number="3.5.4">
+<h3 data-number="3.5.4" class="anchored" data-anchor-id="submission-readiness-stacking-the-verification-lenses"><span class="header-section-number">3.5.4</span> Submission-readiness: stacking the verification lenses</h3>
 <p>For a paper headed to a journal, three orthogonal lenses run together — each catches a different class of failure:</p>
 <table class="caption-top table">
 <thead>
@@ -3331,11 +3438,11 @@ APPROVED   NEEDS WORK
 <p><strong><code>/humanize</code> design choice</strong>: detect-only, no <code>--rewrite</code> mode. Auto-rewriting AI tells degrades prose quality (cross-vendor research finding) and introduces new tells. The author reads the report and edits — that manual step is the price of preserving voice. If the report flags 8+ HIGH-severity tells per 1000 words, rewrite the affected paragraph from scratch rather than patching tell-by-tell.</p>
 </section>
 </section>
-<section id="sec-domain-reviewer" class="level2" data-number="3.5">
-<h2 data-number="3.5" class="anchored" data-anchor-id="sec-domain-reviewer"><span class="header-section-number">3.5</span> Creating Your Own Domain Reviewer</h2>
+<section id="sec-domain-reviewer" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="sec-domain-reviewer"><span class="header-section-number">3.6</span> Creating Your Own Domain Reviewer</h2>
 <p>The template includes <code>domain-reviewer.md</code> — a skeleton for building a substance reviewer specific to your field. For example, in Econ 730, the domain reviewer caught that a slide claimed “<span class="math inline">\(\hat{\beta}\)</span> is consistent under parallel trends” while the cited paper (Callaway and Sant’Anna, 2021) actually requires a <em>conditional</em> parallel trends assumption — a subtle but critical distinction that no grammar or layout checker would flag.</p>
-<section id="the-5-lens-framework" class="level3" data-number="3.5.1">
-<h3 data-number="3.5.1" class="anchored" data-anchor-id="the-5-lens-framework"><span class="header-section-number">3.5.1</span> The 5-Lens Framework</h3>
+<section id="the-5-lens-framework" class="level3" data-number="3.6.1">
+<h3 data-number="3.6.1" class="anchored" data-anchor-id="the-5-lens-framework"><span class="header-section-number">3.6.1</span> The 5-Lens Framework</h3>
 <p>Every domain can benefit from these five review lenses:</p>
 <table class="caption-top table">
 <colgroup>
@@ -4653,7 +4760,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <p><strong>During implementation</strong> — append to the log as you work. Every time a design decision is made, a problem is discovered, or the approach deviates from the plan, write a 1-3 line entry immediately. This is the most important behavior: context gets compressed as the session progresses, and decisions that live only in the conversation will be lost.</p>
 <p><strong>At session end</strong> — add a final section with what was accomplished, open questions, and unresolved issues.</p>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-26-contents" aria-controls="callout-26" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -4662,7 +4769,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-26" class="callout-26-contents callout-collapse collapse">
+<div id="callout-28" class="callout-28-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p><strong>Git records what; session logs record why.</strong> A commit message says “Update Lecture 5 TikZ diagrams.” A session log says “Redesigned the TWFE decomposition diagram because the DA challenge revealed students couldn’t trace the path from weights to bias. Considered a table format but chose a flow diagram because it shows directionality.”</p>
 <p><strong>Incremental logging is the key.</strong> A 4-hour session that only logs at the start and end loses everything in the middle. Appending decisions as they happen means auto-compression can never erase them — they are already on disk.</p>
@@ -4671,7 +4778,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </div>
 <p>Claude writes all three log entries automatically — no need to ask.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-27-contents" aria-controls="callout-27" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-29-contents" aria-controls="callout-29" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -4680,7 +4787,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-27" class="callout-27-contents callout-collapse collapse">
+<div id="callout-29" class="callout-29-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>For multi-project academics, start each week by asking Claude to read all session logs from the past week and synthesize a status report with priorities and open questions. The session log infrastructure already captures what you need — the weekly review is just a synthesis prompt: <em>“Read all session logs from this week. Summarize: what was accomplished, what’s blocked, what should I prioritize next?”</em></p>
 </div>
@@ -4794,7 +4901,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </ul>
 <p>The difference: when you invoke a skill directly, it runs its specific workflow. The orchestrator runtime lives <em>inside</em> each skill — there is no repo-wide orchestrator that activates on its own or chains skills together. A skill is always user- or skill-initiated; nothing fires the runtime unattended.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-30-contents" aria-controls="callout-30" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -4803,7 +4910,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-28" class="callout-28-contents callout-collapse collapse">
+<div id="callout-30" class="callout-30-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p><strong>Natural-language task</strong> → Claude picks a skill: “Translate Lecture 5 to Quarto” → Claude invokes <code>/translate-to-quarto</code>, and that skill runs the orchestrator pattern (translate → verify → review → fix → score) internally.</p>
 <p><strong>Explicit skill call:</strong> <code>/qa-quarto Lecture5</code> — you specifically want the adversarial critic-fixer loop, nothing else.</p>
@@ -5051,7 +5158,7 @@ Phase 4: QUALITY GATE
 <li>Cognitive load issues</li>
 </ul>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-32-contents" aria-controls="callout-32" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-34-contents" aria-controls="callout-34" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -5060,7 +5167,7 @@ Phase 4: QUALITY GATE
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-32" class="callout-32-contents callout-collapse collapse">
+<div id="callout-34" class="callout-34-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>A stronger variant: when Claude reviews its own work in the same conversation, it suffers <strong>confirmation bias</strong> — it has internalized its own reasoning and will systematically find the work acceptable. The fix: spawn a new agent via the Task tool with NO access to the original conversation. Give it only the artifact and a critique prompt. The fresh agent has no sunk cost in the work and will be ruthless.</p>
 <blockquote class="blockquote">
@@ -5358,7 +5465,7 @@ Decision point (1-2 hours):
                            work backwards)</code></pre>
 <p><strong>Enter mid-pipeline.</strong> You do not have to start from ideation. If you already have data, start with <code>/data-analysis</code> and work backwards to the research question. If you already have a draft, start with <code>/review-paper</code>. The skills are modular — use what you need, skip what you don’t.</p>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-35-contents" aria-controls="callout-35" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-37-contents" aria-controls="callout-37" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -5367,7 +5474,7 @@ Decision point (1-2 hours):
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-35" class="callout-35-contents callout-collapse collapse">
+<div id="callout-37" class="callout-37-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>For a production-grade paper pipeline, a dedicated fork takes these same skills and wraps them in full research infrastructure: 6 worker-critic agent pairs plus specialized agents (data-engineer, referees, verifier), simulated blind peer review, weighted aggregate scoring, journal targeting, and R&amp;R response routing. If your primary output is research papers, see <a href="#sec-ecosystem">The Ecosystem</a> for details.</p>
 </div>
@@ -5594,7 +5701,7 @@ Decision point (1-2 hours):
 <section id="pre-submission-checklist" class="level4" data-number="5.10.1.2">
 <h4 data-number="5.10.1.2" class="anchored" data-anchor-id="pre-submission-checklist"><span class="header-section-number">5.10.1.2</span> Pre-Submission Checklist</h4>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-38-contents" aria-controls="callout-38" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-40-contents" aria-controls="callout-40" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -5603,7 +5710,7 @@ Decision point (1-2 hours):
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-38" class="callout-38-contents callout-collapse collapse">
+<div id="callout-40" class="callout-40-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p><strong>Documentation:</strong></p>
 <ul class="task-list">
@@ -5652,7 +5759,7 @@ Decision point (1-2 hours):
 └── results/                # Output tables, figures</code></pre>
 <p>These standards load automatically via the path-scoped rule mechanism: when Claude edits files matching <code>replication-protocol.md</code>’s path globs, the rule is injected into context without any manual invocation. Ask Claude to <em>“prepare a replication package”</em> and the rule’s directory structure and checklist above guide the work from the first file touched.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-39-contents" aria-controls="callout-39" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-41-contents" aria-controls="callout-41" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -5661,7 +5768,7 @@ Decision point (1-2 hours):
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-39" class="callout-39-contents callout-collapse collapse">
+<div id="callout-41" class="callout-41-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>A key principle that maps directly to this workflow: <strong>separate scientific reasoning from computational execution.</strong> Humans design diagnostic templates (what to measure); AI handles execution (how to run it).</p>
 <p>This is the template-executor architecture — and you are already using it:</p>
@@ -5757,7 +5864,7 @@ Decision point (1-2 hours):
 <h4 data-number="5.10.2.4" class="anchored" data-anchor-id="how-existing-agents-support-this"><span class="header-section-number">5.10.2.4</span> How Existing Agents Support This</h4>
 <p>The <code>/slide-excellence</code> skill already invokes the pedagogy-reviewer and slide-auditor, which enforce many of these principles automatically. To enforce <em>all</em> of them — including title-as-assertion and MB/MC smoothness — customize the <strong>domain-reviewer</strong> agent (<code>.claude/agents/domain-reviewer.md</code>) with rhetoric-of-decks lenses. The orchestrator will then apply them during every review cycle without manual invocation.</p>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-40-contents" aria-controls="callout-40" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-42-contents" aria-controls="callout-42" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -5766,7 +5873,7 @@ Decision point (1-2 hours):
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-40" class="callout-40-contents callout-collapse collapse">
+<div id="callout-42" class="callout-42-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>For the complete philosophical treatment — from Aristotle’s three modes of persuasion through neuroaesthetics and the Netflix analogy — see <a href="https://github.com/scunning1975/MixtapeTools/tree/main/presentations">The Rhetoric of Decks</a>. The repository includes a full essay, example Beamer decks with professional color palettes, a <code>theme_rhetoric()</code> ggplot2 theme, and a tested deck generation prompt for Claude Code.</p>
 </div>
@@ -6588,11 +6695,11 @@ research-spec.md  ─────────────→  preregistration-dr
 <li><strong>Verify everything.</strong> The verification rule exists for a reason. Never skip compilation or rendering checks.</li>
 <li><strong>Session logs matter.</strong> Document design decisions, not just what changed. Future-you will thank present-you.</li>
 <li><strong>Devil’s Advocate early.</strong> Challenge slide structure before you’ve built 50 slides on a shaky foundation.</li>
-<li><strong>Progressive disclosure.</strong> Start with CLAUDE.md + 2–3 rules. Add more as your workflow matures. Newcomers should not face all 33 rules on day one.</li>
+<li><strong>Progressive disclosure.</strong> Start with CLAUDE.md + 2–3 rules. Add more as your workflow matures. Newcomers should not face all 35 rules on day one.</li>
 <li><strong>Use <code>CLAUDE.local.md</code> for personal overrides.</strong> This file is automatically gitignored and loaded alongside <code>CLAUDE.md</code>. Put machine-specific paths, personal preferences, and local tool versions here — they won’t pollute the shared repo.</li>
 </ol>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-47-contents" aria-controls="callout-47" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-49-contents" aria-controls="callout-49" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -6601,7 +6708,7 @@ research-spec.md  ─────────────→  preregistration-dr
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-47" class="callout-47-contents callout-collapse collapse">
+<div id="callout-49" class="callout-49-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>For capabilities beyond file editing and shell commands — web search during literature review, database queries for replication, or reference manager integration (Zotero, Mendeley) — Claude Code supports <a href="https://modelcontextprotocol.io">MCP servers</a>. Configure them in <code>.claude/settings.json</code> under <code>&quot;mcpServers&quot;</code>. Start with skills and agents first; add MCP when you need external integrations.</p>
 <section id="extending-with-plugins" class="level2" data-number="7.6">
