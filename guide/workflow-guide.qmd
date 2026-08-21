@@ -544,6 +544,31 @@ It was fixed and then re-qualified *in both directions*: 3 of 3 seeded drifts ca
 false alarms on legitimate prose.
 :::
 
+### Where the verification discipline is written down
+
+Three references carry it, loaded on demand rather than living in every session's context:
+
+| Reference | Read when |
+|---|---|
+| [`verification-ladder.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/verification-ladder.md) | you want the seven rungs end to end — qualify the checker, deterministic gates, the four-layer artifact ladder, independence, analytic verification, the ledger, the external oracle |
+| [`external-oracle-process.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/external-oracle-process.md) | you are sending a paper or proof to an external frontier model and need the prompt contract, the coverage manifest, and the adjudication protocol |
+| [`provenance-and-ground-truth.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/provenance-and-ground-truth.md) | you are porting, replicating, or upgrading, and "the numbers match" is about to license a claim |
+
+And one command runs the mechanical half of all of it:
+
+```bash
+./scripts/backtest.sh    # seven gates: consistency, currency, links, spec, staleness, hygiene
+```
+
+Findings themselves are machine-checked rather than described: reviewers emit a JSON array
+validated against
+[`finding-schema.json`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/finding-schema.json)
+by `scripts/validate-findings.py`. Every finding must cite the **rule** it violates (a finding
+citing no rule is an opinion) and give a **failing case** — a concrete configuration that breaks
+the claim, not "this could be clearer". Finding ids are deterministic, so deduplication across
+review rounds is exact rather than fuzzy.
+
+
 ### The five credibility questions
 
 The most common way AI-assisted empirical work goes wrong is not a wrong number. It is
