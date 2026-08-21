@@ -241,7 +241,7 @@ What the contract forces, and why:
   opinion, and opinions do not gate a commit.
 - **`failing_case`** — a concrete configuration under which the claim breaks, or the exact
   missing hypothesis. *"This could be clearer"* does not validate.
-- **`id = sha1("<file>:<line>:<locus>:<lens>")`** — deterministic, so dedup across rounds is
+- **`id = sha1("<file>:<line>:<locus>")`** — deterministic, so dedup across rounds is
   exact and the two-strikes rule is checkable rather than eyeballed.
 - **`mechanical`** — `true` only for fixes that cannot change a result (typo, cross-reference,
   formatting, label). **Never** for an estimand, assumption, specification, inference

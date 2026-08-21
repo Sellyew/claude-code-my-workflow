@@ -21,10 +21,21 @@ def strip_code(t):
     return t
 
 def slug(h):
+    """GitHub's heading-anchor algorithm.
+
+    Critically, GitHub does NOT collapse runs of whitespace: it strips
+    punctuation in place and converts EACH remaining space to a hyphen. So
+    "Community & Extensions" -> "community--extensions" (double hyphen), because
+    removing "&" leaves two adjacent spaces.
+
+    Collapsing whitespace here produced a false positive on a correct README
+    link. Caught while fixing a different finding; the check was wrong, not the
+    link. (PR #140.)
+    """
     s = h.strip().lower()
     s = re.sub(r'[`*_\[\]()]', '', s)
-    s = re.sub(r'[^\w\s-]', '', s)
-    return re.sub(r'[\s]+', '-', s).strip('-')
+    s = re.sub(r'[^\w\s-]', '', s)      # strip punctuation IN PLACE
+    return s.replace(' ', '-').strip('-')  # each space -> one hyphen, no collapsing
 
 anchors = {}
 def anchors_for(path):
@@ -47,10 +58,14 @@ for f in SCAN:
     base = os.path.dirname(f)
     for i, line in enumerate(text.split("\n"), 1):
         for target in LINK.findall(line):
-            if target.startswith(("http://", "https://", "mailto:", "#")):
+            if target.startswith(("http://", "https://", "mailto:")):
                 continue
             path, _, anc = target.partition("#")
             if not path:
+                # Same-document anchor: [text](#section). Previously skipped
+                # entirely, so a broken local anchor passed. (Codex review, PR #140.)
+                if anc and f.endswith((".md", ".qmd")) and anc not in anchors_for(f):
+                    bad.append((f, i, target, "same-document anchor not found"))
                 continue
             full = os.path.normpath(os.path.join(base, path))
             if not os.path.exists(full):

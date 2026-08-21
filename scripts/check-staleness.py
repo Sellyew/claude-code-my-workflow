@@ -43,13 +43,35 @@ def main():
                     if allow and re.search(allow, line, re.I): continue
                     hits.append((cid, rel, i, desc, line.strip()[:90]))
 
-    # source vs rendered divergence — a correct source with a stale website is still stale
+    # source vs rendered divergence.
+    #
+    # NOT by mtime: git does not preserve timestamps, so on a fresh clone or a
+    # detached worktree the checkout order decides which file looks newer. That
+    # made this gate fail spuriously for every first-time forker and in CI.
+    # (Codex review, PR #140 — confirmed by reproducing it in a fresh worktree.)
+    #
+    # Instead: compare a fingerprint of the SOURCE against the fingerprint the
+    # last render recorded. Content, not clock.
     render = []
     for src, out in [("guide/workflow-guide.qmd", "guide/workflow-guide.html"),
                      ("guide/workflow-guide.qmd", "docs/workflow-guide.html")]:
-        s, o = os.path.join(ROOT, src), os.path.join(ROOT, out)
-        if os.path.exists(s) and os.path.exists(o) and os.path.getmtime(s) > os.path.getmtime(o):
-            render.append(f"{out} is OLDER than {src} — re-render: cd guide && quarto render workflow-guide.qmd")
+        s_path, o_path = os.path.join(ROOT, src), os.path.join(ROOT, out)
+        if not (os.path.exists(s_path) and os.path.exists(o_path)):
+            continue
+        import hashlib
+        src_hash = hashlib.sha256(open(s_path, "rb").read()).hexdigest()[:16]
+        stamp = os.path.join(ROOT, ".render-stamp")
+        recorded = {}
+        if os.path.exists(stamp):
+            for line in open(stamp):
+                if ":" in line:
+                    k, v = line.strip().split(":", 1)
+                    recorded[k] = v
+        if recorded.get(out) != src_hash:
+            render.append(f"{out} was not rendered from the current {src} "
+                          f"(source {src_hash}, stamp {recorded.get(out, 'none')}) — "
+                          f"re-render: cd guide && quarto render workflow-guide.qmd && "
+                          f"./scripts/stamp-render.sh")
 
     # currency expiry — a verified_on date that has aged out
     expired = []

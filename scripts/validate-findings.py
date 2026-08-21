@@ -5,7 +5,7 @@ Turns the FINDING contract from prose into a gate with an exit code.
 
     echo '[]' | python3 scripts/validate-findings.py            # smoke test
     python3 scripts/validate-findings.py report.json
-    python3 scripts/validate-findings.py --id FILE LINE LOCUS LENS   # compute a finding id
+    python3 scripts/validate-findings.py --id FILE LINE LOCUS        # compute a finding id
 
 Exit: 0 valid, 1 invalid, 2 internal error.
 """
@@ -14,8 +14,10 @@ import json, sys, os, hashlib, re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA = os.path.join(ROOT, ".claude", "references", "finding-schema.json")
 
-def finding_id(file, line, locus, lens):
-    return hashlib.sha1(f"{file}:{line}:{locus}:{lens}".encode()).hexdigest()
+def finding_id(file, line, locus, lens=None):
+    # lens is deliberately NOT in the identity: the same defect found by two
+    # lenses must dedup to one finding. (Codex review, PR #140.)
+    return hashlib.sha1(f"{file}:{line}:{locus}".encode()).hexdigest()
 
 def validate(data, schema):
     errs = []
@@ -45,8 +47,8 @@ def validate(data, schema):
             if "minimum" in spec and isinstance(v, int) and v < spec["minimum"]:
                 errs.append(f"{w}.{k}: below minimum {spec['minimum']}")
         # id must be reproducible from its own coordinates
-        if all(k in f for k in ("id", "file", "line", "locus", "lens")):
-            want = finding_id(f["file"], f["line"], f["locus"], f["lens"])
+        if all(k in f for k in ("id", "file", "line", "locus")):
+            want = finding_id(f["file"], f["line"], f["locus"])
             if f["id"] != want:
                 errs.append(f"{w}.id: {f['id'][:12]}… != sha1(file:line:locus:lens) {want[:12]}…")
         if "id" in f:
@@ -57,9 +59,9 @@ def validate(data, schema):
 def main():
     a = sys.argv[1:]
     if a and a[0] == "--id":
-        if len(a) != 5:
-            print("usage: --id FILE LINE LOCUS LENS", file=sys.stderr); return 2
-        print(finding_id(a[1], a[2], a[3], a[4])); return 0
+        if len(a) not in (4, 5):
+            print("usage: --id FILE LINE LOCUS", file=sys.stderr); return 2
+        print(finding_id(a[1], a[2], a[3])); return 0
     try:
         schema = json.load(open(SCHEMA))
     except Exception as e:

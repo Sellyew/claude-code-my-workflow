@@ -22,6 +22,8 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@v2
       - name: Render guide
         run: quarto render guide/workflow-guide.qmd
+      - name: Stamp render fingerprint
+        run: ./scripts/stamp-render.sh
       - name: Sync to docs/
         run: |
           cp guide/workflow-guide.html docs/workflow-guide.html

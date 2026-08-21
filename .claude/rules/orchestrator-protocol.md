@@ -48,7 +48,7 @@ A synthesizer/editor may freely *downgrade* or *de-duplicate* lens findings, but
 
 ### 4. Loop-until-dry
 
-Replace bespoke "max 5 rounds" stopping logic with **convergence**: stop after **2 consecutive dry rounds** (a round that adds 0 new CRITICAL/MAJOR findings). **Dedup is exact, not fuzzy (v2.5):** every finding carries `id = sha1("<file>:<line>:<locus>:<lens>")`, so the same defect gets the same id in every round, from every lens, in every session. A round is dry when it produces no *new* id. Guards:
+Replace bespoke "max 5 rounds" stopping logic with **convergence**: stop after **2 consecutive dry rounds** (a round that adds 0 new CRITICAL/MAJOR findings). **Dedup is exact, not fuzzy (v2.5):** every finding carries `id = sha1("<file>:<line>:<locus>")`, so the same defect gets the same id in every round, **including when a different lens rediscovers it**. A round is dry when it produces no *new* id. Guards:
 
 - **Fallback cap** — `RUN_CONFIG.max_rounds` (default 5) bounds a non-converging loop.
 - **Two-strikes** — the *same* finding (**same `id`** — now mechanically checkable rather than eyeballed) surviving rounds N and N+2 is escalated to the user, not patched a third time ([`summary-parity.md`](summary-parity.md)).

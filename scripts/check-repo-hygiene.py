@@ -16,6 +16,10 @@ ROOT_ALLOW = {
     "README.md", "CLAUDE.md", "MEMORY.md", "CHANGELOG.md", "TROUBLESHOOTING.md",
     "LICENSE", "CITATION.cff", ".gitignore", ".gitattributes",
     "Bibliography_base.bib", ".DS_Store",
+    # Records which source produced the current rendered artifacts. Must live at
+    # the root because it is repo-wide and read by check-staleness.py; git does not
+    # preserve mtimes, so content fingerprints are the only portable answer.
+    ".render-stamp",
 }
 ROOT_ALLOW_DIRS = {
     ".claude", ".git", ".github", ".githooks", ".vscode", "Figures", "Preambles",

@@ -115,6 +115,24 @@ The schema above stopped being prose. It is now
 [`finding-schema.json`](finding-schema.json), enforced by
 [`scripts/validate-findings.py`](../../scripts/validate-findings.py) with an exit code.
 
+### Reconciling this with the prose schema above (Codex review, PR #140)
+
+§1's YAML sketch and this JSON schema are **two serializations of one contract**, and they were
+inconsistent when §7 was added. The JSON schema is now **authoritative**; §1 remains as the
+human-readable sketch. The mapping:
+
+| §1 prose field | Schema field | Note |
+|---|---|---|
+| `location` | `file` + `line` + `locus` | split, so dedup can be exact |
+| `finding` | `claim` | one sentence, unchanged in meaning |
+| `recommendation` | `suggested_fix` | renamed only |
+| `severity: CRITICAL \| MAJOR \| MINOR` | `severity: blocker \| major \| minor \| nit` | **`CRITICAL` maps to `blocker`**; `nit` is new |
+| — | `rule`, `evidence`, `failing_case`, `mechanical`, `confidence` | new required fields |
+| `findings:` wrapper | **bare array** | reports are arrays |
+
+The gate predicate is unchanged in meaning: **`blocker` > 0 → BLOCK**, `major` > 0 → REVISE,
+else PASS. Where older text says `CRITICAL`, read `blocker`.
+
 **Reports are ARRAYS of finding objects** — not `{"findings": [...]}` wrappers.
 
 ```bash
@@ -126,7 +144,7 @@ python3 scripts/validate-findings.py --id paper.tex 42 thm:main identification
 ### Deterministic finding ids — how dedup stops being fuzzy
 
 ```
-id = sha1("<file>:<line>:<locus>:<lens>")
+id = sha1("<file>:<line>:<locus>")
 ```
 
 The same defect gets the same id in every round, from every lens, in every session. That makes
