@@ -83,3 +83,20 @@ or restricted data.
 
 Cloud routines include **all connectors with write access by default**. Grant per task, not
 per account.
+
+## Push on failure, silence on success
+
+**A nightly job that reports "all good" every day trains you to ignore it.** By the time it
+reports something real, it has been noise for a month and you skim past it.
+
+Scheduled checks notify **only when a human is needed**:
+
+- **Failure** → push a notification with the failing gate, the artifact path, and the command
+  to reproduce.
+- **Success** → write the log, say nothing.
+- **Did not run** → this is a **failure**, not silence. A check that could not run is not a
+  passing check, and a scheduler that dies quietly is indistinguishable from one reporting
+  clean. Alert on a missing heartbeat as loudly as on a red gate.
+
+The same principle as monitor filters covering every terminal state: a filter matching only the
+success line is silent through a crash, and **silence looks identical to "still running."**

@@ -27,6 +27,10 @@ Cross-session context lives in [MEMORY.md](MEMORY.md); past plans, specs, and se
 - [`external-oracle-process.md`](.claude/references/external-oracle-process.md) — running an independent frontier-model referee (Claude Code → GPT-5.6 Sol Pro) and adjudicating what it returns.
 - [`provenance-and-ground-truth.md`](.claude/references/provenance-and-ground-truth.md) — naming and pinning your oracles, classifying divergence, and the clean-room boundary.
 
+**How we write** — [`writing-with-ai.md`](.claude/rules/writing-with-ai.md): internal vs external-facing documents, why a model cannot make its own output stop reading as model output, and the human-readable standard for anything with your name on it.
+
+**The laws** — [`research-agent-laws.md`](.claude/references/research-agent-laws.md): 17 laws for running agents on research infrastructure, each paid for by a real incident.
+
 **How we remember** — the record lives in the repo, not the transcript:
 
 - [`progress-reports.md`](.claude/rules/progress-reports.md) — GitHub issues as defect memory, `quality_reports/` as work memory, `MEMORY.md` as lesson memory.

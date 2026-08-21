@@ -189,7 +189,7 @@ This workflow is designed as a **single hub for an entire research program** —
 ## What's Included
 
 <details>
-<summary><strong>18 agents, 60 skills, 35 rules, 7 hooks</strong> (click to expand)</summary>
+<summary><strong>18 agents, 60 skills, 36 rules, 7 hooks</strong> (click to expand)</summary>
 
 ### Agents (`.claude/agents/`)
 
@@ -326,6 +326,7 @@ Rules use path-scoped loading: **always-on** rules load every session (~100 line
 | `exploration-folder-protocol` | `explorations/` | Structured sandbox for experimental work |
 | `exploration-fast-track` | `explorations/` | Lightweight exploration workflow (60/100 threshold) |
 | `tikz-prevention` (v1.4.x) | `Slides/**`, `Figures/**`, `Preambles/**` | TikZ pre-flight grep checks (P3/P4 collision avoidance) |
+| `writing-with-ai` (v2.5) | `**/*.tex`, `**/*.qmd`, `**/*.md`, `**/*.Rmd` | Internal vs external-facing documents; why a model cannot make its own output stop reading as model output; the human-readable standard |
 | `repo-hygiene` (v2.5) | `**` (all tracked files) | Scratch must not become main — rejects root clutter, draft names, superseded copies, version-in-filename, accidental duplicates, tracked build artifacts, undocumented archives |
 | `progress-reports` (v2.5) | `quality_reports/**`, `.github/**` | GitHub as memory — issues for defect memory, `quality_reports/` for work memory, `MEMORY.md` for lesson memory |
 | `issue-ledger` (v2.5) | `.github/**` | Evidence standard for an issue: denominator, positive/negative control, explicit non-scope, and a seven-section closure comment |

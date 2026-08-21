@@ -157,3 +157,21 @@ local.
 **Retired:** `.claude/state/personal-memory.md`. The two-tier idea was right; Claude Code now
 ships the local tier natively, so the hand-rolled file is redundant. An existing one still
 reads as a plain file, but nothing writes to it.
+
+## The capture gate — before anything is remembered
+
+Promotion decides what becomes *shared* knowledge. This gate decides what is worth recording
+**at all**. Five questions; a candidate must pass all five:
+
+1. **Durable** — will this still be true in six months, or is it about today's branch?
+2. **Non-obvious** — would a competent person rediscover it in five minutes anyway?
+3. **Stable** — does it describe a rule, or a symptom that a fix will erase?
+4. **Specific** — is it actionable, or is it a mood? *"Be careful with merges"* is a mood.
+5. **Not already captured** — does an existing entry cover it? Extend that one instead.
+
+> **Just-in-case memories are banned.** They pollute the index and make the useful entries
+> unfindable. A memory store nobody trusts is a memory store nobody reads.
+
+Promotion from local observation to committed knowledge is a **reviewed act, not an autosave** —
+which is why the five-critic council exists and why the user is the final gate even on a
+unanimous vote.

@@ -203,3 +203,19 @@ If you find yourself reaching for an auto-rewriter, that's the signal to rewrite
 - Report at `quality_reports/humanize_<filename>_report.md` (gitignored).
 - Summary to the conversation: counts per category, top concentrated paragraphs, action recommendation.
 - **No file edits.** The user reads the report and applies changes manually.
+
+## What this skill cannot do (v2.5)
+
+`/humanize` finds **surface tells** — boilerplate transitions, the AI-cliché lexicon, hedging
+stacks, symmetric paragraph shapes. Fixing them improves readability, which is worth doing
+whoever wrote the text.
+
+**It does not make prose stop reading as machine-generated to a detector.** An article polished
+through several rounds of surface de-AI-ing was submitted to Pangram, a neural AI-text
+detector, and came back **100% AI-written**. Those detectors classify on the token-level
+statistics of LLM generation, which survive any transformation the model applies — because
+every transformation is still LLM-generated text.
+
+So: **a clean report here means the prose reads well. It does not mean it reads human.** If
+provenance matters, the author writes the load-bearing sentences and measures with a real
+detector. See [`writing-with-ai.md`](../../rules/writing-with-ai.md).

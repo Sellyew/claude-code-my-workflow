@@ -106,3 +106,43 @@ Define against **the truth**, never against another estimate:
 - [`../agents/sim-reviewer.md`](../agents/sim-reviewer.md) — the agent that enforces this rule.
 - [`../agents/r-reviewer.md`](../agents/r-reviewer.md) — Cat 9 (error handling) + Cat 11 (numerical discipline).
 - [`replication-protocol.md`](replication-protocol.md) — replicate-then-extend tolerance contract (applies when a simulation reproduces a published table).
+
+## Parallelism must be provably run-shape-independent
+
+**Seed by task, not by worker.** Pre-generate **one RNG stream per replication** (L'Ecuyer
+`"L'Ecuyer-CMRG"`), so replication *k* draws the same numbers no matter which core runs it or
+how many cores exist.
+
+Worker-based seeding — `mc.set.seed`, `clusterSetRNGStream`, or "set the seed inside the
+worker" — **silently binds your results to the execution shape**. The same script on a laptop
+and a cluster then produces different numbers, and nothing warns you. That is a
+reproducibility failure a replicator will find and you will not.
+
+```r
+# Correct: one stream per replication, independent of core count
+RNGkind("L'Ecuyer-CMRG")
+set.seed(20260821)
+streams <- vector("list", n_reps)
+s <- .Random.seed
+for (k in seq_len(n_reps)) { streams[[k]] <- s; s <- parallel::nextRNGStream(s) }
+
+run_one <- function(k) { .Random.seed <<- streams[[k]]; simulate_once() }
+results <- parallel::mclapply(seq_len(n_reps), run_one, mc.cores = n_cores)
+```
+
+**Prove it before trusting a campaign.** Run the first N replications at two core counts and
+assert bit-identity:
+
+```r
+a <- run_campaign(n_reps = 20, n_cores = 2)
+b <- run_campaign(n_reps = 20, n_cores = 4)
+stopifnot(identical(a, b))   # fails loudly if results depend on run shape
+```
+
+This is a **positive control for your own harness** — the two-core/four-core check is cheap,
+runs in seconds, and is the only thing that distinguishes "seeded correctly" from "seeded in a
+way that happens to look fine on this machine." Record it in the qualification ledger.
+
+Stata: set `seed` per replication inside the loop from a pre-generated list, not once before a
+`parallel` block. Python: use `numpy.random.SeedSequence(...).spawn(n_reps)` — one child per
+replication, never one per worker.
