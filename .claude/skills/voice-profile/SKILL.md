@@ -84,6 +84,8 @@ before it writes, not after.
 
 ## Auditing a draft
 
+Pass **`--audit <file>`** to compare an existing draft against the profile instead of building one:
+
 ```
 /voice-profile --audit main.tex
 ```
