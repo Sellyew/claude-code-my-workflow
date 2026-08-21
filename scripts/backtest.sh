@@ -11,6 +11,8 @@
 #   5. spec-conformance    every skill obeys the Agent Skills spec
 #   6. staleness           stale recommendations, source/render divergence, expired currency
 #   7. repo-hygiene       no scratch-as-main, no root clutter, archives documented
+#   8. derived-counts     enumerable claims (journals, patterns, phases, snippets)
+#                         verified against their own source of truth
 #   +  findings-validator  smoke test, so a review run cannot fail at the last step
 #
 # Every gate runs to completion even if an earlier one fails — you get the whole
@@ -44,6 +46,7 @@ run "links"              python3 "$DIR/check-links.py"
 run "spec-conformance"   python3 "$DIR/check-spec-conformance.py"
 run "staleness"          python3 "$DIR/check-staleness.py"
 run "repo-hygiene"       python3 "$DIR/check-repo-hygiene.py"
+run "derived-counts"     python3 "$DIR/check-derived-counts.py"
 
 echo ""
 echo "── findings-validator smoke test ──"

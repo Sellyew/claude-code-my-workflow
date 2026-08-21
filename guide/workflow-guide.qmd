@@ -557,7 +557,7 @@ Three references carry it, loaded on demand rather than living in every session'
 And one command runs the mechanical half of all of it:
 
 ```bash
-./scripts/backtest.sh    # seven gates: consistency, currency, links, spec, staleness, hygiene
+./scripts/backtest.sh    # eight gates: consistency, currency, links, spec, staleness, hygiene, derived counts
 ```
 
 Findings themselves are machine-checked rather than described: reviewers emit a JSON array
