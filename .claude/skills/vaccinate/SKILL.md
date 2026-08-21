@@ -118,6 +118,7 @@ Verdicts: **PASS** (detects its named class at an agreed threshold) · **FAIL** 
 | File | Read when |
 |---|---|
 | `references/defect-library.md` | choosing what to seed — defect classes by artifact type |
+| `evals/README.md` | the complementary question: does the *skill* produce better output than not having it? |
 
 
 ---
