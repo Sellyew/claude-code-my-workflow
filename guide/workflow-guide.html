@@ -3157,7 +3157,7 @@ APPROVED   NEEDS WORK
 <section id="the-orchestrator-a-runtime-not-a-daemon" class="level2" data-number="3.3">
 <h2 data-number="3.3" class="anchored" data-anchor-id="the-orchestrator-a-runtime-not-a-daemon"><span class="header-section-number">3.3</span> The Orchestrator: A Runtime, Not a Daemon</h2>
 <p>Individual agents are specialists. Skills like <code>/slide-excellence</code> and <code>/qa-quarto</code> coordinate a few agents for specific tasks. In day-to-day work, you don’t have to think about which agents to run — the right skill runs the right agents for you.</p>
-<p>The <strong>orchestrator protocol</strong> (<code>.claude/rules/orchestrator-protocol.md</code>) is a <strong>real runtime</strong>, built on the <code>Task</code> subagent primitive every Claude Code session has: skills fan out to forked reviewers, reduce their typed findings through a deterministic gate, judge with a post-judge hallucination guard, and loop until dry. What is <strong>not</strong> automatic is the <em>trigger</em>: nothing launches this loop on its own, and there is no background daemon — plan approval does NOT auto-trigger it. You invoke a skill (e.g., <code>/create-lecture</code>, <code>/qa-quarto</code>, <code>/review-paper --adversarial</code>) and the skill runs the runtime within its own scope. The human is the auditor of the disagreements the loop surfaces; this is explicitly not an autonomous daemon.</p>
+<p>The <strong>orchestrator protocol</strong> (<code>.claude/rules/orchestrator-protocol.md</code>) is a <strong>real runtime</strong>, built on the <code>Agent</code> subagent primitive every Claude Code session has: skills fan out to forked reviewers, reduce their typed findings through a deterministic gate, judge with a post-judge hallucination guard, and loop until dry. What is <strong>not</strong> automatic is the <em>trigger</em>: nothing launches this loop on its own, and there is no background daemon — plan approval does NOT auto-trigger it. You invoke a skill (e.g., <code>/create-lecture</code>, <code>/qa-quarto</code>, <code>/review-paper --adversarial</code>) and the skill runs the runtime within its own scope. The human is the auditor of the disagreements the loop surfaces; this is explicitly not an autonomous daemon.</p>
 <p>What’s mechanically implemented today: <code>/commit</code> (verifier + quality_score), <code>/qa-quarto</code> (critic-fixer loop), <code>/review-paper --adversarial</code> (critic-fixer loop), <code>/slide-excellence</code> (multi-agent fanout), <code>/review-paper --peer</code> (editor + 2 referees + cross-artifact). See <a href="#pattern-2-contractor-mode-orchestrator">Pattern 2</a> for the complete workflow.</p>
 </section>
 <section id="sec-quality" class="level2" data-number="3.4">
@@ -3942,7 +3942,7 @@ APPROVED   NEEDS WORK
 <tr class="odd">
 <td><strong>Auto</strong></td>
 <td><code>auto</code></td>
-<td>Classifier-gated; everything runs unless flagged risky. On Team / Enterprise / API and rolling out to Max; needs Opus 4.6+ or Sonnet 4.6 (Mar 2026 Week 13; <code>--enable-auto-mode</code> flag retired Apr 2026 Week 16)</td>
+<td>Classifier-gated; everything runs unless flagged risky. <strong>Since 2026-08-14 this is the default starting mode</strong> for new interactive terminal and VS Code sessions on Pro, Max, and Team, and it needs no opt-in flag on Bedrock, Google Cloud’s Agent Platform, or Microsoft Foundry</td>
 <td>Long autonomous tasks with safety net — the recommended mode for trusted repos when bypass is too permissive</td>
 </tr>
 <tr class="even">

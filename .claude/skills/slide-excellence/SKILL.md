@@ -216,3 +216,39 @@ cost-conscious reviews, run individual subagent skills directly
 The previous version of this orchestrator spawned **all 6** subagents regardless of file type. Running `tikz-reviewer` on a TikZ-free deck produced an empty report (wasted tokens). Running `quarto-critic` without a counterpart file produced a "no pair to compare" report (wasted tokens). And running `domain-reviewer` without customization produced generic "are assumptions stated?" feedback that authors learned to ignore (eroded trust in the whole orchestrator).
 
 Conditional dispatch cuts token cost roughly in half on typical `.qmd`-only files and doubles trust by never running a reviewer that can't produce useful output.
+
+## Findings are validated, not just written (v2.5)
+
+This skill's reviewers emit findings under the machine-checked contract in
+[`finding-schema.json`](../../references/finding-schema.json). Reports are JSON **arrays**.
+
+**Smoke-test the harness before spending review effort** — a run that fans out reviewers and
+then cannot write a valid report has wasted the whole pass:
+
+```bash
+echo '[]' | python3 scripts/validate-findings.py
+```
+
+Then, before presenting any summary:
+
+```bash
+python3 scripts/validate-findings.py <report>.json   # exit 0 required
+```
+
+What the contract forces, and why:
+
+- **`rule`** — the documented rule or standard violated. A finding citing no rule is an
+  opinion, and opinions do not gate a commit.
+- **`failing_case`** — a concrete configuration under which the claim breaks, or the exact
+  missing hypothesis. *"This could be clearer"* does not validate.
+- **`id = sha1("<file>:<line>:<locus>:<lens>")`** — deterministic, so dedup across rounds is
+  exact and the two-strikes rule is checkable rather than eyeballed.
+- **`mechanical`** — `true` only for fixes that cannot change a result (typo, cross-reference,
+  formatting, label). **Never** for an estimand, assumption, specification, inference
+  procedure, sample definition, or reporting language: those return to the researcher.
+
+Apply the **per-lens evidence burdens** and the **"does NOT count" filters** in
+[`orchestration-schemas.md` §7](../../references/orchestration-schemas.md) *before*
+verification, so known false alarms never reach the judge. The verifier pass is
+**refute-biased**: only `verdict: "confirmed"` findings ship; anything it cannot ground is
+dropped, not downgraded to a warning.

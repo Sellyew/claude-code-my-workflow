@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   surface-sync:
-    name: surface-sync + skill-integrity + model-versions
+    name: backtest (surface-sync + integrity + model-versions + links + spec + staleness)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,4 +24,4 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run gate suite
-        run: ./scripts/check-surface-sync.sh
+        run: ./scripts/backtest.sh

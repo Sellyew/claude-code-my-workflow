@@ -51,8 +51,8 @@ fi
 
 FAIL=0
 
-echo "── pre-commit: surface-sync gates ──"
-./scripts/check-surface-sync.sh
+echo "── pre-commit: backtest (6 consistency + currency gates) ──"
+./scripts/backtest.sh
 [ $? -ne 0 ] && FAIL=1
 
 if [ "${SKIP_QUALITY_GATE:-0}" = "1" ]; then

@@ -436,6 +436,43 @@ The shipped `journal-profiles.md` covers 5 econ journals (AER, QJE, JPE, ECMA, R
 
 For non-econ paper types in `methods-referee.md`, extend the paper-type list (e.g., biology: `observational / experimental / computational / review`).
 
+
+## Findings are validated, not just written (v2.5)
+
+This skill's reviewers emit findings under the machine-checked contract in
+[`finding-schema.json`](../../references/finding-schema.json). Reports are JSON **arrays**.
+
+**Smoke-test the harness before spending review effort** — a run that fans out reviewers and
+then cannot write a valid report has wasted the whole pass:
+
+```bash
+echo '[]' | python3 scripts/validate-findings.py
+```
+
+Then, before presenting any summary:
+
+```bash
+python3 scripts/validate-findings.py <report>.json   # exit 0 required
+```
+
+What the contract forces, and why:
+
+- **`rule`** — the documented rule or standard violated. A finding citing no rule is an
+  opinion, and opinions do not gate a commit.
+- **`failing_case`** — a concrete configuration under which the claim breaks, or the exact
+  missing hypothesis. *"This could be clearer"* does not validate.
+- **`id = sha1("<file>:<line>:<locus>:<lens>")`** — deterministic, so dedup across rounds is
+  exact and the two-strikes rule is checkable rather than eyeballed.
+- **`mechanical`** — `true` only for fixes that cannot change a result (typo, cross-reference,
+  formatting, label). **Never** for an estimand, assumption, specification, inference
+  procedure, sample definition, or reporting language: those return to the researcher.
+
+Apply the **per-lens evidence burdens** and the **"does NOT count" filters** in
+[`orchestration-schemas.md` §7](../../references/orchestration-schemas.md) *before*
+verification, so known false alarms never reach the judge. The verifier pass is
+**refute-biased**: only `verdict: "confirmed"` findings ship; anything it cannot ground is
+dropped, not downgraded to a warning.
+
 ## Cross-references
 
 - [`.claude/skills/audit-reproducibility/SKILL.md`](../audit-reproducibility/SKILL.md) — numeric-claim verification (auto-invoked on referenced scripts).
