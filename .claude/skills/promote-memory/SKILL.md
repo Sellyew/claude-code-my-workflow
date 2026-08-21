@@ -1,11 +1,12 @@
 ---
 name: promote-memory
 description: Review candidate `[LEARN]` entries in `.claude/state/personal-memory.md` (gitignored) and run them through a five-critic council in parallel: generality, staleness, redundancy, evidence, format. Majority vote (3+ of 5) promotes the entry to MEMORY.md. Use when user says "promote memory", "review my learnings", "what should graduate to MEMORY.md", "five-critic council", or as monthly memory maintenance.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[entry-substring or 'all']"
 disable-model-invocation: true
-allowed-tools: ["Read", "Write", "Glob", "Grep", "Task", "Bash"]
+allowed-tools: ["Read", "Write", "Glob", "Grep", "Agent", "Task", "Bash"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 <!-- Pattern adapted with attribution from Chris Blattman's claudeblattman v2.1
@@ -38,7 +39,7 @@ The rule says generic patterns should sync via git; personal patterns stay local
 
 ## The five critics
 
-Each critic runs in a forked context (`Task` with `context=fork`) — they don't see each other's verdicts or the user's draft. Each casts one **YES/NO** vote per candidate entry with a one-sentence rationale.
+Each critic runs in a forked context (`Agent` with `context=fork`) — they don't see each other's verdicts or the user's draft. Each casts one **YES/NO** vote per candidate entry with a one-sentence rationale.
 
 ### 1. Generality critic
 
@@ -58,7 +59,7 @@ Each critic runs in a forked context (`Task` with `context=fork`) — they don't
 
 ### 5. Format critic
 
-> "Does the entry follow the schema in [`.claude/rules/meta-governance.md`](.claude/rules/meta-governance.md): `[LEARN:category] wrong → right` for corrections, structured `**Why:**` + `**How to apply:**` for feedback/project entries? If it's just a free-form note, vote NO — fix the format first, then re-submit."
+> "Does the entry follow the schema in [`.claude/rules/meta-governance.md`](../../rules/meta-governance.md): `[LEARN:category] wrong → right` for corrections, structured `**Why:**` + `**How to apply:**` for feedback/project entries? If it's just a free-form note, vote NO — fix the format first, then re-submit."
 
 ### Council verdict
 
@@ -83,7 +84,7 @@ Five `Task` invocations in parallel, one per critic, each with `context: fork`:
 - **Staleness critic** — context: the candidate entry + the ability to `Read` / `Grep` the codebase. Should explicitly check any file paths / function names / settings the entry references.
 - **Redundancy critic** — context: the candidate entry + the current `MEMORY.md` + `CLAUDE.md` + relevant rule files.
 - **Evidence critic** — context: the candidate entry only. Vote based on whether the entry self-describes its motivation.
-- **Format critic** — context: the candidate entry + [`.claude/rules/meta-governance.md`](.claude/rules/meta-governance.md) for the schema reference.
+- **Format critic** — context: the candidate entry + [`.claude/rules/meta-governance.md`](../../rules/meta-governance.md) for the schema reference.
 
 Use the **Haiku tier** for all five critics (per [`.claude/rules/model-routing.md`](../../rules/model-routing.md): mechanical-ish review work). The user can override via the agent's `model:` field if they want Sonnet for the harder calls.
 
@@ -138,6 +139,6 @@ Do **not** auto-promote — even on 5-of-5 YES votes. The user's approval is the
 ## Cross-references
 
 - [`.claude/rules/meta-governance.md`](../../rules/meta-governance.md) — the two-tier memory contract this skill operationalizes.
-- [`.claude/agents/promote-memory-council.md`](../../agents/promote-memory-council.md) — the five-critic implementation (one agent file with five role specs, dispatched in parallel via `Task`).
+- [`.claude/agents/promote-memory-council.md`](../../agents/promote-memory-council.md) — the five-critic implementation (one agent file with five role specs, dispatched in parallel via the `Agent` tool).
 - [`.claude/rules/model-routing.md`](../../rules/model-routing.md) — why critics default to Haiku tier.
 - `/learn` (existing skill) — captures new `[LEARN]` entries; pairs with `/promote-memory` (which decides what graduates).

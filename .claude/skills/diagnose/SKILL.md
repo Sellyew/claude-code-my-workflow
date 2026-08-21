@@ -2,7 +2,7 @@
 name: diagnose
 description: Root-cause a failing or wrong empirical result with a disciplined reproduce → minimise → hypothesise → instrument → fix loop, instead of guessing-and-poking. Use when the user says "why is my regression wrong", "this number changed", "my script errors out", "the result won't reproduce", "debug this", "this estimate looks wrong", or "it worked yesterday". Tuned for research code (R/Stata/Python): type coercion, NA/merge blow-ups, factor levels, clustering/SE choices, weighting, collinearity/convergence, seeds, package-version drift. Use `--no-fix` to localize the root cause without editing shared or load-bearing files.
 argument-hint: "[file, script, or short description of the symptom] [--no-fix]"
-allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task"]
+allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Agent", "Task"]
 effort: high
 ---
 
@@ -68,7 +68,7 @@ List candidate causes *before* testing any — a written list beats poking becau
 - **Sample** — a filter that runs before vs. after a transform; an outlier rule applied inconsistently.
 - **Environment** — a package/Stata version bump that changed a default; a seed that moved; locale/encoding.
 
-For a genuinely ambiguous bug, fan out the top competing hypotheses to parallel `Task` subagents (one per hypothesis, `context: fork`), each instructed to *try to confirm its own cause on the MWE* and report back — the loop-first analogue of asking three colleagues at once (see [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md)).
+For a genuinely ambiguous bug, fan out the top competing hypotheses to parallel `Agent` subagents (one per hypothesis, `context: fork`), each instructed to *try to confirm its own cause on the MWE* and report back — the loop-first analogue of asking three colleagues at once (see [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md)).
 
 ### Phase 3b — Reduce the hypotheses (so you don't launder a guess)
 

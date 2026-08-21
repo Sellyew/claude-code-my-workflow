@@ -105,3 +105,96 @@ Gather it, echo it back as the **Pre-Flight Report**, and only then spawn the fl
 - [`.claude/references/agent-fleet.md`](agent-fleet.md) — which agent fills which lens, at which model tier.
 - [`.claude/rules/post-flight-verification.md`](../rules/post-flight-verification.md) — the forked-verifier mechanism the §4 gate reuses.
 - [`.claude/rules/summary-parity.md`](../rules/summary-parity.md) — the two-strikes rule the loop reuses for repeatedly-flagged findings.
+
+
+---
+
+## 7. The FINDING contract is machine-validated (v2.5)
+
+The schema above stopped being prose. It is now
+[`finding-schema.json`](finding-schema.json), enforced by
+[`scripts/validate-findings.py`](../../scripts/validate-findings.py) with an exit code.
+
+**Reports are ARRAYS of finding objects** — not `{"findings": [...]}` wrappers.
+
+```bash
+echo '[]' | python3 scripts/validate-findings.py            # smoke-test the harness first
+python3 scripts/validate-findings.py review-report.json     # validate a real report
+python3 scripts/validate-findings.py --id paper.tex 42 thm:main identification
+```
+
+### Deterministic finding ids — how dedup stops being fuzzy
+
+```
+id = sha1("<file>:<line>:<locus>:<lens>")
+```
+
+The same defect gets the same id in every round, from every lens, in every session. That makes
+`loop-until-dry` **exact**: a round is dry when it produces no *new* id. It also makes the
+two-strikes rule checkable — the same id surviving rounds N and N+2 escalates to the human
+rather than being patched a third time. The validator recomputes every id and rejects any that
+does not match its own coordinates, so ids cannot be invented.
+
+### Every finding must cite a rule
+
+`rule` is required. **A finding that cites no documented rule or standard is an opinion**, and
+opinions do not gate a commit. This is the single cheapest defence against the measured
+tendency of a reviewer told to find gaps to find them in sound work.
+
+### `failing_case` is required
+
+A concrete configuration under which the claim breaks, or the exact missing hypothesis.
+*"This could be clearer"* does not validate.
+
+### The `mechanical` whitelist
+
+`mechanical: true` is permitted **only** for fixes that cannot change a result:
+
+- a typo, a broken cross-reference, a malformed citation key
+- a formatting or overflow fix
+- adding a missing label or docstring
+- a rename with no external callers
+
+**Never mechanical:** anything touching an **estimand**, an **assumption**, a
+**specification**, an **inference procedure**, a **sample definition**, or **reporting
+language**. Those return to the researcher. This is the same boundary as the standing
+escalation rule.
+
+### Two-stage, refute-biased
+
+The reviewer pass proposes; a **separate verifier pass, biased to refute**, decides. Only
+`verdict: "confirmed"` findings ship. A finding the verifier cannot ground is dropped, not
+downgraded to a warning.
+
+### Smoke-test the harness before spending review effort
+
+Run `echo '[]' | python3 scripts/validate-findings.py` once per environment. A review run that
+measures everything and then cannot write a valid report has wasted the whole pass.
+
+### Per-lens evidence burdens
+
+A generic "provide evidence" is too weak. Each lens owes a specific proof:
+
+| Lens | The burden |
+|---|---|
+| `identification` | name the assumption and a design under which it fails |
+| `estimation` | name the estimator and the exact step that diverges from its definition |
+| `inference` | name the variance channel — clustering level, bootstrap, degrees of freedom |
+| `numeric-claim` | the manuscript value, the output value, and the tolerance |
+| `reproducibility` | the command run and its output |
+| `citation` | the quoted passage that does or does not support the claim |
+| `measurement` | the construct, the proxy, and the gap between them |
+| `parity` | the two artifacts and the specific element that differs |
+| `code-quality` | file:line plus the input that triggers the defect |
+
+### "Does NOT count" — suppress known false alarms
+
+Apply before verification:
+
+- A **documented, defensible alternative** is `EXPLAINED`, not a defect. A different-but-named
+  choice (not-yet-treated vs never-treated controls; universal vs varying base period) is
+  recorded, never "fixed".
+- A **deliberate simplification for teaching** is not a substantive error.
+- **Prose taste** is not a finding unless it changes meaning.
+- A **stale claim already flagged** by `claim-reconcile` is one finding, not one per surface.
+- Anything on the **HELD list** is recorded, not acted on.

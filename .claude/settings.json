@@ -62,7 +62,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|Task",
+        "matcher": "Bash|Agent|Task",
         "hooks": [
           {
             "type": "command",

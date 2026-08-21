@@ -44,7 +44,7 @@ REPO = Path(__file__).resolve().parent.parent
 # ---- Known tool names the harness exposes ------------------------------------
 
 TOOLS = {
-    "Task", "Bash", "Edit", "Write", "MultiEdit", "Read", "Grep", "Glob",
+    "Agent", "Task", "Bash", "Edit", "Write", "MultiEdit", "Read", "Grep", "Glob",
     "WebFetch", "WebSearch", "NotebookEdit",
 }
 
@@ -117,6 +117,18 @@ TOOL_INVOCATION_PATTERNS = {
     # The primary check. Task is the most common missing-permission bug
     # (see PR #92 — 4 skills each promised to spawn claim-verifier via Task
     # but forgot to declare Task in allowed-tools).
+    # NOTE (2026-08-21): the subagent-spawning tool is `Agent`. `Task` is retained
+    # as a legacy alias so forks on older Claude Code keep passing; `TaskCreate`/
+    # `TaskGet`/... are the unrelated agent-teams task-list tools and are NOT this.
+    "Agent": [
+        r"\bvia\s+the\s+`?Agent`?\s+tool\b",
+        r"\bvia\s+`?Agent`?\b",
+        r"`Agent`\s+subagents?\b",
+        r"`Agent`\s+calls?\b",
+        r"`Agent`\s+with\b",
+        r"\bAgent:\s*subagent_type",
+        r"`Agent`\s+tool\b",
+    ],
     "Task": [
         r"\bvia\s+`?Task`?\b",
         r"\bsubagent_type\s*=",

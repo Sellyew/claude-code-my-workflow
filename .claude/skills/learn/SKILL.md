@@ -4,11 +4,12 @@ description: |
   Extract reusable knowledge from the current session into a persistent skill.
   Use when you discover something non-obvious, create a workaround, or develop
   a multi-step workflow that future sessions would benefit from.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[skill-name (kebab-case)]"
 allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep"]
 disable-model-invocation: true
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # /learn — Skill Extraction Workflow

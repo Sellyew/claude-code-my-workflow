@@ -12,9 +12,9 @@ paths:
 
 | Share | Tier | Use for |
 |---:|---|---|
-| ~70% | **Haiku 4.5** | Mechanical work — file renames, citation-format conversion, TikZ extraction, bib validation, proofread-fix application, simple grep / file lookups |
-| ~20% | **Sonnet 4.6** | Review and critique — `r-reviewer`, `slide-auditor`, `proofreader`, `quarto-fixer`, `humanize-auditor` |
-| ~10% | **Opus 4.8** | High-judgment work — `editor`, `methods-referee`, `domain-referee`, `claim-verifier`, `quarto-critic`, `tikz-reviewer`, `domain-reviewer`, `verifier` for non-trivial gates |
+| ~70% | **the Haiku tier** | Mechanical work — file renames, citation-format conversion, TikZ extraction, bib validation, proofread-fix application, simple grep / file lookups |
+| ~20% | **the Sonnet tier** | Review and critique — `r-reviewer`, `slide-auditor`, `proofreader`, `quarto-fixer`, `humanize-auditor` |
+| ~10% | **the Opus tier** | High-judgment work — `editor`, `methods-referee`, `domain-referee`, `claim-verifier`, `quarto-critic`, `tikz-reviewer`, `domain-reviewer`, `verifier` for non-trivial gates |
 
 Set per-agent via `model:` in the agent's YAML frontmatter:
 
@@ -43,8 +43,8 @@ Set per skill/agent with the `effort:` frontmatter field. Several skills ship at
 
 **Fable 5** (GA 2026-06-09) is the most capable model in Claude Code — and this rule deliberately does **not** route any of the template's fleet to it. Two verified reasons:
 
-1. **Cost discipline.** Fable 5 is $10/$50 per MTok vs Opus 4.8's $5/$25 — a flat 2× on exactly the judgment tier the 70/20/10 split exists to guard. The referee/editor/verifier agents are bounded, single-sitting tasks; Fable's premium is priced for *long-horizon, larger-than-one-sitting* autonomous work, which the fleet is not.
-2. **Protocol maturity.** In one launch-week session's fan-out, Fable 5 subagents failed the forced structured-output tool protocol 28/28 times vs 0 observed failures on Opus 4.8 — a single-session signal, not a benchmark, but exactly the failure mode that matters here: in a fan-out fleet, a silent tool-protocol failure means a review lens returns *nothing*. (Same logic as the "don't push Opus down a tier" anti-pattern: a too-immature judge is as bad as a too-cheap one.)
+1. **Cost discipline.** Fable 5 is priced above the Opus tier <!-- model-allow --> — a premium on exactly the judgment tier the 70/20/10 split exists to guard. The referee/editor/verifier agents are bounded, single-sitting tasks; Fable's premium is priced for *long-horizon, larger-than-one-sitting* autonomous work, which the fleet is not.
+2. **Protocol maturity — STALE, needs re-measurement (flagged 2026-08-21).** In one *launch-week (2026-06)* fan-out, Fable 5 subagents failed the forced structured-output tool protocol 28/28 times vs 0 on the then-current Opus <!-- model-allow -->. That observation is ~10 weeks old and predates Opus 5; **treat this justification as unverified until re-measured.** It was a single-session signal, not a benchmark, but exactly the failure mode that matters here: in a fan-out fleet, a silent tool-protocol failure means a review lens returns *nothing*. (Same logic as the "don't push Opus down a tier" anti-pattern: a too-immature judge is as bad as a too-cheap one.)
 
 **Where Fable 5 *is* the right call:** your own interactive sessions on the hardest long-horizon work — a multi-day refactor, a deep research synthesis you'll steer by hand — where you are in the loop to catch a protocol hiccup and the task actually exploits the model's horizon. Select it per-session (`/model fable`); leave the fleet's `model:` pins alone. Re-evaluate at Fable point releases (the protocol gap is the kind of thing that gets fixed); when it does, the high-judgment tier is the natural first candidate.
 
@@ -64,7 +64,7 @@ Cost reduction on routed skills is typically **50–80%** with no quality loss o
 - **Proofread fix application** (when the fix is "replace X with Y" mechanically).
 - **File rename / search-and-replace operations.**
 
-### Review / critique (Sonnet 4.6)
+### Review / critique (Sonnet tier)
 
 - **R code review** (`r-reviewer`).
 - **Slide layout audit** (`slide-auditor`).
@@ -73,7 +73,7 @@ Cost reduction on routed skills is typically **50–80%** with no quality loss o
 - **AI-voice audit** (`humanize-auditor`).
 - **Beamer ↔ Quarto translation** (`beamer-translator`) — translation is bounded enough to live here unless the source TeX has unusual TikZ.
 
-### High-judgment (Opus 4.8)
+### High-judgment (Opus tier)
 
 - **Editor for `/review-paper --peer`** (`editor`).
 - **Both referee agents** (`domain-referee`, `methods-referee`).
@@ -103,10 +103,12 @@ If a future contributor ever adds an explicit *challenger → auditor* step (e.g
 
 ## How `/commit` uses this rule
 
-`/commit`'s pre-commit verifier currently runs at the orchestrator's tier. When this rule's pattern matures (Sonnet 4.6 reliably catches most issues), the verifier can be routed to Sonnet by default with Opus reserved for `--strict` mode. Pending evaluation.
+`/commit`'s pre-commit verifier currently runs at the orchestrator's tier. When this rule's pattern matures (the Sonnet tier reliably catches most issues), the verifier can be routed to Sonnet by default with Opus reserved for `--strict` mode. Pending evaluation.
 
 ## Cross-references
 
 - [`.claude/rules/cross-artifact-review.md`](cross-artifact-review.md) — paper ↔ code dependency graph (orthogonal to routing but invoked at similar moments).
 - [`.claude/rules/post-flight-verification.md`](post-flight-verification.md) — CoVe / forked verifier (claim-verifier should stay on Opus per "anti-pattern: pushing Opus down" above).
 - Guide section "Cost-Conscious Composition" — user-facing cost guidance that points at this rule.
+
+> **Tiers, not point versions.** This rule names tiers (`Haiku` / `Sonnet` / `Opus` / `Fable`) on purpose. Current point versions and provider-dependent alias resolution live in the single source of truth: [`model-versions.md`](../references/model-versions.md). Do not hard-code a point version here.

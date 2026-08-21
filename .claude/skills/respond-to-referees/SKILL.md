@@ -2,7 +2,7 @@
 name: respond-to-referees
 description: Generate a structured response-to-referees document from a referee report and the revised manuscript. Maps each referee comment to the specific revision, classifies coverage (addressed / partially / deferred / disagreement), and drafts polite but firm responses. Use during the R&R (revise-and-resubmit) stage of paper revision.
 argument-hint: "[referee-report-path] [revised-manuscript-path] [--no-verify]"
-allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task"]
+allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Agent", "Task"]
 effort: high
 ---
 
@@ -95,7 +95,7 @@ The response document's most hallucination-prone content is the set of "we added
 
 1. **Extract revision-location claims** — every "we added / we modified / we revised X (page Y, line Z / Section N)" assertion in the response document.
 2. **Generate verification questions** — "Does the revised manuscript actually contain the revision claimed at page Y, line Z? Does it match the description?"
-3. **Spawn `claim-verifier`** via `Task` with `subagent_type=claim-verifier` and `context=fork`. Hand it: the claims table, the verification questions, the path to the revised manuscript. Do NOT include the response draft.
+3. **Spawn `claim-verifier`** via the `Agent` tool with `subagent_type=claim-verifier` and `context=fork`. Hand it: the claims table, the verification questions, the path to the revised manuscript. Do NOT include the response draft.
 4. **Reconcile:** PASS → attach green block. PARTIAL / FAIL → rewrite the affected response entries using the verifier's evidence. A response that says "we added robustness check X on page 34" when X is actually on page 27 (or not at all) is worse than a "Deferred" classification.
 
 Downgrade to the classification the evidence supports:

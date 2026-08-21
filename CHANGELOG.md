@@ -6,6 +6,111 @@ If you have forked this template, see the **Upgrading** section at the bottom fo
 
 ---
 
+## v2.5.0 — 2026-08-21
+
+A **verification and currency release.** The substrate moved underneath the template over ten
+weeks — a tool was renamed, two model generations shipped, and a fixed upstream bug left a
+stale blocker in the backlog — while every gate stayed green. v2.5 fixes the facts, and then
+fixes the reason the gates did not notice.
+
+### Fixed — the tool that no longer exists
+
+- **`Task` → `Agent`.** The subagent-spawning tool is `Agent`; `TaskCreate`/`TaskGet`/… are the
+  unrelated agent-teams task-list tools. Migrated across **33 skill frontmatters** and 20 files
+  of body prose, using **dual listing** (`Agent` *and* `Task`) so forks on older Claude Code
+  keep working. The `PostToolUse` matcher `Bash|Task` — which had silently stopped firing on
+  subagents — is now `Bash|Agent|Task`.
+- **`check-skill-integrity.py` generalized** beyond its hard-coded `Task` check. It immediately
+  found a real defect the `Task`-only version could not see: `/new-skill` invoked `Agent`
+  without declaring it.
+
+### Fixed — model currency, and the gate that missed it
+
+- **SSoT → Opus 5 / Sonnet 5** (Fable 5 remains the top tier), with the **provider-dependent
+  alias table** (Bedrock and Google Cloud resolve `sonnet` to Sonnet 4.5; Microsoft Foundry
+  resolves `opus` to Opus 4.6) and a **60-day expiry**.
+- **Consuming surfaces made tier-abstract** (“the Opus tier”, not a point version) so they
+  cannot drift again. The guide's model paragraph now points at the SSoT instead of restating it.
+- **`check-model-versions.sh` tightened.** Its `GA 2026-0` allow-marker was whitelisting *any*
+  line that carried a GA date, which is how two stale guide lines passed. Removed, and the
+  **line-scoped nature of allow markers** is now documented in the gate as a known limitation.
+
+### Fixed — stale recommendations
+
+- `meta-governance.md` claimed MEMORY.md **“stays in Claude's system prompt.”** It does not —
+  there is no `@MEMORY.md` import. Corrected, with the consequence stated.
+- Plugin packaging was deferred on `anthropics/claude-code#11278`, **closed 2025-11-09**.
+- Two `[LEARN:framing]` entries that v2.0 superseded and nobody retired (orchestrator “pattern,
+  not a runtime”; “quality gates advisory only”) marked **SUPERSEDED**, with what still holds.
+- **Auto mode** is no longer plan-gated: since 2026-08-14 it is the default starting mode for
+  new Pro/Max/Team sessions.
+- The **Fable routing rule** is flagged **stale, needs re-measurement** — it rests on a
+  launch-week observation from June that predates Opus 5.
+
+### Added — the verification layer
+
+- **`/vaccinate`** — grade the grader. Seeds known defects plus a **clean control**, runs the
+  check or review agent blind, and reports **recall** and **false-positive rate** into
+  `quality_reports/qualification/LEDGER.md`. Ships a **defect library** of realistic seeds by
+  artifact type. The rule it enforces: *an unqualified check is not weak evidence — it is none.*
+- **`verification-ladder.md`** — seven rungs from *qualify the checker* to the external oracle;
+  the four-layer artifact ladder (existence → **substantiveness** → wiring → coherence); the
+  three independence mechanisms; the specification-search ledger; and how the loop converges
+  (**batch the fixes, then one confirmation round** — not one-finding-per-round).
+- **`external-oracle-process.md`** — the full Claude Code → **GPT-5.6 Sol Pro** process: setup,
+  invocation, artifacts, the **evidence-forcing prompt contract** (location + quote + *failing
+  case*), the **coverage manifest**, the **HELD list**, **CONFIRMED / REFUTED / DOWNGRADED**
+  adjudication, and the hard-won mechanics. With the limit stated as loudly as the appeal:
+  *agreement is not confirmation; models correlate on the same wrong answer.*
+- **`provenance-and-ground-truth.md`** — naming oracles with roles and **pinned commit SHAs**,
+  declaring **precedence before measuring**, the **divergence-kinds taxonomy** (not every
+  difference is a bug), the tolerance registry and the `all.equal` scale trap, the
+  **never re-bless in the commit that moves it** rule, and the clean-room boundary.
+- **The five credibility questions** — reproducibility ≠ implementation fidelity ≠ statistical
+  performance ≠ measurement validity ≠ identification. Evidence for one never clears another.
+
+### Added — enforcement
+
+- **`scripts/check-links.py`** — every relative markdown link and heading anchor must resolve.
+  Wired into the gate suite, so pre-commit and CI both run it. It found **8 broken references**
+  on first run, including that *every* relative link from the guide to a repo file 404s on the
+  published website. Guide links to repo files are now GitHub blob URLs.
+- **`disallowed-tools` on 9 read-only skills.** `/proofread`, `/review-r`, `/visual-audit` and
+  friends keep `Write` (for their report) but can no longer `Edit` the artifact they were told
+  to only report on. Previously nothing stopped them.
+- **Frontmatter conformance.** Audited all 52 skills against the
+  [Agent Skills spec](https://agentskills.io/specification): names, description length, and
+  the 500-line body guidance all pass (median body: 129 lines). `author`/`version` — read by
+  neither the spec nor Claude Code — moved under `metadata:`.
+
+### Added — scheduling guidance that changes a recommendation
+
+`scheduled-routines.md` gains the **three-mechanism decision table**. The consequence for
+research: a cloud routine runs against a **fresh clone with no local file access**, so a
+nightly reproducibility check on local — or restricted — data belongs in **Desktop scheduled
+tasks**, not cloud routines.
+
+### Verification of this release
+
+Every gate touched was **qualified, not just run**: a defect was seeded, the gate was confirmed
+to go red, the artifact was restored, and the gate confirmed green. Two rows are recorded in
+the qualification ledger; the checks that remain **unqualified are listed there by name**.
+
+**Inventory at release: 53 skills, 18 agents, 32 rules, 7 hooks, 12 references** (was 52 / 18 /
+32 / 7 / 9 at v2.1.0).
+
+### Upgrading from v2.1
+
+1. Pull, then run `./scripts/install-hooks.sh` if you have not already — the gate suite now
+   includes the link checker.
+2. If you customized skill frontmatter, note that `allowed-tools` now lists **both** `Agent`
+   and `Task`. Keeping a stale `Task`-only entry is harmless (it is a pre-approval list, not a
+   restriction) but you lose pre-approval on subagent calls.
+3. If you customized `guide/workflow-guide.qmd`, expect conflicts — repo-file links moved to
+   GitHub blob URLs.
+
+---
+
 ## v2.1.0 — 2026-06-10
 
 A **currency + citability release**, driven by a 48-agent web-verified audit ("is this actually up to date and the best for economists, today?"). The architecture audit came back clean — the fixes are facts, not structure.

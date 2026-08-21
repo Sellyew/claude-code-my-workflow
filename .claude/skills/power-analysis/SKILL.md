@@ -1,12 +1,13 @@
 ---
 name: power-analysis
 description: Compute statistical power, required sample size, and minimum detectable effect (MDE) for a study design, then write a registry-ready power section. Handles two-arm RCTs (with clustering / ICC and unequal allocation), multiple-arm corrections, and a simulation-based power option for non-standard designs (DiD/event-study, IV, panel). Use when user says "power analysis", "power calculation", "MDE", "minimum detectable effect", "how big a sample do I need", "is my study powered", "power for an RCT", or when /preregister needs a power section for an experiment. Produces a power/MDE table, power curves, and a methods paragraph to paste into a preregistration.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[--mode mde|n|power] [--design rct|cluster|multiarm|sim] [--input <spec-or-description>]"
 disable-model-invocation: true
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Task"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "Task"]
 effort: high
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # `/power-analysis` — Power / MDE for study design

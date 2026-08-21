@@ -2,7 +2,7 @@
 name: seven-pass-review
 description: Mechanize Pattern 15 — the seven-pass adversarial review protocol for academic manuscripts. Spawns 7 forked subagents in parallel (abstract, intro, methods, results, robustness, prose, citations), then synthesizes a prioritized revision checklist. Use for submission-ready or R&R-stage papers where single-pass review isn't enough.
 argument-hint: "[manuscript path]"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Bash", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Bash", "Agent", "Task"]
 effort: high
 ---
 
@@ -42,14 +42,14 @@ Each lens runs as a **forked subagent** (context: fork) so the main conversation
 
 ### Phase 1: Spawn 7 reviewers in parallel
 
-In a single message, spawn 7 Task tool calls (one per lens). Each subagent gets:
+In a single message, spawn 7 `Agent` tool calls (one per lens). Each subagent gets:
 
 - The manuscript path (to re-read with its own context).
 - The lens-specific prompt (below).
 - Instructions to write to `quality_reports/seven_pass_[stem]/lens_[N]_[lens-name].md`.
 - A closing `findings:` + `scorecard:` block in the shared schema ([`orchestration-schemas.md`](../../references/orchestration-schemas.md)): `severity: CRITICAL | MAJOR | MINOR`, with `evidence` and `change_my_mind` on every CRITICAL/MAJOR. Phase 2 reduces over these typed findings — it does not re-read the prose.
 
-This is the **fan-out** primitive from [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md); `Task` subagents are the portable mechanism (the agents that fill lenses 3/6 are in [`agent-fleet.md`](../../references/agent-fleet.md)).
+This is the **fan-out** primitive from [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md); `Agent` subagents are the portable mechanism (the agents that fill lenses 3/6 are in [`agent-fleet.md`](../../references/agent-fleet.md)).
 
 Lens prompt rubrics are embedded inline below — one summary paragraph per lens. Each forked subagent receives its lens's rubric plus the manuscript path.
 

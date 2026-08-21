@@ -188,7 +188,7 @@ This workflow is designed as a **single hub for an entire research program** —
 ## What's Included
 
 <details>
-<summary><strong>18 agents, 52 skills, 32 rules, 7 hooks</strong> (click to expand)</summary>
+<summary><strong>18 agents, 53 skills, 32 rules, 7 hooks</strong> (click to expand)</summary>
 
 ### Agents (`.claude/agents/`)
 
@@ -229,6 +229,7 @@ This workflow is designed as a **single hub for an entire research program** —
 | `/qa-quarto` | Adversarial critic-fixer loop (loops until dry; 5-round cap is a fallback) |
 | `/slide-excellence` | Combined multi-agent review |
 | `/translate-to-quarto` | Full 11-phase Beamer-to-Quarto translation |
+| `/vaccinate` | Measure whether a check, gate, or AI reviewer actually detects the failure it targets — seeds defects + a clean control, reports recall and false-positive rate into a qualification ledger |
 | `/validate-bib` | Cross-reference citations against bibliography |
 | `/devils-advocate` | Challenge design decisions before committing |
 | `/create-lecture` | Full lecture creation workflow |

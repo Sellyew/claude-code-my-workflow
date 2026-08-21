@@ -155,13 +155,13 @@ Most of the time, you just describe what you want and Claude handles the rest. E
 ::: {.callout-important}
 ## The Bottom Line
 
-**You talk, Claude orchestrates.** The 18 agents, 52 skills, and 32 rules exist so you don't have to think about them. Describe your goal, approve the plan, and let the system work.
+**You talk, Claude orchestrates.** The 18 agents, 53 skills, and 32 rules exist so you don't have to think about them. Describe your goal, approve the plan, and let the system work.
 :::
 
 ::: {.callout-note}
 ## You Don't Need All of This on Day One
 
-This guide describes the full system --- 18 agents, 52 skills, 32 rules. That is the ceiling, not the floor. **Start with just CLAUDE.md and 2--3 skills** (`/compile-latex`, `/proofread`, `/commit`). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you're ready.
+This guide describes the full system --- 18 agents, 53 skills, 32 rules. That is the ceiling, not the floor. **Start with just CLAUDE.md and 2--3 skills** (`/compile-latex`, `/proofread`, `/commit`). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you're ready.
 :::
 
 ---
@@ -696,7 +696,7 @@ argument-hint: "[filename without .tex extension]"
 ::: {.callout-note}
 ## Built-In Skills
 
-Claude Code ships with built-in skills beyond this template's 52: `/batch` orchestrates parallel refactoring across your codebase (using git worktrees for isolation), `/simplify` runs 3-agent code review and applies fixes, and `/debug` helps troubleshoot sessions. These complement the academic skills above.
+Claude Code ships with built-in skills beyond this template's 53: `/batch` orchestrates parallel refactoring across your codebase (using git worktrees for isolation), `/simplify` runs 3-agent code review and applies fixes, and `/debug` helps troubleshoot sessions. These complement the academic skills above.
 :::
 
 ## Agents --- Specialized Reviewers {#agents---specialized-reviewers}
@@ -760,9 +760,11 @@ Claude Code also offers experimental **Agent Teams** --- multiple independent se
 ::: {.callout-note}
 ## Current Anthropic lineup (verified 2026-06-10)
 
-**Fable 5** (`claude-fable-5`, alias `fable`; opt-in via `/model fable` or the `best` alias) is the most capable Claude Code model — Mythos-class, GA 2026-06-09, \$10/\$50 per MTok, 1M context (128k max output), built for long-horizon agentic work; needs Claude Code ≥ 2.1.170 and falls back to Opus 4.8 on flagged content. **Opus 4.8** (`claude-opus-4-8`) is the API/account default and this template's routed high-judgment tier (GA 2026-05-28, \$5/\$25 per MTok, 1M context, defaults to `high` effort) — see the routing rule for why the fleet deliberately stays on it. **Opus 4.7** is the prior generation. **Sonnet 4.6** is the workhorse mid-tier (1M context). **Haiku 4.5** is the cost-efficient fast model. *Verified against Anthropic docs 2026-06-10.*
+**Fable 5** (`claude-fable-5`, alias `fable`) is the most capable Claude Code model — opt-in via `/model fable` or the `best` alias, built for tasks larger than a single sitting; it investigates before acting and verifies its own work more often than smaller models. It is **not** the default on any account type and may bill to usage credits. **Opus** is the high-judgment tier and what this template routes referees, editors, and verifiers to. **Sonnet** is the workhorse mid-tier; **Haiku** is the fast/mechanical tier.
 
-**Retirement notice:** Sonnet 4 and the original Opus 4 retire on **2026-06-15**. If your environment pins one of these (`ANTHROPIC_MODEL` env, hard-coded model IDs in CI, etc.), migrate before then. See [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for the migration checklist.
+Alias resolution is **provider-dependent**, and point versions move faster than any guide can. The single source of truth is [`model-versions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/model-versions.md), which carries the current versions, the per-provider alias table, and a `verified_on` date with an expiry — `scripts/check-model-versions.sh` fails the build when it goes stale. **Do not hard-code a point version here.**
+
+**Retirement notice:** Sonnet 4 and the original Opus 4 retire on **2026-06-15**. If your environment pins one of these (`ANTHROPIC_MODEL` env, hard-coded model IDs in CI, etc.), migrate before then. See [TROUBLESHOOTING.md](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/TROUBLESHOOTING.md) for the migration checklist.
 :::
 
 Not all agents need the same model. Each agent file has a `model:` field in its YAML frontmatter. In v2.0 all 18 agents are **pinned** to an explicit model + effort tier (no longer `inherit`), following the 70/20/10 routing pattern below. You can re-tune any agent to optimize cost:
@@ -835,12 +837,12 @@ The Apr 2026 [TTL change cost analysis](https://dev.to/whoffagents/claude-prompt
 | Model | Share of subagent calls | Use for |
 |---|---|---|
 | **Haiku 4.5** | ~70% | Mechanical work: TikZ extraction, citation reformatting, bib validation, proofread fixes, simple file lookups |
-| **Sonnet 4.6** | ~20% | Review and critique: r-reviewer, slide-auditor, proofreader, quarto-fixer |
-| **Opus 4.8** | ~10% | High-judgment work: editor, domain-referee, methods-referee, claim-verifier, manuscript review |
+| **Sonnet tier** | ~20% | Review and critique: r-reviewer, slide-auditor, proofreader, quarto-fixer |
+| **Opus tier** | ~10% | High-judgment work: editor, domain-referee, methods-referee, claim-verifier, manuscript review |
 
 Set per-agent via `model:` in `.claude/agents/<name>.md` frontmatter. Typical savings vs. all-Opus: **50–80% on routed skills**, no quality loss on the mechanical tier. The community-converged ratio is documented in [Augment Code's routing data](https://augmentcode.com) and aligns with Aider's architect/editor split; we cite Anthropic's [Apr 8 2026 "Decoupling brain from hands"](https://www.anthropic.com/engineering) as the primary-source endorsement of the pattern.
 
-**3. Effort budgeting.** The Effort Levels section earlier covered the `low | medium | high | xhigh | max` ladder. **Opus 4.8 defaults to `high`** — and its `high` does roughly what 4.7's `xhigh` did, for fewer tokens. So: let `high` be the default; drop to `medium`/`low` to save cost on mechanical work; reach for `xhigh` only for extended exploration (deep search, big refactors, the hardest `/review-paper` runs); `ultracode` (xhigh + dynamic workflows) for repo-scale autonomous tasks.
+**3. Effort budgeting.** The Effort Levels section earlier covered the `low | medium | high | xhigh | max` ladder. **the current Opus tier defaults to `high`** — and its `high` does roughly what 4.7's `xhigh` did, for fewer tokens. So: let `high` be the default; drop to `medium`/`low` to save cost on mechanical work; reach for `xhigh` only for extended exploration (deep search, big refactors, the hardest `/review-paper` runs); `ultracode` (xhigh + dynamic workflows) for repo-scale autonomous tasks.
 
 ::: {.callout-tip}
 ## Monitoring: `/cost` and `/usage`
@@ -854,7 +856,7 @@ Run `/cost` after any `/review-paper --peer` pipeline. If your cache hit-rate is
 ::: {.callout-warning}
 ## Agent SDK credit-pool split — 2026-06-15
 
-Starting 2026-06-15, `claude -p` headless subprocess calls (used by `/coarse-review` and any script that calls Claude Code in `-p` mode) draw from a **separate monthly Agent SDK credit pool**, decoupled from interactive credits. If `/coarse-review` starts failing after the cutover with credit-exhaustion errors even though your interactive session works, the Agent SDK pool is what's empty. See [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for the migration details.
+Starting 2026-06-15, `claude -p` headless subprocess calls (used by `/coarse-review` and any script that calls Claude Code in `-p` mode) draw from a **separate monthly Agent SDK credit pool**, decoupled from interactive credits. If `/coarse-review` starts failing after the cutover with credit-exhaustion errors even though your interactive session works, the Agent SDK pool is what's empty. See [TROUBLESHOOTING.md](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/TROUBLESHOOTING.md) for the migration details.
 :::
 
 ## Settings --- Permissions and Hooks {#settings---permissions-and-hooks}
@@ -1004,19 +1006,19 @@ The **Stop hook** runs a fast Python script after every response. No LLM call, n
 
 ## Effort Levels --- Cost vs. Thoroughness {#sec-effort}
 
-Claude Code lets you control how deeply it reasons about each task. Higher effort means more "thinking tokens" and better results --- but higher cost. On **Opus 4.8 the default is `high`** --- its `high` reasoning now delivers what 4.7's `xhigh` did, so you rarely need to bump up (see [Cost-Conscious Composition](#sec-cost)).
+Claude Code lets you control how deeply it reasons about each task. Higher effort means more "thinking tokens" and better results --- but higher cost. On **the current Opus tier the default is `high`** --- its `high` reasoning now delivers what 4.7's `xhigh` did, so you rarely need to bump up (see [Cost-Conscious Composition](#sec-cost)).
 
 | Level | Thinking Budget | Academic Use Case | Relative Cost |
 |-------|----------------|-------------------|---------------|
 | `low` | Minimal | Quick formatting, grep, file renames | $ |
 | `medium` | Standard | Mechanical work; drop here from `high` to save cost | $$ |
-| `high` | ~10k tokens | Complex derivations, paper reviews (**Opus 4.8 default**) | $$$ |
-| `xhigh` | ~20k tokens | Extended exploration / hardest runs; **Opus 4.8 defaults to `high`**, so reserve `xhigh` for genuinely hard work (introduced Apr 2026 Week 16) | $$$$ |
+| `high` | ~10k tokens | Complex derivations, paper reviews (**Opus-tier default**) | $$$ |
+| `xhigh` | ~20k tokens | Extended exploration / hardest runs; **the current Opus tier defaults to `high`**, so reserve `xhigh` for genuinely hard work (introduced Apr 2026 Week 16) | $$$$ |
 | `max` / ultrathink | ~32k tokens | Deep proofs, multi-step analysis | $$$$$ |
 
 **How to set effort:**
 
-- **Per-session:** Type `/effort high` (the Opus 4.8 default) or `/effort xhigh` for the hardest runs. Typing `/effort` on its own opens an **interactive slider** (Apr 2026 Week 16).
+- **Per-session:** Type `/effort high` (the current Opus default) or `/effort xhigh` for the hardest runs. Typing `/effort` on its own opens an **interactive slider** (Apr 2026 Week 16).
 - **Per-skill:** Add `effort: high` to skill frontmatter (see [Skill Frontmatter Reference](#skill-frontmatter))
 - **Keyboard toggle:** `Option+T` (Mac) / `Alt+T` (Windows/Linux) toggles extended thinking
 - **In prompts:** Include "ultrathink" in your prompt to enable extended thinking for that turn. Note: phrases like "think hard" are treated as regular instructions and do *not* allocate extra thinking tokens
@@ -1053,7 +1055,7 @@ Use it for:
 
 #### Two-tier memory architecture (`MEMORY.md` vs `personal-memory.md`)
 
-The template splits memory into two tiers (see [`meta-governance.md`](.claude/rules/meta-governance.md)):
+The template splits memory into two tiers (see [`meta-governance.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/meta-governance.md)):
 
 - **`MEMORY.md`** (committed, ≤ 200 lines) — generic learnings that help all forkers: workflow patterns, design principles, documentation standards, quality thresholds that transfer across domains.
 - **`.claude/state/personal-memory.md`** (gitignored, no size cap) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.
@@ -1072,7 +1074,7 @@ The two-tier split poses one question: *who decides which `[LEARN]` entries grad
 4. **Evidence** — does it cite the originating incident / file / why?
 5. **Format** — does it follow `[LEARN:category] wrong → right`?
 
-Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in *isolated forked contexts* — they cannot see each other's votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per [model-routing.md](.claude/rules/model-routing.md)) since the review is mechanical-ish.
+Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in *isolated forked contexts* — they cannot see each other's votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per [model-routing.md](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/model-routing.md)) since the review is mechanical-ish.
 
 When to run: monthly as memory-maintenance, before sharing a fork, after a paper or course cycle ships, or wired as a `/loop` task.
 
@@ -1464,7 +1466,7 @@ Phase 4: Only then extend
 In one course, we discovered that a widely-used R package silently produced **incorrect estimates** due to a subtle specification issue. This bug was caught 3 times in different scripts. Without the replication-first protocol, these wrong numbers would have been taught to PhD students.
 :::
 
-**Source-language coverage:** The pattern is language-agnostic. The template ships [`/data-analysis`](#all-skills) for R-first projects and [`/stata-replication`](#all-skills) (v1.9.0) for Stata-first projects (mirrors `/data-analysis` exactly; same numbered-pipeline shape, different language; executes via the `stata-mcp` MCP server). Python-first projects follow the same convention with the path `scripts/python/_outputs/`. For Stata users, [`stata-code-conventions.md`](.claude/rules/stata-code-conventions.md) (v1.9.0) codifies the header (`version 18`, `clear all`, `set seed`/`set sortseed`), numbered pipeline (00–99), `esttab` for `\input{}` tables, clustering discipline (`reghdfe`), balance via `iebaltab`, and AEA Data Editor compliance.
+**Source-language coverage:** The pattern is language-agnostic. The template ships [`/data-analysis`](#all-skills) for R-first projects and [`/stata-replication`](#all-skills) (v1.9.0) for Stata-first projects (mirrors `/data-analysis` exactly; same numbered-pipeline shape, different language; executes via the `stata-mcp` MCP server). Python-first projects follow the same convention with the path `scripts/python/_outputs/`. For Stata users, [`stata-code-conventions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md) (v1.9.0) codifies the header (`version 18`, `clear all`, `set seed`/`set sortseed`), numbered pipeline (00–99), `esttab` for `\input{}` tables, clustering discipline (`reghdfe`), balance via `iebaltab`, and AEA Data Editor compliance.
 
 ::: {.callout-note}
 ## Claims provenance via `passport.yaml` (v1.9.0)
@@ -1473,7 +1475,7 @@ Replication-first verifies the *current* state. A separate question: how do we k
 
 The answer is a per-paper `quality_reports/passports/<paper-slug>.yaml` that records, for each numeric claim in the manuscript, the script + line + output that produced it. Schema includes `tolerance`, `last_verified_on`, `status` (PASS / FAIL / STALE / UNVERIFIED). [`/audit-reproducibility`](#all-skills) reads and rewrites the passport in place; [`/commit`](#all-skills) reads it to block commits when a load-bearing claim is FAIL or STALE.
 
-Starter file: [`templates/passport-template.yaml`](templates/passport-template.yaml). Copy once per paper. Pattern attributed to [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills) "Material Passport" concept (scope-reduced for this template: numeric claims only).
+Starter file: [`templates/passport-template.yaml`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/templates/passport-template.yaml). Copy once per paper. Pattern attributed to [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills) "Material Passport" concept (scope-reduced for this template: numeric claims only).
 :::
 
 ## Pattern 6: Multi-Agent Review {#pattern-6-multi-agent-review}
@@ -2285,7 +2287,7 @@ A mature MCP server that lets Claude Code execute Stata `.do` files via a comman
 
 **Why it matters for this template:** v1.9.0 added [`/stata-replication`](#sec-appendix) for Stata-first projects, which depends on this MCP server. R-first projects (the original template focus) continue to use [`/data-analysis`](#sec-appendix); the two skills are parallel — same pipeline shape, different source language. AEA submissions where the original replication package is in Stata are the canonical use case.
 
-For end-to-end Stata workflows, see [`.claude/rules/stata-code-conventions.md`](.claude/rules/stata-code-conventions.md) (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).
+For end-to-end Stata workflows, see [`.claude/rules/stata-code-conventions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md) (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).
 
 ## ClaudeCodeTools: The Editor Persona
 
@@ -2384,11 +2386,11 @@ The template includes matching LaTeX and Quarto palettes. To customize:
 3. Update CSS class names in the SCSS if needed.
 4. Modify the `beamer-translator` environment mapping to match your classes.
 
-**Palette contract.** The core palette names (`primary-blue`, `primary-gold`, `highlight-yellow`, `light-bg`, `jet`) must exist on both surfaces. Snippets in `templates/tikz-snippets/` currently inline their colors for standalone compilation, but real lectures that `\input{header}` inherit the palette automatically. See [`Preambles/README.md`](../Preambles/README.md) for the full contract and TikZ style library.
+**Palette contract.** The core palette names (`primary-blue`, `primary-gold`, `highlight-yellow`, `light-bg`, `jet`) must exist on both surfaces. Snippets in `templates/tikz-snippets/` currently inline their colors for standalone compilation, but real lectures that `\input{header}` inherit the palette automatically. See [`Preambles/README.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/Preambles/README.md) for the full contract and TikZ style library.
 
 ## Step 4: Creating Custom Skills {#sec-create-skills}
 
-The guide includes 52 [skills](#skills---reusable-slash-commands) for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.
+The guide includes 53 [skills](#skills---reusable-slash-commands) for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.
 
 ### When to Create a Skill
 
@@ -2676,6 +2678,7 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | `/qa-quarto` | `.claude/skills/qa-quarto/` | Critic-fixer adversarial loop |
 | `/slide-excellence` | `.claude/skills/slide-excellence/` | Combined multi-agent review |
 | `/translate-to-quarto` | `.claude/skills/translate-to-quarto/` | Beamer to Quarto translation |
+| `/vaccinate` | Grade the grader: seed known defects + a clean control into a copy of a real artifact, run the check or review agent, report **recall** and **false-positive rate** into `quality_reports/qualification/LEDGER.md` | Before trusting any gate or referee simulation for a decision that matters |
 | `/validate-bib` | `.claude/skills/validate-bib/` | Bibliography validation |
 | `/devils-advocate` | `.claude/skills/devils-advocate/` | Design challenge questions |
 | `/create-lecture` | `.claude/skills/create-lecture/` | Full lecture creation |

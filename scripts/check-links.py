@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Verify every relative markdown link and anchor in the repo resolves.
+
+Catches: links to files that don't exist, anchors that don't match a heading,
+and references to skills/agents/rules that were renamed or removed.
+Code spans and fenced blocks are stripped first (docs show example syntax).
+"""
+import re, os, sys, glob
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCAN = []
+for pat in ["*.md", ".claude/**/*.md", "templates/**/*.md", ".github/**/*.md", "guide/*.qmd"]:
+    SCAN += glob.glob(os.path.join(ROOT, pat), recursive=True)
+SCAN = sorted(set(SCAN))
+
+def strip_code(t):
+    t = re.sub(r'```.*?```', lambda m: "\n"*m.group(0).count("\n"), t, flags=re.S)
+    # CommonMark rule: a run of N backticks is closed by a run of N backticks.
+    # Match longest runs first so ``` and `` don't get shredded by the ` pass.
+    t = re.sub(r'(`{1,10})(.+?)\1', lambda m: ' ' * len(m.group(0)), t, flags=re.S)
+    return t
+
+def slug(h):
+    s = h.strip().lower()
+    s = re.sub(r'[`*_\[\]()]', '', s)
+    s = re.sub(r'[^\w\s-]', '', s)
+    return re.sub(r'[\s]+', '-', s).strip('-')
+
+anchors = {}
+def anchors_for(path):
+    if path in anchors: return anchors[path]
+    a = set()
+    try: t = open(path, encoding="utf-8", errors="ignore").read()
+    except Exception: anchors[path] = a; return a
+    for m in re.finditer(r'^#{1,6}\s+(.*?)\s*$', t, re.M):
+        head = m.group(1)
+        explicit = re.search(r'\{#([\w:-]+)\}', head)
+        if explicit: a.add(explicit.group(1))
+        a.add(slug(re.sub(r'\{#[\w:-]+\}', '', head)))
+    anchors[path] = a
+    return a
+
+LINK = re.compile(r'\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)')
+bad = []
+for f in SCAN:
+    text = strip_code(open(f, encoding="utf-8", errors="ignore").read())
+    base = os.path.dirname(f)
+    for i, line in enumerate(text.split("\n"), 1):
+        for target in LINK.findall(line):
+            if target.startswith(("http://", "https://", "mailto:", "#")):
+                continue
+            path, _, anc = target.partition("#")
+            if not path:
+                continue
+            full = os.path.normpath(os.path.join(base, path))
+            if not os.path.exists(full):
+                bad.append((f, i, target, "missing file"))
+            elif anc and full.endswith((".md", ".qmd")):
+                if anc not in anchors_for(full):
+                    bad.append((f, i, target, "anchor not found"))
+
+rel = lambda p: os.path.relpath(p, ROOT)
+if bad:
+    print(f"check-links: {len(bad)} broken reference(s)\n")
+    for f, i, t, why in bad:
+        print(f"  {rel(f)}:{i}  ->  {t}   [{why}]")
+    sys.exit(1)
+print(f"check-links: all relative links and anchors resolve ({len(SCAN)} files scanned)")
+sys.exit(0)

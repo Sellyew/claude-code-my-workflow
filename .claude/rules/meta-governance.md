@@ -58,7 +58,16 @@ When creating or modifying content, ask:
 
 **Review cadence:** After every significant session (plan approval, feature implementation)
 
-**Size limit:** Keep under 200 lines (stays in Claude's system prompt)
+**Size limit:** Keep under 200 lines **and** under 25KB.
+
+> **Corrected 2026-08-21.** This previously read "stays in Claude's system prompt."
+> That is **not** how this file loads: `CLAUDE.md` only markdown-links `MEMORY.md`, it does
+> not `@`-import it, so nothing puts it in the system prompt automatically — it is read on
+> demand. Two consequences: (1) the size limit protects readability, not a context budget;
+> (2) `[LEARN]` entries reach a session only when the file is actually read. If we want the
+> documented behaviour, add `@MEMORY.md` to `CLAUDE.md` — but note the file is already
+> ~30KB, over the 25KB threshold at which trailing content is dropped, so it must be
+> trimmed first. Tracked as an open decision in the v2.5 plan.
 
 ---
 

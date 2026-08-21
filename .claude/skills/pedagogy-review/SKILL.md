@@ -2,7 +2,8 @@
 name: pedagogy-review
 description: Holistic pedagogical review of a lecture deck (`.qmd` or `.tex`). Checks narrative arc, prerequisite assumptions, worked examples, notation clarity, and deck-level pacing. Use when user says "pedagogy review", "does this teach well?", "is the flow right?", "will students follow?", "review the narrative", or before teaching a deck for the first time. Read-only; produces a report.
 argument-hint: "[QMD or TEX filename]"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Agent", "Task"]
+disallowed-tools: ["Edit", "MultiEdit"]
 ---
 
 # Pedagogical Review of Lecture Slides

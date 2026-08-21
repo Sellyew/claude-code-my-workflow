@@ -2558,7 +2558,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">June 10, 2026</p>
+      <p class="date-modified">August 21, 2026</p>
     </div>
   </div>
     
@@ -2757,7 +2757,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 52 skills, and 32 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
+<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 53 skills, and 32 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled">
@@ -2770,7 +2770,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>This guide describes the full system — 18 agents, 52 skills, 32 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
+<p>This guide describes the full system — 18 agents, 53 skills, 32 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
 </div>
 </div>
 <hr>
@@ -3597,7 +3597,7 @@ APPROVED   NEEDS WORK
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Claude Code ships with built-in skills beyond this template’s 52: <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> runs 3-agent code review and applies fixes, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
+<p>Claude Code ships with built-in skills beyond this template’s 53: <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> runs 3-agent code review and applies fixes, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
 </div>
 </div>
 </section>
@@ -3668,8 +3668,9 @@ APPROVED   NEEDS WORK
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><strong>Fable 5</strong> (<code>claude-fable-5</code>, alias <code>fable</code>; opt-in via <code>/model fable</code> or the <code>best</code> alias) is the most capable Claude Code model — Mythos-class, GA 2026-06-09, $10/$50 per MTok, 1M context (128k max output), built for long-horizon agentic work; needs Claude Code ≥ 2.1.170 and falls back to Opus 4.8 on flagged content. <strong>Opus 4.8</strong> (<code>claude-opus-4-8</code>) is the API/account default and this template’s routed high-judgment tier (GA 2026-05-28, $5/$25 per MTok, 1M context, defaults to <code>high</code> effort) — see the routing rule for why the fleet deliberately stays on it. <strong>Opus 4.7</strong> is the prior generation. <strong>Sonnet 4.6</strong> is the workhorse mid-tier (1M context). <strong>Haiku 4.5</strong> is the cost-efficient fast model. <em>Verified against Anthropic docs 2026-06-10.</em></p>
-<p><strong>Retirement notice:</strong> Sonnet 4 and the original Opus 4 retire on <strong>2026-06-15</strong>. If your environment pins one of these (<code>ANTHROPIC_MODEL</code> env, hard-coded model IDs in CI, etc.), migrate before then. See <a href="../TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the migration checklist.</p>
+<p><strong>Fable 5</strong> (<code>claude-fable-5</code>, alias <code>fable</code>) is the most capable Claude Code model — opt-in via <code>/model fable</code> or the <code>best</code> alias, built for tasks larger than a single sitting; it investigates before acting and verifies its own work more often than smaller models. It is <strong>not</strong> the default on any account type and may bill to usage credits. <strong>Opus</strong> is the high-judgment tier and what this template routes referees, editors, and verifiers to. <strong>Sonnet</strong> is the workhorse mid-tier; <strong>Haiku</strong> is the fast/mechanical tier.</p>
+<p>Alias resolution is <strong>provider-dependent</strong>, and point versions move faster than any guide can. The single source of truth is <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/model-versions.md"><code>model-versions.md</code></a>, which carries the current versions, the per-provider alias table, and a <code>verified_on</code> date with an expiry — <code>scripts/check-model-versions.sh</code> fails the build when it goes stale. <strong>Do not hard-code a point version here.</strong></p>
+<p><strong>Retirement notice:</strong> Sonnet 4 and the original Opus 4 retire on <strong>2026-06-15</strong>. If your environment pins one of these (<code>ANTHROPIC_MODEL</code> env, hard-coded model IDs in CI, etc.), migrate before then. See <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the migration checklist.</p>
 </div>
 </div>
 <p>Not all agents need the same model. Each agent file has a <code>model:</code> field in its YAML frontmatter. In v2.0 all 18 agents are <strong>pinned</strong> to an explicit model + effort tier (no longer <code>inherit</code>), following the 70/20/10 routing pattern below. You can re-tune any agent to optimize cost:</p>
@@ -3827,19 +3828,19 @@ APPROVED   NEEDS WORK
 <td>Mechanical work: TikZ extraction, citation reformatting, bib validation, proofread fixes, simple file lookups</td>
 </tr>
 <tr class="even">
-<td><strong>Sonnet 4.6</strong></td>
+<td><strong>Sonnet tier</strong></td>
 <td>~20%</td>
 <td>Review and critique: r-reviewer, slide-auditor, proofreader, quarto-fixer</td>
 </tr>
 <tr class="odd">
-<td><strong>Opus 4.8</strong></td>
+<td><strong>Opus tier</strong></td>
 <td>~10%</td>
 <td>High-judgment work: editor, domain-referee, methods-referee, claim-verifier, manuscript review</td>
 </tr>
 </tbody>
 </table>
 <p>Set per-agent via <code>model:</code> in <code>.claude/agents/&lt;name&gt;.md</code> frontmatter. Typical savings vs. all-Opus: <strong>50–80% on routed skills</strong>, no quality loss on the mechanical tier. The community-converged ratio is documented in <a href="https://augmentcode.com">Augment Code’s routing data</a> and aligns with Aider’s architect/editor split; we cite Anthropic’s <a href="https://www.anthropic.com/engineering">Apr 8 2026 “Decoupling brain from hands”</a> as the primary-source endorsement of the pattern.</p>
-<p><strong>3. Effort budgeting.</strong> The Effort Levels section earlier covered the <code>low | medium | high | xhigh | max</code> ladder. <strong>Opus 4.8 defaults to <code>high</code></strong> — and its <code>high</code> does roughly what 4.7’s <code>xhigh</code> did, for fewer tokens. So: let <code>high</code> be the default; drop to <code>medium</code>/<code>low</code> to save cost on mechanical work; reach for <code>xhigh</code> only for extended exploration (deep search, big refactors, the hardest <code>/review-paper</code> runs); <code>ultracode</code> (xhigh + dynamic workflows) for repo-scale autonomous tasks.</p>
+<p><strong>3. Effort budgeting.</strong> The Effort Levels section earlier covered the <code>low | medium | high | xhigh | max</code> ladder. <strong>the current Opus tier defaults to <code>high</code></strong> — and its <code>high</code> does roughly what 4.7’s <code>xhigh</code> did, for fewer tokens. So: let <code>high</code> be the default; drop to <code>medium</code>/<code>low</code> to save cost on mechanical work; reach for <code>xhigh</code> only for extended exploration (deep search, big refactors, the hardest <code>/review-paper</code> runs); <code>ultracode</code> (xhigh + dynamic workflows) for repo-scale autonomous tasks.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -3867,7 +3868,7 @@ APPROVED   NEEDS WORK
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Starting 2026-06-15, <code>claude -p</code> headless subprocess calls (used by <code>/coarse-review</code> and any script that calls Claude Code in <code>-p</code> mode) draw from a <strong>separate monthly Agent SDK credit pool</strong>, decoupled from interactive credits. If <code>/coarse-review</code> starts failing after the cutover with credit-exhaustion errors even though your interactive session works, the Agent SDK pool is what’s empty. See <a href="../TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the migration details.</p>
+<p>Starting 2026-06-15, <code>claude -p</code> headless subprocess calls (used by <code>/coarse-review</code> and any script that calls Claude Code in <code>-p</code> mode) draw from a <strong>separate monthly Agent SDK credit pool</strong>, decoupled from interactive credits. If <code>/coarse-review</code> starts failing after the cutover with credit-exhaustion errors even though your interactive session works, the Agent SDK pool is what’s empty. See <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the migration details.</p>
 </div>
 </div>
 </section>
@@ -4153,7 +4154,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </section>
 <section id="sec-effort" class="level2" data-number="4.7">
 <h2 data-number="4.7" class="anchored" data-anchor-id="sec-effort"><span class="header-section-number">4.7</span> Effort Levels — Cost vs. Thoroughness</h2>
-<p>Claude Code lets you control how deeply it reasons about each task. Higher effort means more “thinking tokens” and better results — but higher cost. On <strong>Opus 4.8 the default is <code>high</code></strong> — its <code>high</code> reasoning now delivers what 4.7’s <code>xhigh</code> did, so you rarely need to bump up (see <a href="#sec-cost">Cost-Conscious Composition</a>).</p>
+<p>Claude Code lets you control how deeply it reasons about each task. Higher effort means more “thinking tokens” and better results — but higher cost. On <strong>the current Opus tier the default is <code>high</code></strong> — its <code>high</code> reasoning now delivers what 4.7’s <code>xhigh</code> did, so you rarely need to bump up (see <a href="#sec-cost">Cost-Conscious Composition</a>).</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 12%">
@@ -4181,12 +4182,12 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <td>Standard</td>
 <td>Mechanical work; drop here from <code>high</code> to save cost</td>
 <td><span class="math display">\[ |
-| `high` | ~10k tokens | Complex derivations, paper reviews (**Opus 4.8 default**) | \]</span>$</td>
+| `high` | ~10k tokens | Complex derivations, paper reviews (**Opus-tier default**) | \]</span>$</td>
 </tr>
 <tr class="odd">
 <td><code>xhigh</code></td>
 <td>~20k tokens</td>
-<td>Extended exploration / hardest runs; <strong>Opus 4.8 defaults to <code>high</code></strong>, so reserve <code>xhigh</code> for genuinely hard work (introduced Apr 2026 Week 16)</td>
+<td>Extended exploration / hardest runs; <strong>the current Opus tier defaults to <code>high</code></strong>, so reserve <code>xhigh</code> for genuinely hard work (introduced Apr 2026 Week 16)</td>
 <td>$<span class="math display">\[$ |
 | `max` / ultrathink | ~32k tokens | Deep proofs, multi-step analysis | \]</span>$$$</td>
 </tr>
@@ -4194,7 +4195,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </table>
 <p><strong>How to set effort:</strong></p>
 <ul>
-<li><strong>Per-session:</strong> Type <code>/effort high</code> (the Opus 4.8 default) or <code>/effort xhigh</code> for the hardest runs. Typing <code>/effort</code> on its own opens an <strong>interactive slider</strong> (Apr 2026 Week 16).</li>
+<li><strong>Per-session:</strong> Type <code>/effort high</code> (the current Opus default) or <code>/effort xhigh</code> for the hardest runs. Typing <code>/effort</code> on its own opens an <strong>interactive slider</strong> (Apr 2026 Week 16).</li>
 <li><strong>Per-skill:</strong> Add <code>effort: high</code> to skill frontmatter (see <a href="#skill-frontmatter">Skill Frontmatter Reference</a>)</li>
 <li><strong>Keyboard toggle:</strong> <code>Option+T</code> (Mac) / <code>Alt+T</code> (Windows/Linux) toggles extended thinking</li>
 <li><strong>In prompts:</strong> Include “ultrathink” in your prompt to enable extended thinking for that turn. Note: phrases like “think hard” are treated as regular instructions and do <em>not</em> allocate extra thinking tokens</li>
@@ -4231,7 +4232,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">LEARN:workflow</span><span class="co">]</span> Every Beamer edit must auto-sync to Quarto</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <section id="two-tier-memory-architecture-memory.md-vs-personal-memory.md" class="level4" data-number="4.8.0.1">
 <h4 data-number="4.8.0.1" class="anchored" data-anchor-id="two-tier-memory-architecture-memory.md-vs-personal-memory.md"><span class="header-section-number">4.8.0.1</span> Two-tier memory architecture (<code>MEMORY.md</code> vs <code>personal-memory.md</code>)</h4>
-<p>The template splits memory into two tiers (see <a href=".claude/rules/meta-governance.md"><code>meta-governance.md</code></a>):</p>
+<p>The template splits memory into two tiers (see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/meta-governance.md"><code>meta-governance.md</code></a>):</p>
 <ul>
 <li><strong><code>MEMORY.md</code></strong> (committed, ≤ 200 lines) — generic learnings that help all forkers: workflow patterns, design principles, documentation standards, quality thresholds that transfer across domains.</li>
 <li><strong><code>.claude/state/personal-memory.md</code></strong> (gitignored, no size cap) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.</li>
@@ -4249,7 +4250,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <li><strong>Evidence</strong> — does it cite the originating incident / file / why?</li>
 <li><strong>Format</strong> — does it follow <code>[LEARN:category] wrong → right</code>?</li>
 </ol>
-<p>Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in <em>isolated forked contexts</em> — they cannot see each other’s votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per <a href=".claude/rules/model-routing.md">model-routing.md</a>) since the review is mechanical-ish.</p>
+<p>Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in <em>isolated forked contexts</em> — they cannot see each other’s votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/model-routing.md">model-routing.md</a>) since the review is mechanical-ish.</p>
 <p>When to run: monthly as memory-maintenance, before sharing a fork, after a paper or course cycle ships, or wired as a <code>/loop</code> task.</p>
 </section>
 <section id="plans-compression-resistant-task-memory" class="level3" data-number="4.8.1">
@@ -4892,7 +4893,7 @@ Phase 4: Only then extend
 <p>In one course, we discovered that a widely-used R package silently produced <strong>incorrect estimates</strong> due to a subtle specification issue. This bug was caught 3 times in different scripts. Without the replication-first protocol, these wrong numbers would have been taught to PhD students.</p>
 </div>
 </div>
-<p><strong>Source-language coverage:</strong> The pattern is language-agnostic. The template ships <a href="#all-skills"><code>/data-analysis</code></a> for R-first projects and <a href="#all-skills"><code>/stata-replication</code></a> (v1.9.0) for Stata-first projects (mirrors <code>/data-analysis</code> exactly; same numbered-pipeline shape, different language; executes via the <code>stata-mcp</code> MCP server). Python-first projects follow the same convention with the path <code>scripts/python/_outputs/</code>. For Stata users, <a href=".claude/rules/stata-code-conventions.md"><code>stata-code-conventions.md</code></a> (v1.9.0) codifies the header (<code>version 18</code>, <code>clear all</code>, <code>set seed</code>/<code>set sortseed</code>), numbered pipeline (00–99), <code>esttab</code> for <code>\input{}</code> tables, clustering discipline (<code>reghdfe</code>), balance via <code>iebaltab</code>, and AEA Data Editor compliance.</p>
+<p><strong>Source-language coverage:</strong> The pattern is language-agnostic. The template ships <a href="#all-skills"><code>/data-analysis</code></a> for R-first projects and <a href="#all-skills"><code>/stata-replication</code></a> (v1.9.0) for Stata-first projects (mirrors <code>/data-analysis</code> exactly; same numbered-pipeline shape, different language; executes via the <code>stata-mcp</code> MCP server). Python-first projects follow the same convention with the path <code>scripts/python/_outputs/</code>. For Stata users, <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md"><code>stata-code-conventions.md</code></a> (v1.9.0) codifies the header (<code>version 18</code>, <code>clear all</code>, <code>set seed</code>/<code>set sortseed</code>), numbered pipeline (00–99), <code>esttab</code> for <code>\input{}</code> tables, clustering discipline (<code>reghdfe</code>), balance via <code>iebaltab</code>, and AEA Data Editor compliance.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -4905,7 +4906,7 @@ Phase 4: Only then extend
 <div class="callout-body-container callout-body">
 <p>Replication-first verifies the <em>current</em> state. A separate question: how do we keep manuscript and code in sync over the lifetime of a paper, especially during R&amp;R?</p>
 <p>The answer is a per-paper <code>quality_reports/passports/&lt;paper-slug&gt;.yaml</code> that records, for each numeric claim in the manuscript, the script + line + output that produced it. Schema includes <code>tolerance</code>, <code>last_verified_on</code>, <code>status</code> (PASS / FAIL / STALE / UNVERIFIED). <a href="#all-skills"><code>/audit-reproducibility</code></a> reads and rewrites the passport in place; <a href="#all-skills"><code>/commit</code></a> reads it to block commits when a load-bearing claim is FAIL or STALE.</p>
-<p>Starter file: <a href="templates/passport-template.yaml"><code>templates/passport-template.yaml</code></a>. Copy once per paper. Pattern attributed to <a href="https://github.com/Imbad0202/academic-research-skills">Imbad0202/academic-research-skills</a> “Material Passport” concept (scope-reduced for this template: numeric claims only).</p>
+<p>Starter file: <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/templates/passport-template.yaml"><code>templates/passport-template.yaml</code></a>. Copy once per paper. Pattern attributed to <a href="https://github.com/Imbad0202/academic-research-skills">Imbad0202/academic-research-skills</a> “Material Passport” concept (scope-reduced for this template: numeric claims only).</p>
 </div>
 </div>
 </section>
@@ -6167,7 +6168,7 @@ research-spec.md  ─────────────→  preregistration-dr
 <p><strong>Repository:</strong> <a href="https://github.com/SepineTam/stata-mcp">SepineTam/stata-mcp</a> <strong>Author:</strong> SepineTam (171+ stars, 91 releases, v1.17.3 as of May 2026)</p>
 <p>A mature MCP server that lets Claude Code execute Stata <code>.do</code> files via a command-guarded interface — refuses destructive shell ops (<code>!/shell/erase</code> etc.), monitors RAM, and pairs with the Stata Language Server. <strong>Install once per user:</strong> <code>claude mcp add stata-mcp --scope user -- uvx stata-mcp</code> (requires <code>uv</code> and a local Stata install).</p>
 <p><strong>Why it matters for this template:</strong> v1.9.0 added <a href="#sec-appendix"><code>/stata-replication</code></a> for Stata-first projects, which depends on this MCP server. R-first projects (the original template focus) continue to use <a href="#sec-appendix"><code>/data-analysis</code></a>; the two skills are parallel — same pipeline shape, different source language. AEA submissions where the original replication package is in Stata are the canonical use case.</p>
-<p>For end-to-end Stata workflows, see <a href=".claude/rules/stata-code-conventions.md"><code>.claude/rules/stata-code-conventions.md</code></a> (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).</p>
+<p>For end-to-end Stata workflows, see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md"><code>.claude/rules/stata-code-conventions.md</code></a> (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).</p>
 </section>
 <section id="claudecodetools-the-editor-persona" class="level2" data-number="6.8">
 <h2 data-number="6.8" class="anchored" data-anchor-id="claudecodetools-the-editor-persona"><span class="header-section-number">6.8</span> ClaudeCodeTools: The Editor Persona</h2>
@@ -6265,11 +6266,11 @@ research-spec.md  ─────────────→  preregistration-dr
 <li>Update CSS class names in the SCSS if needed.</li>
 <li>Modify the <code>beamer-translator</code> environment mapping to match your classes.</li>
 </ol>
-<p><strong>Palette contract.</strong> The core palette names (<code>primary-blue</code>, <code>primary-gold</code>, <code>highlight-yellow</code>, <code>light-bg</code>, <code>jet</code>) must exist on both surfaces. Snippets in <code>templates/tikz-snippets/</code> currently inline their colors for standalone compilation, but real lectures that <code>\input{header}</code> inherit the palette automatically. See <a href="../Preambles/README.md"><code>Preambles/README.md</code></a> for the full contract and TikZ style library.</p>
+<p><strong>Palette contract.</strong> The core palette names (<code>primary-blue</code>, <code>primary-gold</code>, <code>highlight-yellow</code>, <code>light-bg</code>, <code>jet</code>) must exist on both surfaces. Snippets in <code>templates/tikz-snippets/</code> currently inline their colors for standalone compilation, but real lectures that <code>\input{header}</code> inherit the palette automatically. See <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/Preambles/README.md"><code>Preambles/README.md</code></a> for the full contract and TikZ style library.</p>
 </section>
 <section id="sec-create-skills" class="level2" data-number="7.4">
 <h2 data-number="7.4" class="anchored" data-anchor-id="sec-create-skills"><span class="header-section-number">7.4</span> Step 4: Creating Custom Skills</h2>
-<p>The guide includes 52 <a href="#skills---reusable-slash-commands">skills</a> for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.</p>
+<p>The guide includes 53 <a href="#skills---reusable-slash-commands">skills</a> for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.</p>
 <section id="when-to-create-a-skill" class="level3" data-number="7.4.1">
 <h3 data-number="7.4.1" class="anchored" data-anchor-id="when-to-create-a-skill"><span class="header-section-number">7.4.1</span> When to Create a Skill</h3>
 <p>Create a skill when: - You repeatedly explain the same 3+ step workflow to Claude - You need domain-specific quality checks (citation style, notation consistency, lab protocols) - You enforce field-specific output formats (thesis structure, journal templates) - You coordinate multi-tool workflows (data → analysis → manuscript)</p>
@@ -6796,196 +6797,201 @@ research-spec.md  ─────────────→  preregistration-dr
 <td>Beamer to Quarto translation</td>
 </tr>
 <tr class="even">
+<td><code>/vaccinate</code></td>
+<td>Grade the grader: seed known defects + a clean control into a copy of a real artifact, run the check or review agent, report <strong>recall</strong> and <strong>false-positive rate</strong> into <code>quality_reports/qualification/LEDGER.md</code></td>
+<td>Before trusting any gate or referee simulation for a decision that matters</td>
+</tr>
+<tr class="odd">
 <td><code>/validate-bib</code></td>
 <td><code>.claude/skills/validate-bib/</code></td>
 <td>Bibliography validation</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/devils-advocate</code></td>
 <td><code>.claude/skills/devils-advocate/</code></td>
 <td>Design challenge questions</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/create-lecture</code></td>
 <td><code>.claude/skills/create-lecture/</code></td>
 <td>Full lecture creation</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/commit</code></td>
 <td><code>.claude/skills/commit/</code></td>
 <td>Stage, commit, PR, and merge</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/lit-review</code></td>
 <td><code>.claude/skills/lit-review/</code></td>
 <td>Literature search and synthesis</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/research-ideation</code></td>
 <td><code>.claude/skills/research-ideation/</code></td>
 <td>Research questions and strategies</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/interview-me</code></td>
 <td><code>.claude/skills/interview-me/</code></td>
 <td>Interactive research interview</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/review-paper</code></td>
 <td><code>.claude/skills/review-paper/</code></td>
 <td>Manuscript review</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/respond-to-referees</code></td>
 <td><code>.claude/skills/respond-to-referees/</code></td>
 <td>R&amp;R cross-reference and response draft</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/data-analysis</code></td>
 <td><code>.claude/skills/data-analysis/</code></td>
 <td>End-to-end R analysis</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/audit-reproducibility</code></td>
 <td><code>.claude/skills/audit-reproducibility/</code></td>
 <td>Enforce replication tolerance thresholds on paper ↔︎ code</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/learn</code></td>
 <td><code>.claude/skills/learn/</code></td>
 <td>Extract discoveries into persistent skills</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/context-status</code></td>
 <td><code>.claude/skills/context-status/</code></td>
 <td>Show session health and context usage</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/deep-audit</code></td>
 <td><code>.claude/skills/deep-audit/</code></td>
 <td>Repository-wide consistency audit</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/seven-pass-review</code></td>
 <td><code>.claude/skills/seven-pass-review/</code></td>
 <td>Seven-pass adversarial manuscript review (parallel forked subagents)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/permission-check</code></td>
 <td><code>.claude/skills/permission-check/</code></td>
 <td>Diagnose permission layers (6-tier stack)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/verify-claims</code></td>
 <td><code>.claude/skills/verify-claims/</code></td>
 <td>Chain-of-Verification fact-check on any draft (v1.7.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/checkpoint</code></td>
 <td><code>.claude/skills/checkpoint/</code></td>
 <td>Structured session-handoff snapshot — companion to narrative session logs (v1.8.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/preregister</code></td>
 <td><code>.claude/skills/preregister/</code></td>
 <td>Generate a preregistration document (OSF / AsPredicted / AEA RCT Registry) from a research spec (v1.8.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/humanize</code></td>
 <td><code>.claude/skills/humanize/</code></td>
 <td>Detect AI-voice tells in academic prose (read-only audit; no rewrite) (v1.9.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/compress-session</code></td>
 <td><code>.claude/skills/compress-session/</code></td>
 <td>Distil the current session into a structured note (decisions, files, open questions, next actions, discarded-as-noise) before auto-compaction (v1.9.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/promote-memory</code></td>
 <td><code>.claude/skills/promote-memory/</code></td>
 <td>Five-critic council that votes on whether candidate <code>[LEARN]</code> entries should be promoted from personal-memory.md to MEMORY.md (v1.9.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/stata-replication</code></td>
 <td><code>.claude/skills/stata-replication/</code></td>
 <td>End-to-end Stata pipeline scaffold + execution via the <code>stata-mcp</code> MCP server (mirrors <code>/data-analysis</code> for R-first projects; v1.9.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/simulation-study</code></td>
 <td><code>.claude/skills/simulation-study/</code></td>
 <td>Reproducible Monte Carlo study — DGP, estimator grid, seeded reps, bias/RMSE/coverage/size/power with Monte Carlo SEs (v1.10.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/r-package-check</code></td>
 <td><code>.claude/skills/r-package-check/</code></td>
 <td>R package release gate — <code>devtools::document()</code> + tests + <code>R CMD check --as-cran</code> + CRAN-policy triage (v1.10.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/replication-package</code></td>
 <td><code>.claude/skills/replication-package/</code></td>
 <td>Assemble a submission-ready DCAS / openICPSR replication package; calls <code>/audit-reproducibility</code> and blocks on FAIL (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/capture-environment</code></td>
 <td><code>.claude/skills/capture-environment/</code></td>
 <td>Snapshot the computational environment (renv.lock / sessionInfo / requirements.txt / uv.lock + optional Dockerfile + seeds) (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/did-event-study</code></td>
 <td><code>.claude/skills/did-event-study/</code></td>
 <td>Staggered DiD / event-study wrapper over canonical packages (Callaway–Sant’Anna <code>did</code>, <code>fixest::sunab</code>, HonestDiD; Stata <code>csdid</code>/<code>eventstudyinteract</code>/<code>honestdid</code>) (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/power-analysis</code></td>
 <td><code>.claude/skills/power-analysis/</code></td>
 <td>Power / required-N / MDE for study design (RCT, clustered/ICC, multi-arm, or simulation-based) + a methods paragraph for <code>/preregister</code> (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/disclosure-check</code></td>
 <td><code>.claude/skills/disclosure-check/</code></td>
 <td>Pre-screen restricted-data outputs for SDL violations (small cells, dominance, PII); gates on any CRITICAL (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/grant-proposal</code></td>
 <td><code>.claude/skills/grant-proposal/</code></td>
 <td>Scaffold a grant proposal (NSF/NIH/ERC/foundation) from an <code>/interview-me</code> spec; delegates DMP + facilities; aims↔︎methods↔︎budget coherence pass (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/data-management-plan</code></td>
 <td><code>.claude/skills/data-management-plan/</code></td>
 <td>Draft a funder-compliant Data Management Plan (NSF/NIH 2023/ERC/Horizon) (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/coauthor-brief</code></td>
 <td><code>.claude/skills/coauthor-brief/</code></td>
 <td>Generate a collaborator handoff brief: git delta, per-artifact state, open questions, reproduce-locally + restricted-data steps (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/triage-inbox</code></td>
 <td><code>.claude/skills/triage-inbox/</code></td>
 <td>Triage academic email + calendar (Gmail/Calendar MCP) into a prioritized digest + referee-obligations tracker; human-gated actions only (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/syllabus</code></td>
 <td><code>.claude/skills/syllabus/</code></td>
 <td>Build a course syllabus from a topic/reading list (schedule, objectives, assessment + rubric, per-week <code>/create-lecture</code> work-list) (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/teach-from-paper</code></td>
 <td><code>.claude/skills/teach-from-paper/</code></td>
 <td>Turn a paper into a lecture outline, teachable results, slide skeleton (→ <code>/create-lecture</code>), discussion questions, exercise brief (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/respond-to-eval</code></td>
 <td><code>.claude/skills/respond-to-eval/</code></td>
 <td>Turn student course evaluations into a classified teaching-improvement plan (Keep/Change/Investigate/Out-of-scope) (v2.0)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>/scaffold-exercises</code></td>
 <td><code>.claude/skills/scaffold-exercises/</code></td>
 <td>Scaffold a graded problem set (analytical/empirical/coding) with worked solutions; clean student set + separate solution key (v2.0)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>/new-skill</code></td>
 <td><code>.claude/skills/new-skill/</code></td>
 <td>Scaffold a convention-compliant skill (interview → write <code>SKILL.md</code> with gate-passing frontmatter) (v2.0)</td>

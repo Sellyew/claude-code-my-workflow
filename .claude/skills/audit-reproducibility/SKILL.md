@@ -2,7 +2,7 @@
 name: audit-reproducibility
 description: Enforce the replication-protocol.md rule by cross-checking numeric claims in a manuscript against the actual R / Stata / Python outputs. Report PASS/FAIL per claim against tolerance thresholds. Use before submission and before releasing a replication package.
 argument-hint: "[manuscript path] [outputs-dir] (outputs-dir defaults to scripts/R/_outputs/)"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Bash", "Task", "Monitor"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Bash", "Agent", "Task", "Monitor"]
 effort: high
 ---
 

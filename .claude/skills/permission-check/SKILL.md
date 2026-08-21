@@ -3,6 +3,7 @@ name: permission-check
 description: Diagnose why Claude Code is (or isn't) prompting for permission. By default reads only repo-local layers (CLI project, CLI project-local, VSCode workspace). Host-global layers (CLI user `~/.claude/`, VSCode user settings) are read ONLY when the user explicitly confirms — those files may contain unrelated paths or secrets. Use when user says "why is it asking me to approve?", "permission check", "why am I getting prompts?", "bypass isn't working", "check my permissions". Read-only diagnostic.
 argument-hint: "(no arguments)"
 allowed-tools: ["Read", "Bash", "Glob"]
+disallowed-tools: ["Edit", "MultiEdit"]
 ---
 
 # Permission Check

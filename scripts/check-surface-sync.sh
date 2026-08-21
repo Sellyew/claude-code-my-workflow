@@ -13,10 +13,13 @@
 #      presented as current in user-facing surfaces.
 #      SSoT: .claude/references/model-versions.md.
 #      Exit codes: 0 = clean, 1 = drift, 2 = internal error.
+#   4. check-links.py — every relative markdown link and heading anchor
+#      resolves. Catches renamed/removed files and stale cross-references.
+#      Exit codes: 0 = clean, 1 = broken reference(s).
 #
-# All tools run to completion even if one fails — the user sees the full
+# All four tools run to completion even if one fails — the user sees the full
 # picture on a single invocation. The wrapper's final exit code is the max
-# of the three (any failure propagates).
+# of all four (any failure propagates).
 #
 # We deliberately do NOT use `set -e` because that would abort after the
 # first gate fails, hiding the second gate's output. We use `set -uo
@@ -44,8 +47,14 @@ echo "── check-model-versions ──"
 "$SCRIPT_DIR/check-model-versions.sh"
 MODELS_RC=$?
 
-# Final exit code is the max of all three gates (any failure propagates).
+echo ""
+echo "── check-links ──"
+python3 "$SCRIPT_DIR/check-links.py"
+LINKS_RC=$?
+
+# Final exit code is the max of all four gates (any failure propagates).
 RC="$SYNC_RC"
 [ "$INTEGRITY_RC" -gt "$RC" ] && RC="$INTEGRITY_RC"
 [ "$MODELS_RC" -gt "$RC" ] && RC="$MODELS_RC"
+[ "$LINKS_RC" -gt "$RC" ] && RC="$LINKS_RC"
 exit "$RC"

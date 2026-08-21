@@ -45,3 +45,41 @@ A precise cron expression (e.g. `0 6 * * *`) is applied via `/schedule update` *
 - [`.claude/hooks/claim-reconcile.py`](../hooks/claim-reconcile.py) — the event-driven reconciliation hook.
 - [`.claude/rules/replication-protocol.md`](../rules/replication-protocol.md) — what the reproducibility routine checks.
 - [`.claude/rules/confidential-data.md`](../rules/confidential-data.md) — why unattended runs stay human-gated near restricted data.
+
+## Choosing a scheduling mechanism (verified 2026-08-21)
+
+Claude Code offers **three** ways to schedule work. The distinction that matters for research
+is **local file access** — a cloud routine runs against a *fresh clone* and cannot see local
+or restricted data.
+
+| | Cloud routines | Desktop scheduled tasks | `/loop` |
+|---|---|---|---|
+| Runs on | Anthropic-managed cloud | your machine | your machine |
+| Requires machine on | No | **Yes** | Yes |
+| Requires open session | No | **No** | **Yes** |
+| Persistent across restarts | Yes | Yes | restored on `--resume` if unexpired |
+| **Access to local files** | **No (fresh clone)** | **Yes** | Yes |
+| Permission prompts | none (autonomous) | configurable per task | inherits from session |
+| Minimum interval | **1 hour** | 1 minute | 1 minute |
+
+### What this means for research workflows
+
+- **Nightly reproducibility check on local data** → **Desktop scheduled tasks**. A cloud
+  routine gets a fresh clone and cannot reach your data directory. This is the correct home
+  for `scripts/nightly-repro-check.sh`.
+- **Restricted-use microdata** → **Desktop only**, never cloud. A cloud routine would need the
+  data in the repo, which the confidential-data rule forbids.
+- **Watching a PR, a CI run, or a long build** → cloud routines (no machine required) or
+  `/loop` if you are already in the session.
+- **Polling inside an active session** → `/loop`. It dies with the session; that is fine for
+  polling and wrong for anything that must survive a restart.
+
+> Session-scoped scheduling remains session-scoped: *"Tasks are session-scoped: they live in
+> the current conversation and stop when you start a new one."* Re-verified 2026-08-21 — the
+> long-standing guidance to use durable scheduling for anything that must outlive a session
+> still holds.
+
+### Least privilege still applies
+
+Cloud routines include **all connectors with write access by default**. Grant per task, not
+per account.

@@ -7,10 +7,11 @@ description: |
   and loops until clean.
   Use when: after making broad changes, before releases, or when user says
   "audit", "find inconsistencies", "check everything".
-author: Claude Code Academic Workflow
-version: 1.0.0
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Task"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "Task"]
 disable-model-invocation: true
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # /deep-audit — Repository Infrastructure Audit
@@ -44,7 +45,7 @@ If Phase 0 reports P0 or P1 findings, fix them (or tune the regex if they are fa
 
 ### PHASE 1: Launch 4 Parallel Audit Agents
 
-Launch these 4 agents simultaneously using `Task` with `subagent_type=general-purpose`. Each agent's prompt **must** tell it to read `.claude/references/audit-pet-peeves.md` and explicitly check for each class of bug before reporting clean. The pet-peeves file is a living catalogue of drift patterns review bots have caught; it grows with each PR.
+Launch these 4 agents simultaneously using `Agent` with `subagent_type=general-purpose`. Each agent's prompt **must** tell it to read `.claude/references/audit-pet-peeves.md` and explicitly check for each class of bug before reporting clean. The pet-peeves file is a living catalogue of drift patterns review bots have caught; it grows with each PR.
 
 #### Agent 1: Guide Content Accuracy
 Focus: `guide/workflow-guide.qmd`
@@ -79,7 +80,7 @@ Focus: `.claude/skills/*/SKILL.md` and `.claude/rules/*.md`
 - Valid YAML frontmatter in all files
 - No stale `disable-model-invocation: true`
 - `allowed-tools` values are sensible
-- **`allowed-tools` actually covers every tool the skill body invokes.** For every `Task` spawn, `Bash` command, `Write`/`Edit` call mentioned in the skill's Steps / Phases / Workflow body, verify the tool appears in the `allowed-tools` array. Common miss: skill body says "spawn `agent-X` via `Task` with `context=fork`" but `Task` is absent from `allowed-tools` — runtime permission error or silent bypass. Caught this class of bug after Codex/Copilot flagged it on PR #92 (4 skills promised `Task` in their Post-Flight sections but 3 of 4 had no `Task` permission).
+- **`allowed-tools` actually covers every tool the skill body invokes.** For every `Agent` spawn, `Bash` command, `Write`/`Edit` call mentioned in the skill's Steps / Phases / Workflow body, verify the tool appears in the `allowed-tools` array. Common miss: skill body says "spawn `agent-X` via the `Agent` tool with `context=fork`" but `Task` is absent from `allowed-tools` — runtime permission error or silent bypass. Caught this class of bug after Codex/Copilot flagged it on PR #92 (4 skills promised `Task` in their Post-Flight sections but 3 of 4 had no `Task` permission).
 - **Rule `paths:` scope matches skill implementation.** If rule X lists skill Y in `paths:`, verify skill Y actually implements the protocol rule X mandates. A rule claiming a skill follows a protocol is meaningless if the skill doesn't.
 - Rule `paths:` reference existing directories
 - No contradictions between rules

@@ -1,11 +1,13 @@
 ---
 name: humanize
 description: Read-only audit of `.tex`, `.qmd`, or `.md` text for AI-voice tells — boilerplate transitions ("Moreover", "Furthermore", "It is important to note that"), AI-cliché lexicon ("delve", "navigate the complexities", "tapestry", "robust framework"), em-dash overuse, symmetric paragraph shapes, tricolon abuse, hedging stacking, "not only X but also Y" frames, and formulaic openers. Produces a report; does NOT rewrite. Use when user says "humanize", "does this sound like AI?", "check for AI tells", "de-AI this draft", "remove AI voice", "audit my prose for sycophancy", or before journal submission / posting a working paper.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[filename or 'all'] [--severity low|med|high]"
 disable-model-invocation: true
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Agent", "Task"]
+disallowed-tools: ["Edit", "MultiEdit"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # `/humanize` — AI-voice audit (detect-and-flag)

@@ -2,7 +2,7 @@
 name: commit
 description: Stage, commit, push, open a PR, and merge to main. Use ONLY on explicit commit intent — user says "commit", "ship it", "push this", "open a PR", "merge to main", "let's commit this", or prefixes with `/commit`. Do NOT auto-invoke on vague end-of-task phrases ("we're done", "wrap up") — those require explicit confirmation first. Runs the standard commit-PR-merge cycle; never force-pushes or skips hooks.
 argument-hint: "[optional: commit message]"
-allowed-tools: ["Bash", "Read", "Glob", "Task"]
+allowed-tools: ["Bash", "Read", "Glob", "Agent", "Task"]
 ---
 
 # Commit, PR, and Merge
@@ -22,7 +22,7 @@ python3 scripts/quality_score.py <changed-file-paths>
 - If any file scores below **80**, halt and report the findings. The user must either fix the issues or explicitly override with phrases like *"commit anyway"* or *"skip quality gate"*.
 - If all files score 80+, continue.
 
-Spawn the **verifier** agent (via `Task` with `subagent_type=verifier`) to run compilation/render checks on the changed files. Report pass/fail before committing.
+Spawn the **verifier** agent (via the `Agent` tool with `subagent_type=verifier`) to run compilation/render checks on the changed files. Report pass/fail before committing.
 
 ### Step 0b: Surface-Sync Gate (Pre-Commit)
 
