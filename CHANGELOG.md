@@ -96,8 +96,59 @@ Every gate touched was **qualified, not just run**: a defect was seeded, the gat
 to go red, the artifact was restored, and the gate confirmed green. Two rows are recorded in
 the qualification ledger; the checks that remain **unqualified are listed there by name**.
 
-**Inventory at release: 53 skills, 18 agents, 32 rules, 7 hooks, 12 references** (was 52 / 18 /
-32 / 7 / 9 at v2.1.0).
+### Added — the record lives in the repo, not the transcript
+
+- **`progress-reports.md`** — three durable stores: GitHub **issues** as defect memory
+  (searchable across years, threaded evidence, linked to the fixing commit; a closed one
+  answers *"did we already look at this?"*), `quality_reports/` as **work** memory, `MEMORY.md`
+  as **lesson** memory. The always-omitted and most valuable section of a progress report is
+  *what was tried and abandoned, and why* — it stops the next session re-walking a dead end.
+- **`issue-ledger.md`** — the evidence standard: measurement denominator, a live positive or
+  negative control, explicit non-scope, measurable acceptance criteria, and a seven-section
+  closure comment. **No auto-closing keywords** (the merge is a code event; the closure is a
+  judgement) and **failed hypotheses stay visible**.
+- **Evidence contracts as issue forms** — an incomplete report is incomplete *by construction*.
+
+### Added — structure that stays clean
+
+- **`repo-hygiene.md` + `check-repo-hygiene.py`.** Agents try five approaches and four produce
+  files; those four must not survive. Rejects root clutter, draft names, superseded copies,
+  version-in-filename, accidental duplicates, tracked build artifacts, and undocumented
+  archives. Numbered pipeline stages are exempt — found as a false positive on this repo's own
+  `02_clean.R` and fixed before shipping.
+
+### Added — `/challenge`
+
+Specification curve over the discrete forks, then named sensitivity statistics (E-value,
+Cinelli–Hazlett RV, Oster δ, Rosenbaum Γ, Rambachan–Roth honest DiD) against the identifying
+assumption. Forks are labelled **estimand** vs **estimate** — comparison group, base period,
+and aggregation in staggered DiD change *what is being estimated*, and averaging over them is
+meaningless. Naive pre-testing is explicitly rejected in favour of honest DiD.
+
+### Changed — the landing page teaches
+
+Rebuilt from a sixteen-bullet inventory into: the problem → four persona paths → the seven
+verification rungs → the five credibility questions → inventory (below the fold) → honest
+scope. It now answers *"should I use this?"* before *"what is in it?"*.
+
+### Verification of this release
+
+**Full stress test: 10 seeded defects across all seven gates, 10/10 caught, 0 false alarms on
+the clean control.** Every gate carries a qualification-ledger row; the checks that remain
+unqualified are listed there by name.
+
+Three gates caught this release's own work before it shipped: the link checker caught a file
+move, the count gate caught the guide's own illustrative example reading as a real assertion,
+and the pre-commit hook aborted a commit outright.
+
+And one finding worth more than the fixes: **rebuilding the landing page silently removed it
+from gate coverage.** Every gate stayed green because the page was no longer being *matched*.
+A gate that matches nothing reports nothing. Caught by seeding a defect into that specific
+surface; coverage restored and re-proved. Count assertions went **29 → 34**, and a falling
+number is now documented as the signal to investigate.
+
+**Inventory at release: 60 skills, 18 agents, 35 rules, 7 hooks, 13 references, 7 gates**
+(was 52 / 18 / 32 / 7 / 9 / 3 at v2.1.0).
 
 ### Upgrading from v2.1
 
