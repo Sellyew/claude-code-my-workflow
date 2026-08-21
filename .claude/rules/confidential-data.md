@@ -40,7 +40,7 @@ If the data is human-subjects: record the IRB protocol number, the approved use,
 ## Multi-author git topology (restricted-data-safe collaboration)
 
 - **Feature branches per author**, merged via PR — the same flow the rest of the template uses; no author force-pushes shared history (the [`git-guardrails`](../hooks/git-guardrails.py) hook blocks `--force` and `git add -A`, which is how raw data usually leaks into a commit).
-- **`MEMORY.md` syncs via git; `.claude/state/personal-memory.md` stays local** (`meta-governance.md`). Machine-specific restricted-data *paths* live in personal-memory, never in committed files.
+- **`MEMORY.md` syncs via git; native auto memory (`~/.claude/projects/<project>/memory/`) stays machine-local** (`meta-governance.md`). Machine-specific restricted-data *paths* live in personal-memory, never in committed files.
 - A collaborator joining a restricted-data project gets a [`/coauthor-brief`](../skills/coauthor-brief/SKILL.md) with environment setup ([`/capture-environment`](../skills/capture-environment/SKILL.md) lockfiles) and **access-request steps**, not a data drop.
 - Enable strict path-leak protection while in restricted dirs: `CLAUDE_STRICT_PATHS=1` makes `git-guardrails` *deny* (not just warn) hardcoded machine paths in code.
 

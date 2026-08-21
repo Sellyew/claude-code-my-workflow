@@ -1,0 +1,76 @@
+name: Numeric discrepancy
+description: A reported number does not match what the code produces, or two implementations disagree.
+title: "[numeric]: "
+labels: ["numeric-discrepancy", "needs-reprex"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when a manuscript/table value disagrees with a script output, or when two
+        implementations (R ↔ Stata ↔ Python, or two versions) disagree.
+
+        **Reports without a reproducer, a data description, and the comparison source may be
+        closed as incomplete.** That is not gatekeeping — a discrepancy without a denominator
+        and a tolerance cannot be adjudicated, only argued about.
+  - type: input
+    id: revision
+    attributes:
+      label: Exact revision
+      description: Commit SHA, branch, and worktree. Not "current main".
+      placeholder: "a1b2c3d on feat/did-revision, ~/work/paper"
+    validations: {required: true}
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "R 4.4.1 / Stata 18 MP / Python 3.12; macOS 15"
+    validations: {required: true}
+  - type: textarea
+    id: command
+    attributes:
+      label: Command that produced the observed value
+      render: shell
+    validations: {required: true}
+  - type: textarea
+    id: comparison
+    attributes:
+      label: Comparison source and its output
+      description: The reference implementation, the manuscript line, or the pinned oracle — and what it returns. Name the governing oracle if two references disagree.
+      render: shell
+    validations: {required: true}
+  - type: textarea
+    id: design
+    attributes:
+      label: Design details
+      description: Panel vs repeated cross-section, groups, periods, covariates, weights, clustering level, bootstrap, aggregation. Anything that changes the estimand.
+    validations: {required: true}
+  - type: textarea
+    id: difference
+    attributes:
+      label: Difference observed, with denominator and tolerance
+      description: "e.g. '430 of 962 fingerprinted values moved; max |Δ| = 1.4e-4; declared tolerance 1e-6'. A bare 'the numbers differ' is not actionable."
+    validations: {required: true}
+  - type: textarea
+    id: control
+    attributes:
+      label: Positive or negative control
+      description: What shows your detector fires on a known-affected case (or stays silent on a known-clean one)? "Nothing moved" is only evidence if the check demonstrably can move.
+    validations: {required: true}
+  - type: textarea
+    id: reprex
+    attributes:
+      label: Reproducible fixture
+      description: A small dataset, a seed, or exact steps to regenerate the inputs.
+    validations: {required: true}
+  - type: textarea
+    id: consequence
+    attributes:
+      label: Scientific consequence and scope
+      description: Which claim does this threaten? What is explicitly OUT of scope?
+    validations: {required: true}
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Measurable acceptance criteria
+      description: What result closes this issue? State it before the work starts.
+    validations: {required: true}

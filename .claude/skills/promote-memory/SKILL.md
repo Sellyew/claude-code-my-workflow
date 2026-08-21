@@ -1,6 +1,6 @@
 ---
 name: promote-memory
-description: Review candidate `[LEARN]` entries in `.claude/state/personal-memory.md` (gitignored) and run them through a five-critic council in parallel: generality, staleness, redundancy, evidence, format. Majority vote (3+ of 5) promotes the entry to MEMORY.md. Use when user says "promote memory", "review my learnings", "what should graduate to MEMORY.md", "five-critic council", or as monthly memory maintenance.
+description: Review candidate learnings in Claude Code's native auto memory (`~/.claude/projects/<project>/memory/`, machine-local) and run them through a five-critic council in parallel: generality, staleness, redundancy, evidence, format. Majority vote (3+ of 5) promotes the entry to MEMORY.md. Use when user says "promote memory", "review my learnings", "what should graduate to MEMORY.md", "five-critic council", or as monthly memory maintenance.
 argument-hint: "[entry-substring or 'all']"
 disable-model-invocation: true
 allowed-tools: ["Read", "Write", "Glob", "Grep", "Agent", "Task", "Bash"]
@@ -12,7 +12,7 @@ metadata:
 <!-- Pattern adapted with attribution from Chris Blattman's claudeblattman v2.1
      "Five-critic council" (claudeblattman.com, Apr 2026 continuous-improvement
      loop). Blattman uses it to decide what enters his MEMORY layer; we adapt
-     it to the personal-memory → MEMORY.md promotion question codified in
+     it to the auto-memory → MEMORY.md promotion question codified in
      .claude/rules/meta-governance.md. -->
 
 # `/promote-memory` — five-critic council for memory promotion
@@ -20,7 +20,7 @@ metadata:
 The template's [`meta-governance.md`](../../rules/meta-governance.md) rule splits memory into two tiers:
 
 - **`MEMORY.md`** (committed, ≤ 200 lines) — generic learnings that help all forkers.
-- **`.claude/state/personal-memory.md`** (gitignored, no size cap) — machine-specific and user-specific learnings.
+- **native auto memory** (`~/.claude/projects/<project>/memory/` — machine-local, typed `user`/`feedback`/`project`/`reference`, no size cap on topic files) — machine-specific and user-specific learnings.
 
 The rule says generic patterns should sync via git; personal patterns stay local. **What it doesn't say** is *who decides which is which*. `/promote-memory` operationalizes the call: spawn five critics in parallel, each reviewing the candidate `[LEARN]` entries on a single dimension, and promote on majority vote (3+ of 5).
 
@@ -33,7 +33,7 @@ The rule says generic patterns should sync via git; personal patterns stay local
 
 ## When NOT to use
 
-- **For a single fresh `[LEARN]` after a single correction.** Just add it to personal-memory.md; let it sit until the next council runs.
+- **For a single fresh `[LEARN]` after a single correction.** Just let auto memory record it; let it sit until the next council runs.
 - **For deleting stale entries.** Use `/learn --revoke` or manual edit. `/promote-memory` only promotes; it doesn't demote.
 - **For project-specific context.** That belongs in CLAUDE.md or session logs, not in either memory tier.
 
@@ -74,7 +74,7 @@ Each critic returns YES/NO + rationale. The promotion threshold is **majority (3
 
 ### Step 1: Read candidate entries
 
-If `$ARGUMENTS` is `all`, read every `[LEARN:*]` entry in `.claude/state/personal-memory.md`. Otherwise treat `$ARGUMENTS` as a substring filter (e.g., `r-code` matches all `[LEARN:r-code]` entries).
+If `$ARGUMENTS` is `all`, read every `[LEARN:*]` entry in `~/.claude/projects/<project>/memory/`. Otherwise treat `$ARGUMENTS` as a substring filter (e.g., `r-code` matches all `[LEARN:r-code]` entries).
 
 ### Step 2: Spawn the council
 
@@ -142,3 +142,18 @@ Do **not** auto-promote — even on 5-of-5 YES votes. The user's approval is the
 - [`.claude/agents/promote-memory-council.md`](../../agents/promote-memory-council.md) — the five-critic implementation (one agent file with five role specs, dispatched in parallel via the `Agent` tool).
 - [`.claude/rules/model-routing.md`](../../rules/model-routing.md) — why critics default to Haiku tier.
 - `/learn` (existing skill) — captures new `[LEARN]` entries; pairs with `/promote-memory` (which decides what graduates).
+
+## Source of candidates (v2.5)
+
+Candidates come from **native auto memory** — `~/.claude/projects/<project>/memory/`. Claude
+writes these itself as it works, typed `user` / `feedback` / `project` / `reference`, and the
+`MEMORY.md` there is an index, not the content.
+
+The promotion question is unchanged and is the whole point: *would a researcher in a different
+field, forking this template, be better off knowing this?* If yes it belongs in the committed
+`MEMORY.md`; if it is about this machine, this dataset, or this person's preferences, it stays
+local.
+
+**Retired:** `.claude/state/personal-memory.md`. The two-tier idea was right; Claude Code now
+ships the local tier natively, so the hand-rolled file is redundant. An existing one still
+reads as a plain file, but nothing writes to it.

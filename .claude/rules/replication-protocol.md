@@ -182,3 +182,25 @@ The pattern is borrowed from [Imbad0202/academic-research-skills](https://github
 - **Do not auto-populate** the passport at `/audit-reproducibility` time without showing the user the inferred mapping. Source-line inference is best-effort; the author confirms.
 - **Do not promote UNVERIFIED claims to PASS** without running the actual numeric audit. The passport is a verified-state artifact; bypassing the verification defeats the purpose.
 - **Do not use the passport as a substitute for `/verify-claims`.** The passport handles numeric claims with code provenance; `/verify-claims` handles citation and named-entity claims with literature provenance. Both run.
+
+## Auto memory is an un-logged context input
+
+Claude Code's **native auto memory** is on by default and is machine-local
+(`~/.claude/projects/<project>/memory/`). It can shape a session invisibly to anyone
+replicating your work: a preference or correction recorded weeks ago is context a replicator
+does not have and cannot see.
+
+This is not a correctness bug — it is an **auditability** one, and the fix is disclosure, not
+abstinence:
+
+- For a session that produces a **reported number**, note in the analysis log that auto memory
+  was active. One line.
+- If a run must be *exactly* reconstructible from the repo alone — a final replication-package
+  build, a numbers-freeze before submission — disable it for that run:
+  `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`.
+- Anything that genuinely belongs to the project, rather than to your machine, should be
+  promoted into the committed `MEMORY.md` via [`/promote-memory`](../skills/promote-memory/SKILL.md)
+  — where a replicator can actually read it.
+
+The principle is the same one behind pinned commits and lockfiles: **if it influenced the
+result, it should be visible to whoever checks the result.**

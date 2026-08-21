@@ -1,0 +1,42 @@
+name: Reproducibility failure
+description: A replication package, script, or pipeline does not reproduce from a clean state.
+title: "[repro]: "
+labels: ["reproducibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For failures reproducing published or reported results from source. If the numbers run
+        but disagree, use **Numeric discrepancy** instead.
+  - type: input
+    id: revision
+    attributes: {label: Exact revision, placeholder: "commit SHA + branch"}
+    validations: {required: true}
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where it fails
+      options:
+        - Environment install / lockfile restore
+        - Data acquisition or access
+        - A specific script errors
+        - Runs clean but produces no output
+        - Produces output that does not match
+    validations: {required: true}
+  - type: textarea
+    id: cold
+    attributes:
+      label: Cold-run transcript
+      description: From a clean checkout. Include the command, the error, and the completion sentinel status.
+      render: shell
+    validations: {required: true}
+  - type: textarea
+    id: env
+    attributes:
+      label: Declared vs resolved environment
+      description: What the lockfile declares, and what actually installed. Divergence here is the most common root cause.
+    validations: {required: true}
+  - type: textarea
+    id: acceptance
+    attributes: {label: Measurable acceptance criteria}
+    validations: {required: true}
