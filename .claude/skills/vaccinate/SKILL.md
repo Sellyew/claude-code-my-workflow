@@ -1,6 +1,6 @@
 ---
 name: vaccinate
-description: Measure whether a check, gate, or AI reviewer can actually detect the failure it is supposed to catch. Seeds known defects into a copy of a real artifact plus a clean control, runs the checker, and reports recall and false-positive rate into a qualification ledger. Use when the user says "does this check work", "qualify the gate", "test my reviewer", "seed defects", "vaccinate", "can I trust this review", or before relying on any automated check or referee simulation for a decision that matters. NOT a code fixer and NOT a reviewer itself — it grades the grader.
+description: Qualify a check before it is allowed to clear anything — prove it can detect the failure it is meant to catch. Seeds known defects into a copy of a real artifact plus a clean control, runs the checker, and reports recall and false-positive rate into a qualification ledger. Use when the user says "does this check work", "qualify the gate", "test my reviewer", "seed defects", "vaccinate", "qualify the checks", "can I trust this review", "does it pass for the right reason", or before relying on any automated check or referee simulation for a decision that matters. NOT a code fixer and NOT a reviewer itself — it grades the grader.
 argument-hint: "[checker or skill to qualify] [artifact to seed]"
 allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep", "Agent"]
 disable-model-invocation: true
@@ -119,7 +119,50 @@ Verdicts: **PASS** (detects its named class at an agreed threshold) · **FAIL** 
 |---|---|
 | `references/defect-library.md` | choosing what to seed — defect classes by artifact type |
 
+
+---
+
+# Doctrine: what qualification means
+
+## 4. Do not assume more machinery is better
+
+A second model, more agents, or a longer debate is **not** presumed to verify better. Before an elaborate procedure earns extra weight, show it outperforms a simpler check on the same prespecified seeded failures and valid cases, reporting both detection and false alarms. Complexity that has not beaten a baseline is cost, not assurance.
+
+## 5. Treat AI verdicts as predictions, not facts
+
+When a model grades, triages, or reviews at scale:
+- keep a **sampled set for qualified human review**, and record how it was sampled (retain coverage of hard subgroups — do not sample only the easy middle);
+- keep fitting/prompt-tuning cases **separate** from evaluation cases;
+- report where AI and expert judgments diverge;
+- remember a well-calibrated *average* score certifies no individual verdict;
+- **agreement between models is not independent evidence** — they share failure modes and converge on the same wrong answer at a meaningful rate.
+
+Any material change to the model, prompt, rubric, or target population requires fresh human labels and recalibration.
+
+## 6. Requalify after material change
+
+A check qualified against an old interface, schema, or scale may silently stop testing anything. Re-run the seeded-defect proof after material changes to the object under test or to the check itself.
+
+## Distinguish qualified checks from scientific judgments
+
+- **Qualified checks** have a defensible reference answer: unique keys, units convert, a table
+  regenerates, an estimator recovers an analytic special case, a seeded fault triggers a
+  failure. These can be automated and rerun forever.
+- **Scientific judgments** — whether a field measures the intended construct, whether an
+  identifying assumption is plausible, whether a result deserves causal language — cannot be
+  automated, and **no volume of qualified checks substitutes for one.**
+
+## Confirm the check actually ran
+
+A missing, substituted, or degraded check is **missing evidence**, not a pass. Verify the run
+happened (log, exit status, artifact timestamp — not an assumption); that it ran on the
+**current** object, not a cached one; that nothing was skipped, filtered, or swallowed into a
+default; and that the tolerance was fixed **before** the comparison. *A tolerance loosened
+after a failed comparison converts evidence into decoration.* If it must be loosened, record
+it as an approved divergence with a reason.
+
 ## Cross-references
 
 - [`verification-ladder.md`](../../references/verification-ladder.md) — rung 0; why this comes before everything
+- Merged with the former `/qualify-checks` (2026-08-21): same goal — one skill, not two
 - [`external-oracle-process.md`](../../references/external-oracle-process.md) — qualifying an external referee

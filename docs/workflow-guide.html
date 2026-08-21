@@ -2757,7 +2757,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 53 skills, and 32 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
+<p><strong>You talk, Claude orchestrates.</strong> The 18 agents, 59 skills, and 32 rules exist so you don’t have to think about them. Describe your goal, approve the plan, and let the system work.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled">
@@ -2770,7 +2770,7 @@ You see: &quot;Analysis complete. 3 tables, 4 figures. Score: 85/100.&quot;</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>This guide describes the full system — 18 agents, 53 skills, 32 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
+<p>This guide describes the full system — 18 agents, 59 skills, 32 rules. That is the ceiling, not the floor. <strong>Start with just CLAUDE.md and 2–3 skills</strong> (<code>/compile-latex</code>, <code>/proofread</code>, <code>/commit</code>). Add rules and agents as you discover what you need. The template is designed for progressive adoption: fork it, fill in the placeholders, and start working. Everything else is there when you’re ready.</p>
 </div>
 </div>
 <hr>
@@ -3597,7 +3597,7 @@ APPROVED   NEEDS WORK
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Claude Code ships with built-in skills beyond this template’s 53: <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> runs 3-agent code review and applies fixes, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
+<p>Claude Code ships with built-in skills beyond this template’s 59: <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> runs 3-agent code review and applies fixes, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
 </div>
 </div>
 </section>
@@ -6270,7 +6270,7 @@ research-spec.md  ─────────────→  preregistration-dr
 </section>
 <section id="sec-create-skills" class="level2" data-number="7.4">
 <h2 data-number="7.4" class="anchored" data-anchor-id="sec-create-skills"><span class="header-section-number">7.4</span> Step 4: Creating Custom Skills</h2>
-<p>The guide includes 53 <a href="#skills---reusable-slash-commands">skills</a> for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.</p>
+<p>The guide includes 59 <a href="#skills---reusable-slash-commands">skills</a> for common academic tasks. But if you have repetitive workflows specific to your domain, you can create your own.</p>
 <section id="when-to-create-a-skill" class="level3" data-number="7.4.1">
 <h3 data-number="7.4.1" class="anchored" data-anchor-id="when-to-create-a-skill"><span class="header-section-number">7.4.1</span> When to Create a Skill</h3>
 <p>Create a skill when: - You repeatedly explain the same 3+ step workflow to Claude - You need domain-specific quality checks (citation style, notation consistency, lab protocols) - You enforce field-specific output formats (thesis structure, journal templates) - You coordinate multi-tool workflows (data → analysis → manuscript)</p>
@@ -6800,6 +6800,36 @@ research-spec.md  ─────────────→  preregistration-dr
 <td><code>/vaccinate</code></td>
 <td>Grade the grader: seed known defects + a clean control into a copy of a real artifact, run the check or review agent, report <strong>recall</strong> and <strong>false-positive rate</strong> into <code>quality_reports/qualification/LEDGER.md</code></td>
 <td>Before trusting any gate or referee simulation for a decision that matters</td>
+</tr>
+<tr class="odd">
+<td><code>/adjudicate-review</code></td>
+<td><code>.claude/skills/adjudicate-review/</code></td>
+<td>Turn incoming findings — AI review, referee report, linter, second model — into verified fixes. Every finding is a CANDIDATE until checked against the source</td>
+</tr>
+<tr class="even">
+<td><code>/blast-radius</code></td>
+<td><code>.claude/skills/blast-radius/</code></td>
+<td>Before and after changing anything shared (return value, schema, default, units), enumerate every consumer and actually run them</td>
+</tr>
+<tr class="odd">
+<td><code>/credible-claims</code></td>
+<td><code>.claude/skills/credible-claims/</code></td>
+<td>Research brief before delegating, claim record after. Keeps faster execution from being mistaken for credible evidence</td>
+</tr>
+<tr class="even">
+<td><code>/differential-audit</code></td>
+<td><code>.claude/skills/differential-audit/</code></td>
+<td>Compare two implementations — a port, a replication, a refactor, a version upgrade — so that agreement means something</td>
+</tr>
+<tr class="odd">
+<td><code>/oracle-review</code></td>
+<td><code>.claude/skills/oracle-review/</code></td>
+<td>Run an external frontier-model referee (Claude Code → GPT-5.6 Sol Pro) and adjudicate what comes back</td>
+</tr>
+<tr class="even">
+<td><code>/verify-artifact</code></td>
+<td><code>.claude/skills/verify-artifact/</code></td>
+<td>Prove the file you are about to send IS the thing you mean — rebuild, verify integrity, diff against source</td>
 </tr>
 <tr class="odd">
 <td><code>/validate-bib</code></td>
