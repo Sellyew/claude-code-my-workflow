@@ -48,12 +48,15 @@ def validate(data, schema):
                 errs.append(f"{w}.{k}: {v!r} does not match {spec['pattern']}")
             if "minimum" in spec and isinstance(v, int) and not isinstance(v, bool) and v < spec["minimum"]:
                 errs.append(f"{w}.{k}: below minimum {spec['minimum']}")
-        # id must be reproducible from its own coordinates
-        if all(k in f for k in ("id", "file", "line", "locus")):
-            want = finding_id(f["file"], f["line"], f["locus"])
-            if f["id"] != want:
-                errs.append(f"{w}.id: {f['id'][:12]}… != sha1(file:line:locus) {want[:12]}…")
-        if "id" in f:
+        # id must be reproducible from its own coordinates. Guard on type:
+        # a non-string id already failed the type check above, and slicing or
+        # hashing it here would crash the validator instead of reporting
+        # (Codex, PR #140 round 3).
+        if isinstance(f.get("id"), str):
+            if all(k in f for k in ("file", "line", "locus")):
+                want = finding_id(f["file"], f["line"], f["locus"])
+                if f["id"] != want:
+                    errs.append(f"{w}.id: {f['id'][:12]}… != sha1(file:line:locus) {want[:12]}…")
             if f["id"] in seen: errs.append(f"{w}.id: duplicate of findings[{seen[f['id']]}]")
             seen[f["id"]] = i
     return errs

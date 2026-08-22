@@ -145,12 +145,25 @@ for case_file in "$CASES"/*.md; do
     case_with=0; case_without=0
     for r in $(seq 1 "$REPS"); do
         for mode in with without; do
-            if [ "$mode" = "with" ]; then
-                resp="$(timeout 180 claude -p "/$SKILL $prompt" --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)"
-            else
-                # --setting-sources user is the mechanism verified to actually drop
-                # project skills; skillOverrides / deny rules / --disallowedTools do not.
-                resp="$(timeout 180 claude -p "$prompt" --setting-sources user --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)"
+            # A failed or timed-out invocation must NOT be graded: an empty
+            # response scores positive cases as misses and nottrigger-* cases
+            # as perfect passes (Codex, PR #140 round 3). Retry once, then
+            # abort the whole run rather than write a corrupt report.
+            rc=0
+            for attempt in 1 2; do
+                if [ "$mode" = "with" ]; then
+                    resp="$(timeout 180 claude -p "/$SKILL $prompt" --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)" && rc=0 || rc=$?
+                else
+                    # --setting-sources user is the mechanism verified to actually drop
+                    # project skills; skillOverrides / deny rules / --disallowedTools do not.
+                    resp="$(timeout 180 claude -p "$prompt" --setting-sources user --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)" && rc=0 || rc=$?
+                fi
+                [ "$rc" -eq 0 ] && break
+                echo "  invocation failed ($name rep=$r mode=$mode rc=$rc; 124=timeout) — attempt $attempt" >&2
+            done
+            if [ "$rc" -ne 0 ]; then
+                echo "ABORT: headless invocation failed twice ($name rep=$r mode=$mode rc=$rc). No report written." >&2
+                exit 2
             fi
             # Each assertion line may list ALTERNATIVES separated by " | ".
             # A correct answer phrased differently must still count; single-substring
@@ -210,7 +223,12 @@ for (case, mode), hits in sorted(by.items()):
     flag = ""
     # BOTH arms gate the verdict: a noisy baseline makes the delta just as
     # uninterpretable as a noisy treatment arm (v2.5 audit).
-    if (len(hits) > 1 and sd_w > 0.5) or (len(off) > 1 and sd_o > 0.5):
+    # For 1-assertion cases hits are binary and pstdev over 3 reps maxes out
+    # at ~0.47, under the 0.5 threshold — so ANY instability flags a binary
+    # case (Codex, PR #140 round 3).
+    n_asserts = max((r["asserts"] for r in rows if r["case"] == case), default=0)
+    binary_unstable = n_asserts == 1 and (len(set(hits)) > 1 or len(set(off)) > 1)
+    if (len(hits) > 1 and sd_w > 0.5) or (len(off) > 1 and sd_o > 0.5) or binary_unstable:
         flag = "  <-- HIGH VARIANCE, result not interpretable"
         noisy.append(case)
     print(f"  {case:<34} with={hits} (sd={sd_w:.2f})  without={off} (sd={sd_o:.2f}){flag}")

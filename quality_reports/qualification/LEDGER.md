@@ -98,6 +98,17 @@ output as unverified.
 > seen. Total assertions went 29 → 34 across this release; a falling number is the signal to
 > look for.
 
+## Harness re-qualification after Codex round 3 (2026-08-22)
+
+Three confirmed findings (PR #140 round 3) changed the harness and validator; each fix was
+re-qualified with a seeded defect AND a clean control (an unqualified check is none):
+
+| Check | Seeded defect | Red? | Control | Green? |
+|---|---|---|---|---|
+| eval harness: invocation guard | PATH shim forces `claude` to exit 124 on per-case calls (smoke + manipulation pass) | yes — retries once, then ABORT exit 2, no report | same shim answering all calls | yes — completes, exit 0 |
+| eval harness: variance gate, binary cases | 1-assertion case with hits [0,1,1] (pstdev 0.47 < old 0.5 threshold) | yes — flagged, exit 3 | stable [1,1,1]; and multi-assert [0,3,0] still exits 3 | yes — exit 0 / exit 3 |
+| validate-findings: non-string id | finding with `"id": 1` | yes — clean diagnostic, exit 1 (previously TypeError crash) | `[]` smoke | yes — exit 0 |
+
 ## Skill eval results (2026-08-22, final harness: sandboxed, behavioral manipulation check, N=3)
 
 Every run passed the behavioral manipulation check (with-arm retrieved the skill-only marker;
