@@ -85,3 +85,8 @@ scripts/R/_outputs/
 # Output artifacts — uncomment lines below based on your preference
 # *.rds
 # output/**/*.rds
+
+# Quarto render artifacts beside their .qmd sources (regenerable; quality_score
+# renders them during gating). Published HTML lives in docs/, never here.
+Quarto/*.html
+Quarto/*_files/
