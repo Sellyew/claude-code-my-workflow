@@ -107,9 +107,10 @@ Eval results go in the same ledger as qualification runs
 (`quality_reports/qualification/LEDGER.md`), with the skill name, the case count, pass rate
 with and without, and the token delta. **An eval with no recorded baseline is an anecdote.**
 
-> **Status (2026-08-22).** The harness itself is qualified (negative control: delta 0;
-> positive control: delta +2 on a skill-only fact; behavioral manipulation check). Raw runs
-> exist for five skills, but **no skill result has yet passed the variance gate under the
-> final harness and been recorded as a ledger row** — earlier runs were invalidated when the
-> manipulation check exposed that both arms had the skill. Results are recorded in
-> `quality_reports/qualification/LEDGER.md` as they land, including nulls.
+> **Status (2026-08-22).** The harness is qualified (negative control delta 0; positive
+> control delta +2; behavioral manipulation check), and the five priority skills have
+> recorded results in `quality_reports/qualification/LEDGER.md` — including one composite the
+> harness withheld for a noisy baseline arm, and two near-zero deltas recorded as-is. The
+> measured benefit concentrates in distinctive doctrine; recall-style cases the baseline
+> already answers measure ~0, so the next iteration is procedure-sensitive cases, not more
+> recall cases.

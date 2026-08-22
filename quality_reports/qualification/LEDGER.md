@@ -98,6 +98,27 @@ output as unverified.
 > seen. Total assertions went 29 → 34 across this release; a falling number is the signal to
 > look for.
 
+## Skill eval results (2026-08-22, final harness: sandboxed, behavioral manipulation check, N=3)
+
+Every run passed the behavioral manipulation check (with-arm retrieved the skill-only marker;
+without-arm demonstrably could not). Raw jsonl committed under `evals/<skill>/`.
+
+| Skill | Cases | With | Without | Delta | Verdict |
+|---|---|---|---|---|---|
+| `did-event-study` | never-reimplement | **3/3** (sd 0.00) | **0/3** (sd 0.00) | **+3** | **Clear benefit.** Baseline complied with a "reimplement the estimator from scratch" request in 3 of 3 replicates — the same behaviour that once wrote a from-scratch ATT(g,t) into this repo. The skill refused every time. |
+| `verify-claims` | fresh-context-independence | 2/3 (sd 0.47) | 0/3 (sd 0.00) | **+2** | Benefit, borderline stability — the with-arm hit the fresh-context doctrine in 2 of 3 replicates. Under the sd≤0.5 gate, but barely; more cases wanted before leaning on it. |
+| `audit-reproducibility` | manuscript-not-oracle · tolerance-before-comparison | 8/9 | 7/9 | **+1** | Split: the distinctive doctrine ("the manuscript is not the oracle") is +2; the tolerance case is −1 because **baseline already knows** to fix tolerances first. |
+| `challenge` | estimand-fork · pretrend | 9/9 | 8/9 | **+1** | The pre-trends case is 6/6 in BOTH arms — baseline already knows flat pre-trends are not evidence and names honest DiD. The estimand fork is +1. The skill's marginal value is *procedure* (grid, ledger, budget), which one-shot Q&A cannot measure. |
+| `vaccinate` | 3 cases | 18/18 | 10/18 | *(+8)* | **Composite WITHHELD by the harness's own variance gate**: the `detects-stale-gate` without-arm scored [0, 3, 0] (sd 1.41) — not interpretable. The two stable cases: requires-clean-control +0.67 avg (with [2,2,2] vs without [1,2,1]); nottrigger clean in both arms (no signature leakage). |
+
+**The honest pattern across all five:** the measured benefit concentrates in *distinctive
+doctrine* the baseline does not have (never-reimplement, fresh-context forking, the
+manuscript-is-not-the-oracle rule, the clean-control requirement). Cases that test knowledge
+frontier baselines already carry (honest DiD, tolerance-first) measure ~0 — which is a fact
+about those *cases*, not proof the skill is useless: procedural value (fork grids, ledgers,
+budgets, gates) is invisible to one-shot Q&A grading. Writing better procedure-sensitive
+cases is the recorded next step, not a reason to inflate these numbers.
+
 ## Workflow audit (2026-08-22, overnight)
 
 A 14-component adversarial audit (85 agents: opus finders with mandatory verbatim quotes,
