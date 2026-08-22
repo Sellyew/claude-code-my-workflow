@@ -149,7 +149,7 @@ It covers:
 The guide covers Claude Code's latest capabilities:
 
 - **Model lineup** — **Fable 5** (`claude-fable-5`, opt-in via `/model fable` or the `best` alias) is the top tier for long-horizon work. Current Opus/Sonnet point versions and the **provider-dependent alias table** live in the single source of truth, [`model-versions.md`](.claude/references/model-versions.md) — surfaces here stay tier-abstract so they cannot go stale, and the staleness gate fails the build when the SSoT's own expiry passes.
-- **Effort levels** — `/effort` sets cost vs. thoroughness (`low` / `medium` / `high` / `xhigh` / `max`). **Opus 4.8 defaults to `high`** — its `high` does roughly what 4.7's `xhigh` did for fewer tokens, so reserve `xhigh` for extended exploration and `ultracode` (xhigh + dynamic workflows) for the largest autonomous runs.
+- **Effort levels** — `/effort` sets cost vs. thoroughness (`low` / `medium` / `high` / `xhigh` / `max`). **The current Opus tier defaults to `high`** — reserve `xhigh` for extended exploration and `ultracode` (xhigh + dynamic workflows) for the largest autonomous runs.
 - **`/goal <verifiable condition>`** (v1.9.0; Anthropic May 2026) — keep working across turns until a fast model confirms the condition holds. Pairs with `/commit` quality gates for verified-end-state runs.
 - **`claude agents` dashboard** (v1.9.0; Anthropic May 2026) — single screen for parallel review work (`/review-paper --peer`, `/slide-excellence`).
 - **Cost-Conscious Composition** — prompt-cache TTL (5-min default on API keys; **1-hour automatic on Claude subscriptions**), 70/20/10 model routing (Haiku/Sonnet/Opus), `/cost` + `/usage` monitoring, Agent SDK credit-pool split (2026-06-15).
@@ -329,8 +329,8 @@ Rules use path-scoped loading: **always-on** rules load every session (~100 line
 | `tikz-prevention` (v1.4.x) | `Slides/**`, `Figures/**`, `Preambles/**` | TikZ pre-flight grep checks (P3/P4 collision avoidance) |
 | `agent-authored-code` (v2.5) | `**/*.sh`, `**/*.py`, `**/*.R`, `**/*.do` | The bugs are usually ours: dry-run before any bulk edit, resolve paths before `cd`, monitor by PID file not `pgrep`, cover every terminal state |
 | `writing-with-ai` (v2.5) | `**/*.tex`, `**/*.qmd`, `**/*.md`, `**/*.Rmd` | Internal vs external-facing documents; why a model cannot make its own output stop reading as model output; the human-readable standard |
-| `repo-hygiene` (v2.5) | `**` (all tracked files) | Scratch must not become main — rejects root clutter, draft names, superseded copies, version-in-filename, accidental duplicates, tracked build artifacts, undocumented archives |
-| `progress-reports` (v2.5) | `quality_reports/**`, `.github/**` | GitHub as memory — issues for defect memory, `quality_reports/` for work memory, `MEMORY.md` for lesson memory |
+| `repo-hygiene` (v2.5) | always-on (enforced repo-wide by the hygiene gate) | Scratch must not become main — rejects root clutter, draft names, superseded copies, version-in-filename, accidental duplicates, tracked build artifacts, undocumented archives |
+| `progress-reports` (v2.5) | always-on | GitHub as memory — issues for defect memory, `quality_reports/` for work memory, `MEMORY.md` for lesson memory |
 | `issue-ledger` (v2.5) | `.github/**` | Evidence standard for an issue: denominator, positive/negative control, explicit non-scope, and a seven-section closure comment |
 | `tikz-measurement` (v1.5.x) | `Slides/**`, `Figures/**`, `Preambles/**`, `scripts/**` | Bézier curve depth math + 6-pass collision protocol (from MixtapeTools) |
 | `content-invariants` (v1.6.x) | `.tex`, `.qmd`, `Preambles/`, `scripts/R/**` | Pre-Flight Reports — proves inputs were read before work |
@@ -418,7 +418,7 @@ As of March 2026, **15+ research groups** across economics, energy, political sc
 
 **Extended workflows:**
 
-- **[clo-author](https://github.com/hugosantanna/clo-author)** by Hugo Sant'Anna (UAB) — Paper-centric research workflows with 17 specialized agents (6 worker-critic pairs plus referees, data-engineer, verifier), simulated blind peer review, AEA replication compliance, and full research lifecycle management. **The `/review-paper --peer <journal>` pipeline in this template is adapted from clo-author with Hugo's permission** (pipeline shape, 6-way disposition taxonomy, journal-calibration schema, paper-type branching). Thanks, Hugo.
+- **[clo-author](https://github.com/hugosantanna/clo-author)** by Hugo Sant'Anna (UAB) — Paper-centric research workflows with 21 specialized agents (7 worker-critic pairs plus referees, data-engineer, verifier), simulated blind peer review, AEA replication compliance, and full research lifecycle management. **The `/review-paper --peer <journal>` pipeline in this template is adapted from clo-author with Hugo's permission** (pipeline shape, 6-way disposition taxonomy, journal-calibration schema, paper-type branching). Thanks, Hugo.
 - **[claudeblattman](https://github.com/chrisblattman/claudeblattman)** by Chris Blattman (U Chicago) — Comprehensive guide for non-technical academics: executive assistant workflows, proposal writing, agent debates, and self-improving configuration
 - **[MixtapeTools](https://github.com/scunning1975/MixtapeTools)** by Scott Cunningham (Baylor) — The Rhetoric of Decks: philosophy and practice of beautiful, rhetorically effective academic presentations
 - **[autoresearch](https://github.com/karpathy/autoresearch)** by Andrej Karpathy — Constraint-based autonomous research with `program.md` as constitutional document

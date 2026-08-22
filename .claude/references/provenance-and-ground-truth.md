@@ -124,8 +124,10 @@ Reference code may be **read** to understand public behaviour, tests, architectu
 style. **Generated numerical outputs, manifests, behavioural descriptions, and public docs
 may be used as test oracles.** Implementation code may not be copied.
 
-**Licence compatibility is a gate, not a footnote.** Importing GPL/LGPL material into an
-MIT repo is a violation regardless of how useful it is. Reimplement the *idea* independently
+**Licence compatibility is a gate, not a footnote.** Copying copyleft-licensed text or code
+into a permissively-licensed repo without honouring the copyleft terms is a violation
+regardless of how useful it is (LGPL's linking allowances do not cover copying source into
+an MIT tree). Reimplement the *idea* independently
 and credit it as prior art, or obtain permission and record it in the ledger.
 
 ---

@@ -43,7 +43,7 @@ Bandwidth (MSE-optimal · half · double) · polynomial order (local linear · q
 
 ## Instrumental variables
 
-Instrument set (each alone · all) · included controls · weak-instrument-robust vs conventional
+Instrument set (each alone · all — **`estimand`**: different instruments identify different compliers, hence different LATEs) · included controls · weak-instrument-robust vs conventional
 inference · sample restrictions defining compliers. Complier-defining restrictions are
 **`estimand`** — the LATE changes.
 

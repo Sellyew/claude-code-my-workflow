@@ -607,7 +607,7 @@ be *measured*, not reviewed away.
 
 ### Submission-readiness: stacking the verification lenses
 
-For a paper headed to a journal, three orthogonal lenses run together — each catches a different class of failure:
+For a paper headed to a journal, four orthogonal lenses run together — each catches a different class of failure:
 
 | Lens | Skill | What it catches | Block-`/commit` on failure? |
 |---|---|---|---|

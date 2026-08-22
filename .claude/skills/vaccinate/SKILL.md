@@ -125,11 +125,11 @@ Verdicts: **PASS** (detects its named class at an agreed threshold) · **FAIL** 
 
 # Doctrine: what qualification means
 
-## 4. Do not assume more machinery is better
+## Do not assume more machinery is better
 
 A second model, more agents, or a longer debate is **not** presumed to verify better. Before an elaborate procedure earns extra weight, show it outperforms a simpler check on the same prespecified seeded failures and valid cases, reporting both detection and false alarms. Complexity that has not beaten a baseline is cost, not assurance.
 
-## 5. Treat AI verdicts as predictions, not facts
+## Treat AI verdicts as predictions, not facts
 
 When a model grades, triages, or reviews at scale:
 - keep a **sampled set for qualified human review**, and record how it was sampled (retain coverage of hard subgroups — do not sample only the easy middle);
@@ -140,7 +140,7 @@ When a model grades, triages, or reviews at scale:
 
 Any material change to the model, prompt, rubric, or target population requires fresh human labels and recalibration.
 
-## 6. Requalify after material change
+## Requalify after material change
 
 A check qualified against an old interface, schema, or scale may silently stop testing anything. Re-run the seeded-defect proof after material changes to the object under test or to the check itself.
 

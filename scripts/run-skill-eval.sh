@@ -60,7 +60,7 @@ RESULTS="$OUT/$STAMP.jsonl"
 # error immediately, it hangs. Without a timeout this script appears to work
 # and then sits there, which is the worst of both.
 echo "── smoke test: can we run headless at all? ──"
-SMOKE="$(timeout 45 claude -p "Reply with exactly: OK" --output-format text 2>/dev/null || true)"
+SMOKE="$(timeout 45 claude -p "Reply with exactly: OK" --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null || true)"
 if ! grep -q "OK" <<<"$SMOKE"; then
     echo "" >&2
     echo "eval: headless \`claude -p\` is not working here." >&2
@@ -100,7 +100,12 @@ if [ -f "$MARKER_FILE" ]; then
     MARKER_EXPECT="$(sed -n 2p "$MARKER_FILE")"
 else
     MARKER_Q="Quote verbatim the first markdown heading (the line starting with #) of your skill instructions."
-    MARKER_EXPECT="$(grep -m1 '^# ' ".claude/skills/$SKILL/SKILL.md" | sed 's/^# //' | cut -c1-40)"
+    MARKER_EXPECT="$(grep -m1 '^# ' "$ROOT/.claude/skills/$SKILL/SKILL.md" 2>/dev/null | sed 's/^# //' | cut -c1-40)"
+fi
+if [ -z "$MARKER_EXPECT" ]; then
+    echo "eval: ABORT — MARKER_EXPECT is empty (marker.txt missing/short, or SKILL.md has no H1)." >&2
+    echo "      An empty marker would make grep -qiF match EVERYTHING and fake a passing check." >&2
+    exit 3
 fi
 echo "── manipulation check (behavioral: retrieve a fact only the skill contains) ──"
 ON_RESP="$(timeout 180 claude -p "/$SKILL $MARKER_Q" --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)"

@@ -50,7 +50,7 @@ Fixed fixtures are necessary but not sufficient — they test what the author al
 
 ## 6. Test the comparator itself
 
-Before trusting a green result, feed the comparison a wrong value, a missing result, a misaligned row, and an empty result. **It must fail, not skip.** A comparator that silently passes over what it cannot reconcile turns every subsequent green into noise. (See `qualify-checks`.)
+Before trusting a green result, feed the comparison a wrong value, a missing result, a misaligned row, and an empty result. **It must fail, not skip.** A comparator that silently passes over what it cannot reconcile turns every subsequent green into noise. (See `vaccinate`.)
 
 ## 7. Compare every declared channel
 

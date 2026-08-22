@@ -201,14 +201,14 @@ rather than restating it and asking.
 The strongest outcomes in the logged sessions began as **investigations**, not fix requests.
 The messier ones mixed auditing with editing.
 
-**Phase 1 — read-only.** Produce a findings table: `severity | file:line | claim | evidence I
+**Audit pass — read-only.** Produce a findings table: `severity | file:line | claim | evidence I
 actually ran | proposed fix`. Mark anything not verified by execution as **UNVERIFIED**. Edit
 nothing.
 
-**Phase 2 — repair, on approved rows only.** The user picks which findings get fixed. This is
+**Repair pass — on approved rows only.** The user picks which findings get fixed. This is
 what makes declining a finding cheap, and declining findings is how scope stays bounded.
 
-`--no-fix` runs Phase 1 alone.
+`--no-fix` runs the audit pass alone.
 
 ## Cross-references
 

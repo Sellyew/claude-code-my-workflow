@@ -70,8 +70,9 @@ description: |
   - What the skill does
   - Specific trigger conditions (exact error messages, symptoms)
   - When to use it (contexts, scenarios)
-author: Claude Code Academic Workflow
-version: 1.0.0
+metadata:
+  author: [you]
+  version: "1.0"
 argument-hint: "[expected arguments]"  # Optional
 ---
 
@@ -131,8 +132,9 @@ description: |
   Handle silent observation dropping in fixest when covariates have missing values.
   Use when: estimates seem wrong, sample size unexpectedly small, or comparing
   results between packages.
-author: Claude Code Academic Workflow
-version: 1.0.0
+metadata:
+  author: [you]
+  version: "1.0"
 ---
 
 # fixest Missing Covariate Handling

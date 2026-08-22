@@ -24,9 +24,12 @@ if ! cmp -s "$G" "$D"; then
     echo "  sync first:  cp guide/workflow-guide.html docs/workflow-guide.html" >&2
     exit 1
 fi
-SH="$(shasum -a 256 "$SRC" | cut -c1-16)"
-GH="$(shasum -a 256 "$G"   | cut -c1-16)"
-DH="$(shasum -a 256 "$D"   | cut -c1-16)"
+fp() { local h; h="$(shasum -a 256 "$1" 2>/dev/null | cut -c1-16)"; 
+       [ -n "$h" ] || { echo "stamp-render: fingerprint failed for $1 (shasum missing?)" >&2; exit 2; };
+       printf '%s' "$h"; }
+SH="$(fp "$SRC")" || exit 2
+GH="$(fp "$G")"   || exit 2
+DH="$(fp "$D")"   || exit 2
 {
   echo "guide/workflow-guide.html:$SH:$GH"
   echo "docs/workflow-guide.html:$SH:$DH"

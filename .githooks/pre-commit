@@ -51,7 +51,7 @@ fi
 
 FAIL=0
 
-echo "── pre-commit: backtest (6 consistency + currency gates) ──"
+echo "── pre-commit: backtest (full gate suite — see scripts/backtest.sh) ──"
 ./scripts/backtest.sh
 [ $? -ne 0 ] && FAIL=1
 
