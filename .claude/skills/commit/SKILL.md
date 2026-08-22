@@ -24,17 +24,20 @@ python3 scripts/quality_score.py <changed-file-paths>
 
 Spawn the **verifier** agent (via the `Agent` tool with `subagent_type=verifier`) to run compilation/render checks on the changed files. Report pass/fail before committing.
 
-### Step 0b: Surface-Sync Gate (Pre-Commit)
+### Step 0b: Consistency Gate (Pre-Commit)
 
-**Runs unconditionally.** Enforces that count claims (`"14 agents, 28 skills, 24 rules, 6 hooks"` and siblings) across README.md, CLAUDE.md, the guide source + rendered HTML, the landing page, and the skill template all agree with the on-disk counts of `.claude/{skills,agents,rules,hooks}`:
+**Runs unconditionally.** The full backtest suite — all eight gates (surface-sync count claims like `"18 agents, 60 skills, 36 rules, 7 hooks"` and marked tables, skill integrity, model currency, links, spec conformance, staleness, repo hygiene, derived counts):
 
 ```bash
-./scripts/check-surface-sync.sh
+./scripts/backtest.sh
 ```
 
-- **Exit 0:** all counts consistent — continue.
-- **Exit 1:** drift detected — print the diff and halt. Fix the stale counts, then re-run. Do NOT proceed past this gate on drift, even with "commit anyway" — the purpose is to catch the exact class of issue that produced PRs #70, #76, and #78.
-- **Exit 2:** script error (missing surface file, unreadable directory) — investigate before proceeding.
+- **Exit 0:** all gates green — continue.
+- **Nonzero:** at least one gate is red — print its output and halt. Fix, then re-run. Do NOT proceed past this gate on a red result, even with "commit anyway" — count drift alone produced PRs #70, #76, and #78.
+
+### Step 0c: Passport Check (Pre-Commit)
+
+If the diff touches a manuscript (`.tex`/`.qmd`) that has a passport in `quality_reports/passports/`, or any `source_file` a passport lists, read that passport: a load-bearing claim with `status: FAIL` or `STALE` is a **must-fix** — halt, name the claim, and point at `/audit-reproducibility` (or the stale script) before committing. Skip silently when no passport exists.
 
 ### Step 1: Check current state
 

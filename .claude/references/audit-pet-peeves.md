@@ -223,7 +223,7 @@
 - `CLAUDE.md` "Skills Quick Reference" table (rows = N).
 - `README.md` skills/agents tables.
 - `docs/index.html` inline bullet lists that enumerate skills.
-A future mechanical check could count `.claude/{skills,agents,rules}/*` and grep table rows in these surfaces; until then, deep-audit Agent 1 + Agent 4 should explicitly check appendix table row counts.
+Shipped in v2.0.0: `check-surface-sync.py` TABLE-ROW assertions verify tables carrying a `<!-- surface-sync-table: ... -->` marker. Tables WITHOUT the marker (e.g. the guide appendix) remain invisible to it — deep-audit agents must still check those row counts explicitly (v2.5 shipped 58 of 60 appendix rows until a semantic sweep caught it).
 
 **Why deep-audit missed it (until v1.8.0).** Agent 1's prompt asked about counts, not row counts. Agent 4's prompt asked about feature counts agreeing across documents, not about whether enumerative tables tabulate the same set as the count claims. Both agents looked at the lede counts (which were correct) and stopped.
 

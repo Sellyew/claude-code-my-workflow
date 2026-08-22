@@ -39,7 +39,7 @@ When a mistake is corrected, append a `[LEARN:category]` entry below.
 
 [LEARN:files] Specifications go in `quality_reports/specs/YYYY-MM-DD_description.md`, not scattered in root or other directories. Maintains structure.
 
-[LEARN:files] Templates belong in `templates/` directory with descriptive names. Currently have: session-log.md, quality-report.md, exploration-readme.md, archive-readme.md, requirements-spec.md, constitutional-governance.md, decision-record.md (v1.6.0), journal-profile-template.md (v1.5.0), response-to-referees.md, skill-template.md, plus `tikz-snippets/` directory.
+[LEARN:files] Templates belong in `templates/` with descriptive names. Don't enumerate the inventory here — a hand-kept list goes stale (this entry's own list was missing three files when audited); `ls templates/` is the inventory.
 
 ## Constitutional Governance
 
@@ -61,7 +61,7 @@ When a mistake is corrected, append a `[LEARN:category]` entry below.
 
 [LEARN:memory] Two-tier memory solves template vs working project tension: MEMORY.md (generic patterns, committed) + native auto memory (`~/.claude/projects/<project>/memory/`, machine-local) → cross-machine sync + local privacy. *(Second tier was `personal-memory.md` until v2.5; retired for the native mechanism.)*
 
-[LEARN:memory] Post-merge hooks prompt reflection, don't auto-append → user maintains control while building habit.
+[LEARN:memory] Hooks prompt reflection, don't auto-append (e.g. the Stop-hook session-log reminder) → user maintains control while building habit.
 
 ## Meta-Governance
 
@@ -101,7 +101,7 @@ When a mistake is corrected, append a `[LEARN:category]` entry below.
 
 ## Dogfooding Gaps Found in Round-1 Audit (2026-04-16)
 
-[LEARN:dogfooding] Empty `quality_reports/plans/`, `specs/`, `session_logs/` directories are a red flag — they mean the repo claims to enforce dogfooding rules that nobody is following. Stop hook on `log-reminder.py` did catch the missing session log this session, which validates the hook's value. Plan-first has no equivalent automation.
+[LEARN:dogfooding] Empty `quality_reports/plans/`, `specs/`, `session_logs/` directories in a WORKING FORK are a red flag — claimed dogfooding nobody follows. (In the shipped template these dirs are gitignored by design, so the heuristic applies to your own fork, not the clean tree.) The Stop-hook log reminder validates itself by catching missing logs; plan-first has no equivalent automation.
 
 [LEARN:audit] "Claim-vs-reality" is the highest-ROI audit lens for a governance-heavy template repo. More valuable than skill-consistency or doc-drift checks because it surfaces where the template oversells itself — the exact thing forkers will discover and call out.
 
@@ -143,7 +143,7 @@ The key insight: each pattern enforces independence differently. Critic-fixer us
 
 [LEARN:edits] **Batch edits to protected `.claude/` paths: use Bash + `python3` heredoc.** Edit fires the protected-paths gate; Bash does not. For 5+ edits, one read→modify→write script via Bash avoids the prompt storm.
 
-[LEARN:audit] **Surface-sync covers numeric counts, NOT enumerative tables** (v1.8.0: appendix missed `/checkpoint`, `/preregister`, and the peer-review agent trio across 3 releases). When adding a skill/agent, check the appendix tables by hand — the gate won't.
+[LEARN:audit] **Surface-sync checks counts and MARKED tables** (`<!-- surface-sync-table: ... -->`, since v2.0) — tables without the marker are invisible to it (the guide appendix shipped 58 of 60 rows in v2.5 until a semantic sweep caught it). New skill/agent: add the row AND confirm the table is marker-covered or hand-checked.
 
 [LEARN:pattern] **`disable-model-invocation: true` is load-bearing-write discipline.** Set it on skills writing persistent files the user must intend (lecture .tex, SKILL.md, preregistration); not on transient-report skills. It only blocks model auto-trigger; `/skill-name` still works. (Codified in `templates/skill-template.md`.)
 

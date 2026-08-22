@@ -8,7 +8,7 @@ effort: high
 
 # Seven-Pass Adversarial Review
 
-Runs seven independent reviewers, each focused on a single lens, then synthesizes their findings into one prioritized revision plan. Pattern 15 from the workflow guide, mechanized.
+Runs seven independent reviewers, each focused on a single lens, then synthesizes their findings into one prioritized revision plan — the fan-out → reduce → judge runtime from `orchestrator-protocol.md`, applied with seven lenses.
 
 **Why seven passes?** A single-agent review blends lenses and softens each one. Seven forked agents each approach the paper with full context budget for their own lens, then a synthesizer resolves conflicts and de-duplicates.
 

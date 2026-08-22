@@ -441,7 +441,7 @@ What's mechanically implemented today: `/commit` (verifier + quality_score), `/q
 
 ## Quality Review: The 80/90/95 System {#sec-quality}
 
-The [quality-gates rule](#sec-blocks) (`quality-gates.md`) defines scoring thresholds that `/commit` and review skills apply. Thresholds are **advisory** — enforced inside specific skills **and**, once you run `./scripts/install-hooks.sh`, by a real git pre-commit hook (`.githooks/pre-commit`) that runs the surface-sync + quality (≥80) gates on every commit. Bypass it sparingly with `SKIP_QUALITY_GATE=1` or `--no-verify`. Every file gets a quality score from 0 to 100:
+The [quality-gates rule](#sec-blocks) (`quality-gates.md`) defines scoring thresholds that `/commit` and review skills apply. Thresholds are **advisory** — enforced inside specific skills **and**, once you run `./scripts/install-hooks.sh`, by a real git pre-commit hook (`.githooks/pre-commit`) that runs the full backtest gate suite plus the quality (≥80) gate on every commit. Bypass it sparingly with `SKIP_QUALITY_GATE=1` or `--no-verify`. Every file gets a quality score from 0 to 100:
 
 | Score | Threshold | Meaning | Action |
 |-------|-----------|---------|--------|

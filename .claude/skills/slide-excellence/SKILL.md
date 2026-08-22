@@ -104,8 +104,8 @@ Running it in its shipped state produces generic checks ("are assumptions
 stated?") rather than field-specific review. Options:
 
   1. Customize .claude/agents/domain-reviewer.md — replace the 5 lenses
-     with checks for your field. The /configure-project skill will scaffold
-     this interactively (coming in PR D of the plan).
+     with checks for your field (the file's EXAMPLES block shows two
+     disciplines to copy from).
   2. Run slide-excellence with --skip-substance to proceed without the
      substance-review agent. Other reviewers still run.
   3. Run slide-excellence with --acknowledge-template-domain-reviewer to

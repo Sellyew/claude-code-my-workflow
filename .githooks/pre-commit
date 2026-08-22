@@ -3,8 +3,8 @@
 # Pre-commit quality gate for the academic-workflow template.
 #
 # This closes the "a direct `git commit` bypasses every gate" hole: the
-# gates that `/commit` runs (surface-sync + quality score) now run on EVERY
-# commit, not only when you go through the skill.
+# full backtest suite + the quality score now run on EVERY commit, not
+# only when you go through the skill.
 #
 # Install once per clone:   ./scripts/install-hooks.sh
 # (sets core.hooksPath=.githooks so git finds this version-controlled hook.)

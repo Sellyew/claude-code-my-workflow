@@ -110,7 +110,7 @@ For parallel arrows, stagger labels: use `pos=0.3` on one and `pos=0.7` on the o
 
 Preferred workflow:
 
-1. `/new-diagram <snippet-name>` — see the `/new-diagram` skill once TX3 ships; it scaffolds from the gallery.
+1. `/new-diagram <snippet-name>` — the `/new-diagram` skill scaffolds from the gallery.
 2. Or copy the snippet manually: `cp templates/tikz-snippets/dag-basic.tex Figures/LectureN/my-dag.tex`.
 3. Edit node labels and coordinates to fit your case. **Keep the coordinate map up to date.**
 4. Only then invoke `/extract-tikz` or `/compile-latex`.

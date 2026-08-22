@@ -148,7 +148,7 @@ See @README.md for project overview and @package.json for available commands.
 @docs/git-instructions.md
 ```
 
-**This template's `CLAUDE.md` deliberately does NOT use `@import`** — at 146 lines it's already lean, and importing fragments fractures the onboarding context (forkers expect "one file to load at session start"). Mention this here for forkers whose customization grows large enough to warrant splitting; for short CLAUDE.md files, splitting tends to hurt more than help.
+**This template's `CLAUDE.md` deliberately does NOT use `@import`** — it is deliberately lean, and importing fragments fractures the onboarding context (forkers expect "one file to load at session start"). Mention this here for forkers whose customization grows large enough to warrant splitting; for short CLAUDE.md files, splitting tends to hurt more than help.
 
 ---
 

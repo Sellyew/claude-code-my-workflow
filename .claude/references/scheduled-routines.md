@@ -31,20 +31,13 @@ otherwise exit quietly.
 
 A precise cron expression (e.g. `0 6 * * *`) is applied via `/schedule update` *after* the routine exists; manage with `/schedule list` / `update` / `remove`. Two scheduling constraints to design around: the **minimum interval is 1 hour**, and accounts carry a **daily run cap** — so batch checks into one routine rather than many small ones. Routines operate on **committed repos**: anything uncommitted or private-by-design (e.g. a local research vault) is invisible to them.
 
-`scripts/nightly-repro-check.sh` is a thin local equivalent for users who prefer a machine cron over a Routine — and the right tool for uncommitted/private material (note: a local cron does not survive a closed laptop; for committed repos prefer `/schedule`).
+`scripts/nightly-repro-check.sh` is the **local** runner for the nightly reproducibility check — required, not a preference, whenever the data is local or uncommitted (a cloud routine gets a fresh clone and cannot reach your data directory; see the mechanism table below). Schedule it via Desktop scheduled tasks or a machine cron. `/schedule` (cloud) fits only fully committed repos.
 
 ## Guardrails for unattended runs
 
 - **Never point an unattended loop at a submission portal, shared/restricted data, or a co-author's inbox without a human gate.** Routines *propose*; a human *sends*. (`/triage-inbox` never auto-sends; the [`git-guardrails`](../hooks/git-guardrails.py) hook still blocks destructive git even in a routine.)
 - **Bound the cost.** A nightly full-manuscript re-audit is fine; a nightly 7× `/seven-pass-review` is not — cost-pilot first.
 - **Connectors are INCLUDED by default — least-privilege them.** Cloud Routines run with **all of your claude.ai connectors attached, write access included, and no approval prompts**. An unattended routine that only needs to read your repo should have Gmail/Calendar/Slack *removed from that routine's connector list* before it ever fires — the risk is not a missing connector but a fully-armed one acting without you. (Locally-authenticated MCP servers in your *terminal* sessions are a separate thing and may still be absent in other headless contexts — degrade gracefully either way.)
-
-## Cross-references
-
-- `/schedule` — create/list/run routines.
-- [`.claude/hooks/claim-reconcile.py`](../hooks/claim-reconcile.py) — the event-driven reconciliation hook.
-- [`.claude/rules/replication-protocol.md`](../rules/replication-protocol.md) — what the reproducibility routine checks.
-- [`.claude/rules/confidential-data.md`](../rules/confidential-data.md) — why unattended runs stay human-gated near restricted data.
 
 ## Choosing a scheduling mechanism (verified 2026-08-21)
 
@@ -100,3 +93,10 @@ Scheduled checks notify **only when a human is needed**:
 
 The same principle as monitor filters covering every terminal state: a filter matching only the
 success line is silent through a crash, and **silence looks identical to "still running."**
+
+## Cross-references
+
+- `/schedule` — create/list/run routines.
+- [`.claude/hooks/claim-reconcile.py`](../hooks/claim-reconcile.py) — the event-driven reconciliation hook.
+- [`.claude/rules/replication-protocol.md`](../rules/replication-protocol.md) — what the reproducibility routine checks.
+- [`.claude/rules/confidential-data.md`](../rules/confidential-data.md) — why unattended runs stay human-gated near restricted data.

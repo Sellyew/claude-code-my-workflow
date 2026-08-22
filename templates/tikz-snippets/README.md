@@ -4,7 +4,7 @@ Copy-paste starting points for common academic diagrams. Every snippet:
 
 - Compiles standalone via `\documentclass{standalone}` — verify quickly with `xelatex snippet.tex`.
 - Satisfies [`tikz-prevention.md`](../../.claude/rules/tikz-prevention.md): explicit node dimensions (P1), coordinate map comment (P2), no `scale=` (P3), directional keyword on every edge label (P4).
-- Uses color names from [`Preambles/header.tex`](../../Preambles/header.tex) once TX2 ships. Until then, snippets embed their palette inline.
+- Embeds its palette inline so each snippet compiles standalone; adapt the colors to your [`Preambles/header.tex`](../../Preambles/header.tex) names when you adopt one.
 
 ## Inventory
 
@@ -21,7 +21,7 @@ Copy-paste starting points for common academic diagrams. Every snippet:
 
 ## Usage
 
-**Via the `/new-diagram` skill** (once TX3 lands):
+**Via the `/new-diagram` skill:**
 
 ```text
 /new-diagram dag-basic Figures/Lecture02/identification.tex

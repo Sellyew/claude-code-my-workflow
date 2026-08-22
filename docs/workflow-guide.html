@@ -3172,7 +3172,7 @@ APPROVED   NEEDS WORK
 </section>
 <section id="sec-quality" class="level2" data-number="3.4">
 <h2 data-number="3.4" class="anchored" data-anchor-id="sec-quality"><span class="header-section-number">3.4</span> Quality Review: The 80/90/95 System</h2>
-<p>The <a href="#sec-blocks">quality-gates rule</a> (<code>quality-gates.md</code>) defines scoring thresholds that <code>/commit</code> and review skills apply. Thresholds are <strong>advisory</strong> — enforced inside specific skills <strong>and</strong>, once you run <code>./scripts/install-hooks.sh</code>, by a real git pre-commit hook (<code>.githooks/pre-commit</code>) that runs the surface-sync + quality (≥80) gates on every commit. Bypass it sparingly with <code>SKIP_QUALITY_GATE=1</code> or <code>--no-verify</code>. Every file gets a quality score from 0 to 100:</p>
+<p>The <a href="#sec-blocks">quality-gates rule</a> (<code>quality-gates.md</code>) defines scoring thresholds that <code>/commit</code> and review skills apply. Thresholds are <strong>advisory</strong> — enforced inside specific skills <strong>and</strong>, once you run <code>./scripts/install-hooks.sh</code>, by a real git pre-commit hook (<code>.githooks/pre-commit</code>) that runs the full backtest gate suite plus the quality (≥80) gate on every commit. Bypass it sparingly with <code>SKIP_QUALITY_GATE=1</code> or <code>--no-verify</code>. Every file gets a quality score from 0 to 100:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 20%">
