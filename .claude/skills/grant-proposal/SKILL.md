@@ -54,7 +54,7 @@ Generate the funder's section set. Map spec content into slots:
 
 - **Specific Aims / Project Summary** — RQ + 2–3 numbered, directional aims drawn from the spec's hypotheses.
 - **Background & Significance** — motivation + prior work; pull citations from the `/lit-review` synthesis if present (do not re-search unless asked).
-- **Research Design & Methods** — lift the identification strategy verbatim from the spec (estimand, treatment/control, identifying assumption, robustness: pre-trends, placebo, clustering). Name the estimator concretely (e.g. `fixest::feols`, `did::att_gt`, Stata `csdid`).
+- **Research Design & Methods** — lift the identification strategy verbatim from the spec (estimand, treatment/control, identifying assumption, robustness and placebo strategy, clustering). Name the estimator concretely (e.g. `fixest::feols`, `AER::ivreg`, Stata `reghdfe`).
 - **Preliminary Results** — summarize any existing `/data-analysis` / passport outputs; otherwise mark `[PRELIMINARY RESULTS: none yet — describe planned pilot]`.
 - **Timeline & Milestones** — quarter/year table aligned to the aims (every aim gets a milestone).
 - **Broader Impacts / Significance** — sponsor-appropriate framing (NSF Broader Impacts vs NIH Significance vs foundation mission-fit).

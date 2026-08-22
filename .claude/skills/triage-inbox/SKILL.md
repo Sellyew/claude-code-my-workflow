@@ -57,7 +57,7 @@ For each non-noise thread, propose exactly one of:
 
 - **Draft reply** — write a courteous draft *for review*. Do not send. If the Gmail MCP exposes a create-draft tool, you MAY stage a Gmail draft (which still requires the user to hit send) — otherwise inline the text in the digest.
 - **Calendar hold** — for an R&R / grant / talk deadline, propose a hold (title, date, lead-time reminder). Surface conflicts against existing events. **Propose only** — booking is the user's click.
-- **Scaffold a referee project** — for an *accepted* (or leaning-yes) referee request under the cap, offer to run `/new-referee-project` on the attached manuscript. Over the cap → recommend a polite decline draft instead, and say why ("4 reviews already open vs. cap of 3").
+- **Scaffold a referee project** — for an *accepted* (or leaning-yes) referee request under the cap, offer to scaffold a referee project (dated folder + manuscript + notes template). Over the cap → recommend a polite decline draft instead, and say why ("4 reviews already open vs. cap of 3").
 - **Summarize + offer a brief** — for a co-author thread, distill the asks and offer to generate a [`/coauthor-brief`](../coauthor-brief/SKILL.md).
 - **Snooze** — defer with a re-surface date; nothing else happens.
 
@@ -75,7 +75,7 @@ For each non-noise thread, propose exactly one of:
 
 ## Needs a decision (M)
 - **[R&R]** *J. of X* — minor revision, **due 2026-07-15**. → Propose calendar hold (−14d reminder); conflicts: none.
-- **[Referee]** *Econometrica* — review request, manuscript 12-345. Open reviews 2/3 → under cap. → Offer `/new-referee-project`.
+- **[Referee]** *Econometrica* — review request, manuscript 12-345. Open reviews 2/3 → under cap. → Offer to scaffold a referee project.
 - **[Co-author]** A. Smith — "can you redo Table 3 with not-yet-treated controls?" → Summarized; offer `/coauthor-brief`.
 
 ## FYI / snoozed (P)
@@ -106,7 +106,6 @@ Plus the one-line chat summary: digest path, counts per bucket, open-reviews-vs-
 
 - [`.claude/skills/coauthor-brief/SKILL.md`](../coauthor-brief/SKILL.md) — the handoff brief offered for co-author threads.
 - [`.claude/skills/respond-to-referees/SKILL.md`](../respond-to-referees/SKILL.md) — drafts the R&R response document once a revision deadline surfaces here.
-- `/new-referee-project` — scaffolds a review repo from an accepted referee request (the action this skill proposes, never auto-runs).
 - `/schedule` — wire this skill into a cron routine; the human-gated design is what makes unattended runs safe.
 - [`.claude/rules/orchestrator-protocol.md`](../../rules/orchestrator-protocol.md) — the "no daemon, user/skill-initiated, human-in-the-loop" contract this skill honors for outbound actions.
 - [`.claude/rules/confidential-data.md`](../../rules/confidential-data.md) — never copy attachment contents, restricted data, or credentials into a digest that may be committed.
@@ -114,7 +113,7 @@ Plus the one-line chat summary: digest path, counts per bucket, open-reviews-vs-
 ## What this skill does NOT do
 
 - **Send, reply, accept, decline, or book.** It drafts and proposes; you execute. No exceptions, including in scheduled runs.
-- **Auto-scaffold a referee project.** It *offers* `/new-referee-project`; scaffolding waits for your yes and respects the cap.
+- **Auto-scaffold a referee project.** It *offers* the scaffold; creating it waits for your yes and respects the cap.
 - **Run unattended with side effects.** Outbound actions are always human-gated — the only thing a cron run writes is the digest and the tracker.
 - **Read or store message bodies wholesale.** It extracts gists, deadlines, and senders; it does not archive email contents or attachment data into the repo.
 - **Reach mail/calendar without MCP.** No direct IMAP/API credentials — everything goes through the session's MCP servers, and their absence degrades gracefully.

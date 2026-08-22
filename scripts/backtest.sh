@@ -2,7 +2,7 @@
 # backtest.sh — prove the whole repo is internally consistent and currently true.
 #
 # Run this after ANY change. It is the difference between a maintained repo and
-# one that merely looks maintained. Six gates:
+# one that merely looks maintained. Eight gates:
 #
 #   1. surface-sync        counts + enumerative tables match what is on disk
 #   2. skill-integrity     frontmatter <-> body tool parity, anchors, flag parity

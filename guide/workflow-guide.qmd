@@ -613,8 +613,8 @@ For a paper headed to a journal, four orthogonal lenses run together — each ca
 |---|---|---|---|
 | **Grammar / overflow** | [`/proofread`](#all-skills) | typos, search-and-replace artifacts, overfull `\hbox`, citation-format inconsistency | No (advisory) |
 | **AI-voice tells** (v1.9.0) | [`/humanize`](#all-skills) | boilerplate transitions ("Moreover", "It is important to note"), AI-cliché lexicon ("delve", "navigate the complexities"), hedging stacking, sycophancy | No (advisory; author edits manually) |
-| **Factual claims** | [`/verify-claims`](#all-skills) | fabricated citations, numerical contradictions, directional contradictions | **Yes — HIGH-WARN gate-refuses** (v1.9.0) |
-| **Numeric provenance** | [`/audit-reproducibility`](#all-skills) | manuscript value ≠ script output value within tolerance | Yes via `passport.yaml` (v1.9.0) |
+| **Factual claims** | [`/verify-claims`](#all-skills) | fabricated citations, numerical contradictions, directional contradictions | **Must-fix — resolve HIGH-WARN before committing** (v1.9.0) |
+| **Numeric provenance** | [`/audit-reproducibility`](#all-skills) | manuscript value ≠ script output value within tolerance | Must-fix via `passport.yaml` status (v1.9.0) |
 
 These are *complementary*, not redundant. A paper can pass `/proofread` (clean grammar) and fail `/humanize` (the prose reads as AI-drafted). It can pass `/humanize` (your own voice) and fail `/verify-claims` (citation fabricated). It can pass `/verify-claims` (citations real) and fail `/audit-reproducibility` (Table 2 doesn't match the code). Run all four before submission; reach for `/review-paper --variance N` for the simulated peer-review verdict on top.
 
@@ -622,7 +622,7 @@ These are *complementary*, not redundant. A paper can pass `/proofread` (clean g
 
 ## Creating Your Own Domain Reviewer {#sec-domain-reviewer}
 
-The template includes `domain-reviewer.md` --- a skeleton for building a substance reviewer specific to your field. For example, in Econ 730, the domain reviewer caught that a slide claimed "$\hat{\beta}$ is consistent under parallel trends" while the cited paper (Callaway and Sant'Anna, 2021) actually requires a *conditional* parallel trends assumption --- a subtle but critical distinction that no grammar or layout checker would flag.
+The template includes `domain-reviewer.md` --- a skeleton for building a substance reviewer specific to your field. The class of defect it exists to catch: a slide asserts a stronger property than the cited paper actually proves --- a subtle but critical distinction that no grammar or layout checker would flag.
 
 ### The 5-Lens Framework
 
@@ -703,10 +703,12 @@ Rules are markdown files in `.claude/rules/` that Claude loads automatically. Th
 ```
 .claude/rules/
 ├── plan-first-workflow.md       # ~83 lines — plan before you build
-├── orchestrator-protocol.md     # ~93 lines — review-fix runtime (fan-out → reduce → judge → loop-until-dry)
+├── orchestrator-protocol.md     # ~119 lines — review-fix runtime (fan-out → reduce → judge → loop-until-dry)
 ├── session-logging.md           # ~23 lines — three logging triggers
 ├── prompt-shaping.md            # ~32 lines — shape informal asks (ambient; replaces /prompt)
-└── meta-governance.md           # ~251 lines — template vs working project
+├── progress-reports.md          # ~92 lines — GitHub as memory: issues, reports, MEMORY.md
+├── repo-hygiene.md              # ~74 lines — scratch must not become main
+└── meta-governance.md           # ~277 lines — template vs working project
 ```
 
 **Path-scoped rules** load only when relevant:
@@ -719,7 +721,7 @@ Rules are markdown files in `.claude/rules/` that Claude loads automatically. Th
 ├── replication-protocol.md      # paths: ["scripts/**/*.R"] — replicate first
 ├── exploration-folder-protocol.md  # paths: ["explorations/**"] — sandbox rules
 ├── orchestrator-research.md     # paths: ["scripts/**/*.R", "explorations/**"] — simple loop
-└── ...27 path-scoped rules total
+└── ...29 path-scoped rules total
 ```
 
 The always-on rules are deliberately compact — together they fit well within the budget Claude reads reliably each session. `meta-governance` is a reference document for the template's dual nature (working project vs. public template) and loads passively. Path-scoped rules add rich, domain-specific guidance exactly when Claude needs it.
@@ -813,7 +815,7 @@ argument-hint: "[filename without .tex extension]"
 ::: {.callout-note}
 ## Built-In Skills
 
-Claude Code ships with built-in skills beyond this template's 60: `/batch` orchestrates parallel refactoring across your codebase (using git worktrees for isolation), `/simplify` runs 3-agent code review and applies fixes, and `/debug` helps troubleshoot sessions. These complement the academic skills above.
+Claude Code ships with built-in skills beyond this template's 60 (as of Aug 2026): `/batch` orchestrates parallel refactoring across your codebase (using git worktrees for isolation), `/simplify` reviews recent changes for simplification opportunities, and `/debug` helps troubleshoot sessions. These complement the academic skills above.
 :::
 
 ## Agents --- Specialized Reviewers {#agents---specialized-reviewers}
@@ -869,7 +871,7 @@ Save findings to: quality_reports/[FILENAME]_report.md
 
 A single Claude prompt trying to check grammar, layout, math, and code simultaneously will do a mediocre job at all of them. Specialized agents focus on one dimension and do it thoroughly. The `/slide-excellence` skill runs them all in parallel, then synthesizes results.
 
-Claude Code also offers experimental **Agent Teams** --- multiple independent sessions that coordinate, share findings, and challenge each other's approaches. This is a research preview feature; the orchestrator + subagent pattern described here is more mature for academic workflows.
+Claude Code also offers experimental **Agent Teams** --- multiple independent sessions that coordinate, share findings, and challenge each other's approaches. This is a research preview feature (as of Aug 2026); the orchestrator + subagent pattern described here is more mature for academic workflows.
 :::
 
 ### Multi-Model Strategy: Cost vs. Quality {#multi-model-strategy-cost-vs-quality}
@@ -888,11 +890,11 @@ Not all agents need the same model. Each agent file has a `model:` field in its 
 
 | Task Type | Recommended Model | Why | Examples |
 |-----------|-------------------|-----|----------|
-| Complex translation | `model: opus` | Needs deep understanding of both formats | beamer-translator, quarto-critic |
-| Fast, constrained work | `model: sonnet` | Speed matters more than depth | r-reviewer, quarto-fixer |
-| Mechanical default | `model: haiku` | Bounded, fast work | proofreader, slide-auditor |
+| Adversarial comparison / high-judgment review | `model: opus` | Needs deep understanding of both artifacts at once | quarto-critic, tikz-reviewer, editor |
+| Fast, constrained work | `model: sonnet` | Speed matters more than depth | beamer-translator, r-reviewer, quarto-fixer, proofreader, slide-auditor |
+| Mechanical default | `model: haiku` | Bounded, fast work | promote-memory-council |
 
-**The principle:** Use Opus for tasks that require holding two large documents in mind simultaneously (translation, adversarial comparison). Use Sonnet for tasks with clear, bounded scope (fix these 12 issues, check this R script). Use Haiku for mechanical work. In v2.0 every agent is pinned explicitly rather than inheriting — see `agent-fleet.md` for the full fleet + tiers.
+**The principle:** Use Opus for tasks that require holding two large documents in mind simultaneously (adversarial comparison, refereeing). Use Sonnet for tasks with clear, bounded scope (fix these 12 issues, check this R script). Use Haiku for mechanical work. In v2.0 every agent is pinned explicitly rather than inheriting — see `agent-fleet.md` for the full fleet + tiers.
 
 To change an agent's model, edit its YAML frontmatter:
 
@@ -1099,7 +1101,7 @@ A handful of recent Mar–Apr 2026 commands cut friction in the actual editing l
 | `Ctrl+G` (in plan mode) | Opens the in-progress plan file in `$EDITOR` for direct editing before approval | You want to surgically tweak the plan without typing instructions back to Claude |
 | `claude --continue` / `claude --resume` | Resume the most recent conversation (`--continue`) or pick from recent (`--resume`); rename with `/rename` | Picking up a multi-day project --- treat sessions like branches |
 | `/checkpoint <slug>` | Writes a structured state snapshot to `quality_reports/checkpoints/` (this template, not Anthropic's) | Before stopping or handing off --- companion to the narrative session log |
-| `/goal <verifiable condition>` | Sets an end-state condition; Claude keeps working across turns until a fast model confirms it holds (Apr 2026 Week 20, v2.1.139) | "All R scripts pass without errors", "Figure 3 renders to PDF without overflow" --- pair with `/commit` quality gates for verified-end-state runs |
+| `/goal <verifiable condition>` | Sets an end-state condition; Claude keeps working across turns until a fast model confirms it holds (May 2026 Week 20, v2.1.139) | "All R scripts pass without errors", "Figure 3 renders to PDF without overflow" --- pair with `/commit` quality gates for verified-end-state runs |
 
 **Three patterns that compose well:**
 
@@ -1175,9 +1177,9 @@ Use it for:
 The template splits memory into two tiers (see [`meta-governance.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/meta-governance.md)):
 
 - **`MEMORY.md`** (committed, ≤ 200 lines) — generic learnings that help all forkers: workflow patterns, design principles, documentation standards, quality thresholds that transfer across domains.
-- **`.claude/state/personal-memory.md`** (gitignored, no size cap) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.
+- **Native auto memory** (`~/.claude/projects/<project>/memory/`, machine-local, never committed) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.
 
-When a fork user does `git clone`, they get the generic `MEMORY.md`. Their own `personal-memory.md` builds up locally as they work.
+When a fork user does `git clone`, they get the generic `MEMORY.md`. Their own auto memory builds up locally as they work.
 
 #### `/promote-memory` — graduating learnings (v1.9.0)
 
@@ -1590,14 +1592,14 @@ In one course, we discovered that a widely-used R package silently produced **in
 
 Replication-first verifies the *current* state. A separate question: how do we keep manuscript and code in sync over the lifetime of a paper, especially during R&R?
 
-The answer is a per-paper `quality_reports/passports/<paper-slug>.yaml` that records, for each numeric claim in the manuscript, the script + line + output that produced it. Schema includes `tolerance`, `last_verified_on`, `status` (PASS / FAIL / STALE / UNVERIFIED). [`/audit-reproducibility`](#all-skills) reads and rewrites the passport in place; [`/commit`](#all-skills) reads it to block commits when a load-bearing claim is FAIL or STALE.
+The answer is a per-paper `quality_reports/passports/<paper-slug>.yaml` that records, for each numeric claim in the manuscript, the script + line + output that produced it. Schema includes `tolerance`, `last_verified_on`, `status` (PASS / FAIL / STALE / UNVERIFIED). [`/audit-reproducibility`](#all-skills) reads and rewrites the passport in place; a FAIL or STALE on a load-bearing claim is a must-fix before you commit.
 
 Starter file: [`templates/passport-template.yaml`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/templates/passport-template.yaml). Copy once per paper. Pattern attributed to [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills) "Material Passport" concept (scope-reduced for this template: numeric claims only).
 :::
 
 ## Pattern 6: Multi-Agent Review {#pattern-6-multi-agent-review}
 
-The `/slide-excellence` skill runs up to 6 [specialized agents](#agents---specialized-reviewers) in parallel:
+The `/slide-excellence` skill runs up to 7 [specialized agents](#agents---specialized-reviewers) in parallel:
 
 ```
 /slide-excellence Lecture5_Topic.tex
@@ -1607,7 +1609,8 @@ The `/slide-excellence` skill runs up to 6 [specialized agents](#agents---specia
   +-- Agent 3: Proofreading (proofreader)
   +-- Agent 4: TikZ Review (tikz-reviewer, if applicable)
   +-- Agent 5: Content Parity (if Quarto version exists)
-  +-- Agent 6: Substance Review (domain-reviewer)
+  +-- Agent 6: R Code Review (r-reviewer, if the deck embeds R code)
+  +-- Agent 7: Substance Review (domain-reviewer)
   |
   +-- Synthesize: Combined quality score + prioritized fix list
 ```
@@ -1841,7 +1844,7 @@ These skills produce structured reports saved to `quality_reports/`. The `/data-
 ::: {.callout-note}
 ## `/review-paper --peer [journal]` — simulated peer review pipeline
 
-For submission-ready manuscripts, `/review-paper --peer <journal>` runs an **editor + two dispositioned referees + editorial decision**, calibrated to the target journal. Editor calibration reads `.claude/references/journal-profiles.md`; the template ships profiles for **AER, QJE, JPE, ECMA, JoE** (econ) and **APSR, AJPS, JOP** (poli-sci). Other fields: add a profile, ~40 lines each.
+For submission-ready manuscripts, `/review-paper --peer <journal>` runs an **editor + two dispositioned referees + editorial decision**, calibrated to the target journal. Editor calibration reads `.claude/references/journal-profiles.md`; the template ships profiles for **AER, QJE, JPE, ECMA, ReStud** (econ) and **APSR, AJPS, JOP** (poli-sci). Other fields: add a profile, ~40 lines each.
 
 The methods-referee is **paper-type-aware** — the same skill picks different sanity checks based on what kind of paper this is:
 
@@ -2540,7 +2543,7 @@ Each adaptation follows the same pattern: fork the template, fill in `CLAUDE.md`
 
 Two disciplines are already concrete in this template:
 
-- **Economics** --- top-4 + top-field journal profiles (AER, QJE, JPE, ECMA, JoE), R-centric `r-code-conventions.md`, econometrics example in domain-reviewer.md.
+- **Economics** --- top-5 journal profiles (AER, QJE, JPE, ECMA, ReStud), R-centric `r-code-conventions.md`, econometrics example in domain-reviewer.md.
 - **Political Science** --- APSR, AJPS, JOP journal profiles (v1.8.0), `formal-theory` + `survey-experiment` paper types in methods-referee, poli-sci example in domain-reviewer.md.
 
 Both fields are wired into `.claude/references/discipline-cards.md`, which `/research-ideation`, `/interview-me`, `/preregister`, and the editor agent read when you give them a discipline without a target journal. Cards document paper-type frequency, dominant journals, preregistration norms (OSF / AsPredicted / AEA RCT / ClinicalTrials.gov), significance-stars conventions, SE conventions, and dominant code language (R / Stata / Python).
@@ -2671,7 +2674,7 @@ A common (and security-relevant) misreading: omitting `Bash` from `allowed-tools
 
 - **`effort: high`** is useful for review skills that need deep reasoning (e.g., paper critique). Use `effort: low` for simple formatting skills to save tokens.
 - **`context: fork`** runs the skill in a fresh subagent context, protecting your main conversation from large outputs. Good for skills that produce verbose reports.
-- **`allowed-tools`** prevents skills from accidentally using destructive tools. A read-only review skill should use `["Read", "Grep", "Glob"]`.
+- **`disallowed-tools`** genuinely removes tools while a skill runs — use it to make review skills read-only. (`allowed-tools` alone does **not** sandbox; see the callout above.)
 :::
 
 ### Dynamic Content in Skills {#skill-dynamic-content}
@@ -2864,7 +2867,7 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | Domain Referee | `.claude/agents/domain-referee.md` | Disposition-primed substance referee for `/review-paper --peer` (v1.5.0) |
 | Methods Referee | `.claude/agents/methods-referee.md` | Paper-type-aware methodology referee for `/review-paper --peer` (v1.5.0; +formal-theory + survey-experiment in v1.8.0) |
 | Humanize Auditor | `.claude/agents/humanize-auditor.md` | Read-only auditor for AI-voice tells in academic prose; invoked by `/humanize` (v1.9.0) |
-| Promote-Memory Council | `.claude/agents/promote-memory-council.md` | Five-critic council (generality / staleness / redundancy / evidence / format) for `[LEARN]` promotion from personal-memory.md to MEMORY.md; invoked by `/promote-memory` (v1.9.0) |
+| Promote-Memory Council | `.claude/agents/promote-memory-council.md` | Five-critic council (generality / staleness / redundancy / evidence / format) for `[LEARN]` promotion from native auto memory to MEMORY.md; invoked by `/promote-memory` (v1.9.0) |
 | Sim Reviewer | `.claude/agents/sim-reviewer.md` | Monte Carlo reviewer — DGP/estimand match, Monte Carlo SE, coverage-vs-truth, claims↔tables parity (v1.10.0) |
 | R Package Reviewer | `.claude/agents/r-package-reviewer.md` | R package-source reviewer — DESCRIPTION/NAMESPACE hygiene, roxygen, testthat, CRAN-policy red flags (v1.10.0) |
 
@@ -2912,7 +2915,7 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | `/preregister` | `.claude/skills/preregister/` | Generate a preregistration document (OSF / AsPredicted / AEA RCT Registry) from a research spec (v1.8.0) |
 | `/humanize` | `.claude/skills/humanize/` | Detect AI-voice tells in academic prose (read-only audit; no rewrite) (v1.9.0) |
 | `/compress-session` | `.claude/skills/compress-session/` | Distil the current session into a structured note (decisions, files, open questions, next actions, discarded-as-noise) before auto-compaction (v1.9.0) |
-| `/promote-memory` | `.claude/skills/promote-memory/` | Five-critic council that votes on whether candidate `[LEARN]` entries should be promoted from personal-memory.md to MEMORY.md (v1.9.0) |
+| `/promote-memory` | `.claude/skills/promote-memory/` | Five-critic council that votes on whether candidate `[LEARN]` entries should be promoted from native auto memory to MEMORY.md (v1.9.0) |
 | `/stata-replication` | `.claude/skills/stata-replication/` | End-to-end Stata pipeline scaffold + execution via the `stata-mcp` MCP server (mirrors `/data-analysis` for R-first projects; v1.9.0) |
 | `/simulation-study` | `.claude/skills/simulation-study/` | Reproducible Monte Carlo study — DGP, estimator grid, seeded reps, bias/RMSE/coverage/size/power with Monte Carlo SEs (v1.10.0) |
 | `/r-package-check` | `.claude/skills/r-package-check/` | R package release gate — `devtools::document()` + tests + `R CMD check --as-cran` + CRAN-policy triage (v1.10.0) |
@@ -2930,6 +2933,8 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | `/respond-to-eval` | `.claude/skills/respond-to-eval/` | Turn student course evaluations into a classified teaching-improvement plan (Keep/Change/Investigate/Out-of-scope) (v2.0) |
 | `/scaffold-exercises` | `.claude/skills/scaffold-exercises/` | Scaffold a graded problem set (analytical/empirical/coding) with worked solutions; clean student set + separate solution key (v2.0) |
 | `/new-skill` | `.claude/skills/new-skill/` | Scaffold a convention-compliant skill (interview → write `SKILL.md` with gate-passing frontmatter) (v2.0) |
+| `/diagnose` | `.claude/skills/diagnose/` | Root-cause a wrong or failing empirical result — reproduce → minimise → bisect → instrument → fix; `--no-fix` localizes without editing (v2.0) |
+| `/submission-disclosures` | `.claude/skills/submission-disclosures/` | Submission-time disclosure block: journal-matched AI-use, CRediT roles, conflict-of-interest, and data-availability statements (v2.1) |
 
 ## All Rules
 
@@ -2942,12 +2947,18 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | Session Logging | `session-logging.md` | Three logging triggers |
 | Meta-Governance | `meta-governance.md` | Template vs working project distinctions |
 | Prompt Shaping | `prompt-shaping.md` | Ambient prompt-shaping habit (replaces the retired `/prompt` and `/prompt-only` skills) |
+| Progress Reports | `progress-reports.md` | GitHub as memory — issues as defect memory, `quality_reports/` as work memory, `MEMORY.md` as lesson memory |
+| Repo Hygiene | `repo-hygiene.md` | Scratch must not become main — enforced by `check-repo-hygiene.py` on every commit |
 
 **Path-scoped** (load only when working on matching files):
 
 | Rule | File | Triggers On |
 |------|------|------------|
 | Verification Protocol | `verification-protocol.md` | `.tex`, `.qmd`, `docs/` |
+| Agent-Authored Code | `agent-authored-code.md` | `**/*.sh`, `**/*.py` |
+| Inference Robustness | `inference-robustness.md` | `scripts/**/*.R`, `scripts/**/*.do` |
+| Issue Ledger | `issue-ledger.md` | `.github/**`, `**/ISSUE_TEMPLATE/**` |
+| Writing With AI | `writing-with-ai.md` | `**/*.tex`, `**/*.qmd` |
 | Single Source of Truth | `single-source-of-truth.md` | `Figures/`, `.tex`, `.qmd` |
 | Quality Gates | `quality-gates.md` | `.tex`, `.qmd`, `*.R` |
 | R Code Conventions | `r-code-conventions.md` | `Figures/**`, `scripts/**`, `explorations/**` (analysis scripts) |

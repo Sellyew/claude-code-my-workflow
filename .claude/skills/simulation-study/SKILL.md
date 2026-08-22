@@ -14,7 +14,7 @@ metadata:
 
 Design and run a Monte Carlo experiment that characterizes an estimator's finite-sample behavior, then review it for the bugs that quietly invalidate simulation evidence.
 
-**Input:** `$ARGUMENTS` — a description of the estimator(s) and DGP to study (e.g., "compare TWFE vs Callaway–Sant'Anna ATT under staggered adoption with heterogeneous, dynamic effects"), or a pointer to an existing script/paper whose simulation you want to reproduce or extend.
+**Input:** `$ARGUMENTS` — a description of the estimator(s) and DGP to study (e.g., "compare 2SLS vs LIML under weak instruments with heteroskedasticity"), or a pointer to an existing script/paper whose simulation you want to reproduce or extend.
 
 ---
 
@@ -22,7 +22,7 @@ Design and run a Monte Carlo experiment that characterizes an estimator's finite
 
 - **Follow [`.claude/rules/simulation-conventions.md`](../../rules/simulation-conventions.md)** — the simulation contract (DGP, truth, estimand, MCSE) is non-negotiable.
 - **Follow [`.claude/rules/r-code-conventions.md`](../../rules/r-code-conventions.md)** for general R standards (header, `library()` at top, relative paths, numerical discipline).
-- **Save the script** to `scripts/R/` with a numbered, descriptive name (e.g., `scripts/R/sim_twfe_vs_csdid.R`).
+- **Save the script** to `scripts/R/` with a numbered, descriptive name (e.g., `scripts/R/sim_2sls_vs_liml.R`).
 - **Save outputs** (per-rep raw tibble, summary table, figures) to `scripts/R/_outputs/`.
 - **`saveRDS()` the per-replication raw results**, not just the summary — re-aggregation and the review pass need them.
 - **Run the `sim-reviewer` agent** on the generated script before presenting results, then address Critical/High findings.
@@ -125,7 +125,7 @@ dir.create("scripts/R/_outputs", recursive = TRUE, showWarnings = FALSE)
 generate_data <- function(n, params) { ... }     # returns list(data, truth)
 
 # 2. Estimators ----
-estimators <- list(twfe = est_twfe, csdid = est_csdid)  # each -> est, se, ci, converged
+estimators <- list(tsls = est_tsls, liml = est_liml)    # each -> est, se, ci, converged
 
 # 3. Run one replication ----
 run_one_rep <- function(rep_id, n, params) { ... }      # -> tibble rows (one per estimator)

@@ -3,6 +3,7 @@ name: promote-memory-council
 description: Five-critic council that votes YES/NO on whether candidate `[LEARN]` entries should be promoted from `~/.claude/projects/<project>/memory/` (gitignored) to MEMORY.md (committed). Each critic reviews one dimension — generality, staleness, redundancy, evidence, format — in an isolated forked context. Invoked by `/promote-memory`.
 tools: Read, Grep, Glob
 model: haiku
+effort: low
 ---
 
 # Promote-Memory Council Agent

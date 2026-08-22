@@ -74,11 +74,11 @@ Once you have enough information (typically 5-8 exchanges), produce a **Research
 
 ## Empirical Strategy
 
-- **Method:** [e.g., Difference-in-Differences with staggered adoption]
+- **Method:** [e.g., regression discontinuity around an eligibility cutoff]
 - **Treatment:** [What varies]
 - **Control:** [Comparison group]
 - **Key identifying assumption:** [What must hold]
-- **Robustness checks:** [Pre-trends, placebo tests, etc.]
+- **Robustness checks:** [Placebo tests, bandwidth sensitivity, etc.]
 
 ## Data
 

@@ -18,7 +18,7 @@ A ready-to-fork foundation for AI-assisted academic work. You describe what you 
 >
 > **Only need Python/R/markdown?** You don't need XeLaTeX or Quarto. The agents, rules, skills, and orchestration patterns work for any text/code artifact. Skip the `HelloWorld` demos and head straight to `/data-analysis`, `/review-paper`, `/lit-review`, or `/review-r`.
 >
-> **Session 2 onwards:** [MEMORY.md](MEMORY.md) (committed) collects generic `[LEARN]` entries that help all forkers; `.claude/state/personal-memory.md` (gitignored) is for machine-specific notes. See [`.claude/rules/meta-governance.md`](.claude/rules/meta-governance.md) for the distinction.
+> **Session 2 onwards:** [MEMORY.md](MEMORY.md) (committed) collects generic `[LEARN]` entries that help all forkers; machine-specific notes accumulate in Claude Code's native auto memory (`~/.claude/projects/<project>/memory/`, machine-local, never committed). See [`.claude/rules/meta-governance.md`](.claude/rules/meta-governance.md) for the distinction.
 
 ### 1. Fork & Clone
 
@@ -76,7 +76,7 @@ If both succeed, delete `Slides/HelloWorld.tex` and `Quarto/HelloWorld.qmd` and 
 
 You don't craft a perfect prompt — you **state a goal and let the work loop toward it under gates**. Specialist agents do the labor; enforcing gates decide when it's good enough; you adjudicate the disagreements they surface. Three things make that trustworthy:
 
-- **Real gates, not reminders.** One command — `./scripts/backtest.sh` — runs **eight gates**: surface-sync, skill integrity, model currency against the SSoT, link and anchor resolution, Agent Skills spec conformance, staleness (including source-vs-published divergence), and repo hygiene. A version-controlled pre-commit hook (run `./scripts/install-hooks.sh` once) runs it plus the quality check (≥80) on *every* commit — bypassing the skill no longer bypasses the review. A `git-guardrails` hook blocks destructive git (`reset --hard`, `clean -f`, `push --force`, `add -A`); the review runtime re-checks any reviewer-introduced "fatal" finding before it counts.
+- **Real gates, not reminders.** One command — `./scripts/backtest.sh` — runs **eight gates**: surface-sync, skill integrity, model currency against the SSoT, link and anchor resolution, Agent Skills spec conformance, staleness (including source-vs-published divergence), repo hygiene, and derived counts (enumerable claims re-counted from disk). A version-controlled pre-commit hook (run `./scripts/install-hooks.sh` once) runs it plus the quality check (≥80) on *every* commit — bypassing the skill no longer bypasses the review. A `git-guardrails` hook blocks destructive git (`reset --hard`, `clean -f`, `push --force`, `add -A`); the review runtime re-checks any reviewer-introduced "fatal" finding before it counts.
 - **Every gate is qualified, not just green.** Each one has been shown a planted defect and confirmed to go red, with recall and false-alarm rate recorded in [`quality_reports/qualification/LEDGER.md`](quality_reports/qualification/LEDGER.md). Checks that have *not* been qualified are listed there by name — because an unqualified check is not weak evidence, it is none. Run [`/vaccinate`](.claude/skills/vaccinate/SKILL.md) to qualify one.
 - **A real orchestration runtime.** Reviews fan out to forked specialist agents, reduce over a shared finding schema, judge with a hallucination gate, and loop until dry — see [`orchestrator-protocol.md`](.claude/rules/orchestrator-protocol.md).
 - **Ground truth as a process.** A mismatch isn't always a failure: a defensible, *named* alternative is recorded as `EXPLAINED` and carried into your response-to-referees, while genuine errors stay fail-closed.
@@ -112,19 +112,19 @@ Every artifact gets a score (0–100). Scores below threshold halt the workflow 
 - **90** — PR threshold
 - **95** — excellence (aspirational)
 
-> **Framing honesty:** Thresholds are advisory at the harness level — the `/commit` skill runs quality checks and halts on failure. **And** as of v2.0, running `./scripts/install-hooks.sh` once installs a real pre-commit hook (`.githooks/pre-commit`) that runs the surface-sync + quality (≥80) gates on *every* commit, so bypassing the skill no longer bypasses the review. Opt out per-commit with `SKIP_QUALITY_GATE=1` or `git commit --no-verify`.
+> **Framing honesty:** Thresholds are advisory at the harness level — the `/commit` skill runs quality checks and halts on failure. **And** as of v2.0, running `./scripts/install-hooks.sh` once installs a real pre-commit hook (`.githooks/pre-commit`) that runs the full backtest gate suite plus the quality (≥80) gate on *every* commit, so bypassing the skill no longer bypasses the review. Opt out per-commit with `SKIP_QUALITY_GATE=1` or `git commit --no-verify`.
 
 ### Context Survival
 
 Plans, specifications, and session logs survive auto-compression and session boundaries. The PreCompact hook saves a context snapshot before Claude's auto-compression triggers, ensuring critical decisions are never lost. MEMORY.md accumulates learning across sessions, so patterns discovered in one session inform future work.
 
-For *forced* compression (long pipelines, mid-plan handoffs), `/compress-session` (v1.9.0) distils the conversation into a structured note — decisions, next actions, and **discarded-as-noise** — instead of letting auto-compaction truncate. `/promote-memory` (v1.9.0) periodically harvests generic learnings from gitignored personal-memory.md to committed MEMORY.md via a five-critic council.
+For *forced* compression (long pipelines, mid-plan handoffs), `/compress-session` (v1.9.0) distils the conversation into a structured note — decisions, next actions, and **discarded-as-noise** — instead of letting auto-compaction truncate. `/promote-memory` (v1.9.0) periodically harvests generic learnings from native auto memory to committed MEMORY.md via a five-critic council.
 
 ### Verification Discipline (v1.7.0+)
 
 Multiple complementary verification layers run before submission:
 
-- **`/verify-claims`** (v1.7.0) — Chain-of-Verification with a forked verifier that cannot self-confirm because it has never seen the draft. v1.9.0 adds HIGH/MED/LOW-WARN severity tiers; HIGH-WARN (fabricated citation, numerical contradiction) gate-refuses `/commit`.
+- **`/verify-claims`** (v1.7.0) — Chain-of-Verification with a forked verifier that cannot self-confirm because it has never seen the draft. v1.9.0 adds HIGH/MED/LOW-WARN severity tiers; HIGH-WARN findings (fabricated citation, numerical contradiction) are must-fix — resolve them before committing.
 - **`/audit-reproducibility`** (v1.7.0; Stata coverage v1.9.0) — every numeric claim in the manuscript is cross-checked against the script output that produced it. v1.9.0 adds `passport.yaml` — a per-paper YAML state file with PASS/FAIL/STALE/UNVERIFIED status per claim.
 - **`/humanize`** (v1.9.0) — detect AI-voice tells (boilerplate transitions, hedging stacking, sycophancy) before submission. Read-only by design; auto-rewriting degrades quality.
 - **`/review-paper --variance N`** (v1.9.0) — runs N referees with sampled dispositions and reports a **decision distribution**, not a point estimate. Motivated by AgentReview (EMNLP 2024) finding 37% of decisions vary purely from disposition sampling.
@@ -272,7 +272,7 @@ This workflow is designed as a **single hub for an entire research program** —
 | `/grant-proposal` (v2.0) | Scaffold an NSF/NIH/ERC/foundation grant proposal by composing primitives (spec → aims/methods, delegated DMP + facilities, coherence pass + requirements checklist) |
 | `/data-management-plan` (v2.0) | Funder-compliant Data Management Plan (NSF / NIH DMS 2023 / ERC / Horizon Europe) — folds in disclosure-avoidance + IRB constraints and a replication-package/environment plan; outputs a draft + funder checklist |
 | `/coauthor-brief` (v2.0) | Collaborator handoff brief — what changed since last brief, per-artifact state, open questions, reproduce-locally + restricted-data access steps |
-| `/triage-inbox` (v2.0) | Schedulable academic inbox + calendar triage via Gmail/Calendar MCP — classifies referee requests, R&R/editor, co-author threads, seminar/conference invites, grant/admin deadlines; proposes one human-gated action each (draft reply, calendar hold, `/new-referee-project`, `/coauthor-brief`, snooze); emits a digest + referee-obligations tracker; degrades gracefully when MCP is absent; never auto-sends |
+| `/triage-inbox` (v2.0) | Schedulable academic inbox + calendar triage via Gmail/Calendar MCP — classifies referee requests, R&R/editor, co-author threads, seminar/conference invites, grant/admin deadlines; proposes one human-gated action each (draft reply, calendar hold, scaffold a referee project, `/coauthor-brief`, snooze); emits a digest + referee-obligations tracker; degrades gracefully when MCP is absent; never auto-sends |
 | `/diagnose` (v2.0) | Root-cause a wrong/failing empirical result — disciplined reproduce → minimise → hypothesise → instrument → fix loop; tuned for research-code bugs (type coercion, NA/merge blow-ups, clustering/SE choice, seed/package-version drift); `--no-fix` localizes without editing |
 | `/submission-disclosures` (v2.1) | The submission-time disclosure block: AI-use disclosure matched to the target journal's verified-current policy, CRediT contributor roles, conflict-of-interest, and data-availability statements (NOT statistical disclosure — that's `/disclosure-check`) |
 | `/syllabus` (v2.0) | Build/restructure a course syllabus from a topic or reading list — course description + prerequisites, week-by-week schedule (topic→readings→deliverables), measurable learning objectives, assessment scheme + rubric, standard policies (late work / AI use / integrity / accessibility), and a per-week work-list mapping weeks to `/create-lecture` decks; economics-aware (PhD metrics/micro/macro sequences, undergrad) |
@@ -295,7 +295,7 @@ This workflow is designed as a **single hub for an entire research program** —
 
 ### Rules (`.claude/rules/`)
 
-Rules use path-scoped loading: **always-on** rules load every session (~100 lines total); **path-scoped** rules load only when Claude works on matching files. Claude follows ~150 instructions reliably, so less is more.
+Rules use path-scoped loading: **always-on** rules load every session; **path-scoped** rules load only when Claude works on matching files. Claude follows ~150 instructions reliably, so less is more.
 
 **Always-on** (no `paths:` frontmatter — load every session):
 
@@ -305,6 +305,8 @@ Rules use path-scoped loading: **always-on** rules load every session (~100 line
 | `orchestrator-protocol` | Goal-first review runtime: fan-out → reduce → judge (+ hallucination gate) → loop-until-dry (the contractor loop, now a real runtime) |
 | `session-logging` | Three logging triggers: post-plan, incremental, end-of-session |
 | `meta-governance` | Template vs. working project distinctions |
+| `progress-reports` | GitHub as memory — issues as defect memory, `quality_reports/` as work memory, `MEMORY.md` as lesson memory |
+| `repo-hygiene` | Scratch must not become main — enforced by `check-repo-hygiene.py` on every commit |
 | `prompt-shaping` (v2.0) | Ambient habit — shape informal/ambiguous requests before acting (replaces the retired `/prompt` + `/prompt-only` skills) |
 
 **Path-scoped** (load only when working on matching files):

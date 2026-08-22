@@ -6,18 +6,21 @@ If you have forked this template, see the **Upgrading** section at the bottom fo
 
 ---
 
-## v2.5.0 — 2026-08-21
+## v2.5.0 — 2026-08-22
 
 ### Removed — `/did-event-study` (owner veto, 2026-08-22)
 
 The staggered-DiD pipeline skill is **removed**. The owner — whose own methods it drove — has
 not vetted its current content, and **methodological prescriptions in the owner's field do not
 ship without the owner's current sign-off**. A recorded sign-off from an earlier version does
-not transfer to later content. `did-conventions.md` remains as the conventions reference;
-honest-DiD and the estimators are driven through the canonical packages directly
-(`did`/`DRDID`/`HonestDiD` in R, `csdid`/`drdid`/`honestdid` in Stata). The veto applies to ALL unvetted DiD-prescriptive content, removed in the same release:
+not transfer to later content. Estimation is driven through the canonical packages directly
+(`did`/`DRDID`/`HonestDiD` in R, `csdid`/`drdid`/`honestdid` in Stata). The veto applies to
+ALL unvetted DiD-prescriptive content, removed in the same release:
 the `did-conventions.md` rule, the staggered-DiD sections of `/challenge`'s fork catalogue,
-the honest-DiD entry in its sensitivity-statistics catalogue, the two DiD eval cases, and
+the honest-DiD entry in its sensitivity-statistics catalogue, the two DiD eval cases, the
+tracked validation report `quality_reports/did_validation.md`, the pre-trends prescriptions
+baked into the editor / referee personas and worked examples, the citation-metadata claim of
+a "validated DiD/event-study workflow", and
 every one-line echo of those prescriptions in the references, guide, and landing page. What
 remains says only: use the canonical packages and the owner's published work. Eval
 measurements are preserved in the qualification ledger as records, annotated.
@@ -166,7 +169,7 @@ routines, where *did not run* is a failure rather than silence.
 - **`pdf-processing.md` extended for corpora.** The rule was right for one paper and does not
   scale by multiplication; more than two or three documents means one subagent per document.
 
-**Inventory at release: 60 skills, 18 agents, 37 rules, 7 hooks, 15 references, 8 gates**
+**Inventory at release: 60 skills, 18 agents, 36 rules, 7 hooks, 15 references, 8 gates**
 (was 52 / 18 / 32 / 7 / 9 / 3 at v2.1.0).
 
 ### Upgrading from v2.1

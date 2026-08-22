@@ -100,7 +100,7 @@ A forked subagent cannot stop to ask the user a question. So every interactive c
 
 - **No post-plan-approval trigger / no daemon.** Exiting plan mode does not launch a fix loop, and there is no background service that points the runtime at an artifact unattended. A multi-agent fix loop with no human in it, run against a submission, shared data, or a co-author's draft, is exactly the failure mode we refuse — the loop is always user/skill-initiated. **This is a documented non-goal, not a missing feature.**
 - **No repo-wide orchestrator chaining.** Skills compose the primitives within their own scope; they do not invoke each other without an explicit call.
-- **Quality gate enforcement.** `quality_score.py` runs inside `/commit`, **and** — once `./scripts/install-hooks.sh` is run — the `.githooks/pre-commit` hook runs the surface-sync + quality gates on every commit, so a direct `git commit` no longer bypasses the review (bypass is explicit: `SKIP_QUALITY_GATE=1` / `--no-verify`).
+- **Quality gate enforcement.** `quality_score.py` runs inside `/commit`, **and** — once `./scripts/install-hooks.sh` is run — the `.githooks/pre-commit` hook runs the full backtest gate suite plus the quality gate on every commit, so a direct `git commit` no longer bypasses the review (bypass is explicit: `SKIP_QUALITY_GATE=1` / `--no-verify`).
 
 ## "Just Do It" mode
 

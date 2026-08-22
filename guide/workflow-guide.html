@@ -3457,13 +3457,13 @@ APPROVED   NEEDS WORK
 <td><strong>Factual claims</strong></td>
 <td><a href="#all-skills"><code>/verify-claims</code></a></td>
 <td>fabricated citations, numerical contradictions, directional contradictions</td>
-<td><strong>Yes — HIGH-WARN gate-refuses</strong> (v1.9.0)</td>
+<td><strong>Must-fix — resolve HIGH-WARN before committing</strong> (v1.9.0)</td>
 </tr>
 <tr class="even">
 <td><strong>Numeric provenance</strong></td>
 <td><a href="#all-skills"><code>/audit-reproducibility</code></a></td>
 <td>manuscript value ≠ script output value within tolerance</td>
-<td>Yes via <code>passport.yaml</code> (v1.9.0)</td>
+<td>Must-fix via <code>passport.yaml</code> status (v1.9.0)</td>
 </tr>
 </tbody>
 </table>
@@ -3473,7 +3473,7 @@ APPROVED   NEEDS WORK
 </section>
 <section id="sec-domain-reviewer" class="level2" data-number="3.6">
 <h2 data-number="3.6" class="anchored" data-anchor-id="sec-domain-reviewer"><span class="header-section-number">3.6</span> Creating Your Own Domain Reviewer</h2>
-<p>The template includes <code>domain-reviewer.md</code> — a skeleton for building a substance reviewer specific to your field. For example, in Econ 730, the domain reviewer caught that a slide claimed “<span class="math inline">\(\hat{\beta}\)</span> is consistent under parallel trends” while the cited paper (Callaway and Sant’Anna, 2021) actually requires a <em>conditional</em> parallel trends assumption — a subtle but critical distinction that no grammar or layout checker would flag.</p>
+<p>The template includes <code>domain-reviewer.md</code> — a skeleton for building a substance reviewer specific to your field. The class of defect it exists to catch: a slide asserts a stronger property than the cited paper actually proves — a subtle but critical distinction that no grammar or layout checker would flag.</p>
 <section id="the-5-lens-framework" class="level3" data-number="3.6.1">
 <h3 data-number="3.6.1" class="anchored" data-anchor-id="the-5-lens-framework"><span class="header-section-number">3.6.1</span> The 5-Lens Framework</h3>
 <p>Every domain can benefit from these five review lenses:</p>
@@ -3599,10 +3599,12 @@ APPROVED   NEEDS WORK
 <p><strong>Always-on rules</strong> (no <code>paths:</code> frontmatter) load every session. Keep these few and focused:</p>
 <pre><code>.claude/rules/
 ├── plan-first-workflow.md       # ~83 lines — plan before you build
-├── orchestrator-protocol.md     # ~93 lines — review-fix runtime (fan-out → reduce → judge → loop-until-dry)
+├── orchestrator-protocol.md     # ~119 lines — review-fix runtime (fan-out → reduce → judge → loop-until-dry)
 ├── session-logging.md           # ~23 lines — three logging triggers
 ├── prompt-shaping.md            # ~32 lines — shape informal asks (ambient; replaces /prompt)
-└── meta-governance.md           # ~251 lines — template vs working project</code></pre>
+├── progress-reports.md          # ~92 lines — GitHub as memory: issues, reports, MEMORY.md
+├── repo-hygiene.md              # ~74 lines — scratch must not become main
+└── meta-governance.md           # ~277 lines — template vs working project</code></pre>
 <p><strong>Path-scoped rules</strong> load only when relevant:</p>
 <pre><code>.claude/rules/
 ├── r-code-conventions.md        # paths: [&quot;**/*.R&quot;] — R standards
@@ -3611,7 +3613,7 @@ APPROVED   NEEDS WORK
 ├── replication-protocol.md      # paths: [&quot;scripts/**/*.R&quot;] — replicate first
 ├── exploration-folder-protocol.md  # paths: [&quot;explorations/**&quot;] — sandbox rules
 ├── orchestrator-research.md     # paths: [&quot;scripts/**/*.R&quot;, &quot;explorations/**&quot;] — simple loop
-└── ...27 path-scoped rules total</code></pre>
+└── ...29 path-scoped rules total</code></pre>
 <p>The always-on rules are deliberately compact — together they fit well within the budget Claude reads reliably each session. <code>meta-governance</code> is a reference document for the template’s dual nature (working project vs. public template) and loads passively. Path-scoped rules add rich, domain-specific guidance exactly when Claude needs it.</p>
 <p><strong>Sync vs. translate:</strong> The <code>beamer-quarto-sync</code> rule handles incremental edits — fix a typo in Beamer, same fix goes to Quarto. The <code>/translate-to-quarto</code> skill is for full initial translation of a new lecture. Translate once, sync thereafter.</p>
 <p><strong>Why rules matter:</strong> Without them, Claude will use generic defaults. With them, Claude follows <em>your</em> standards consistently across sessions.</p>
@@ -3737,7 +3739,7 @@ APPROVED   NEEDS WORK
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Claude Code ships with built-in skills beyond this template’s 60: <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> runs 3-agent code review and applies fixes, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
+<p>Claude Code ships with built-in skills beyond this template’s 60 (as of Aug 2026): <code>/batch</code> orchestrates parallel refactoring across your codebase (using git worktrees for isolation), <code>/simplify</code> reviews recent changes for simplification opportunities, and <code>/debug</code> helps troubleshoot sessions. These complement the academic skills above.</p>
 </div>
 </div>
 </section>
@@ -3792,7 +3794,7 @@ APPROVED   NEEDS WORK
 </div>
 <div class="callout-body-container callout-body">
 <p>A single Claude prompt trying to check grammar, layout, math, and code simultaneously will do a mediocre job at all of them. Specialized agents focus on one dimension and do it thoroughly. The <code>/slide-excellence</code> skill runs them all in parallel, then synthesizes results.</p>
-<p>Claude Code also offers experimental <strong>Agent Teams</strong> — multiple independent sessions that coordinate, share findings, and challenge each other’s approaches. This is a research preview feature; the orchestrator + subagent pattern described here is more mature for academic workflows.</p>
+<p>Claude Code also offers experimental <strong>Agent Teams</strong> — multiple independent sessions that coordinate, share findings, and challenge each other’s approaches. This is a research preview feature (as of Aug 2026); the orchestrator + subagent pattern described here is more mature for academic workflows.</p>
 </div>
 </div>
 </section>
@@ -3831,26 +3833,26 @@ APPROVED   NEEDS WORK
 </thead>
 <tbody>
 <tr class="odd">
-<td>Complex translation</td>
+<td>Adversarial comparison / high-judgment review</td>
 <td><code>model: opus</code></td>
-<td>Needs deep understanding of both formats</td>
-<td>beamer-translator, quarto-critic</td>
+<td>Needs deep understanding of both artifacts at once</td>
+<td>quarto-critic, tikz-reviewer, editor</td>
 </tr>
 <tr class="even">
 <td>Fast, constrained work</td>
 <td><code>model: sonnet</code></td>
 <td>Speed matters more than depth</td>
-<td>r-reviewer, quarto-fixer</td>
+<td>beamer-translator, r-reviewer, quarto-fixer, proofreader, slide-auditor</td>
 </tr>
 <tr class="odd">
 <td>Mechanical default</td>
 <td><code>model: haiku</code></td>
 <td>Bounded, fast work</td>
-<td>proofreader, slide-auditor</td>
+<td>promote-memory-council</td>
 </tr>
 </tbody>
 </table>
-<p><strong>The principle:</strong> Use Opus for tasks that require holding two large documents in mind simultaneously (translation, adversarial comparison). Use Sonnet for tasks with clear, bounded scope (fix these 12 issues, check this R script). Use Haiku for mechanical work. In v2.0 every agent is pinned explicitly rather than inheriting — see <code>agent-fleet.md</code> for the full fleet + tiers.</p>
+<p><strong>The principle:</strong> Use Opus for tasks that require holding two large documents in mind simultaneously (adversarial comparison, refereeing). Use Sonnet for tasks with clear, bounded scope (fix these 12 issues, check this R script). Use Haiku for mechanical work. In v2.0 every agent is pinned explicitly rather than inheriting — see <code>agent-fleet.md</code> for the full fleet + tiers.</p>
 <p>To change an agent’s model, edit its YAML frontmatter:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> quarto-critic</span></span>
@@ -4262,7 +4264,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </tr>
 <tr class="even">
 <td><code>/goal &lt;verifiable condition&gt;</code></td>
-<td>Sets an end-state condition; Claude keeps working across turns until a fast model confirms it holds (Apr 2026 Week 20, v2.1.139)</td>
+<td>Sets an end-state condition; Claude keeps working across turns until a fast model confirms it holds (May 2026 Week 20, v2.1.139)</td>
 <td>“All R scripts pass without errors”, “Figure 3 renders to PDF without overflow” — pair with <code>/commit</code> quality gates for verified-end-state runs</td>
 </tr>
 </tbody>
@@ -4375,9 +4377,9 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <p>The template splits memory into two tiers (see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/meta-governance.md"><code>meta-governance.md</code></a>):</p>
 <ul>
 <li><strong><code>MEMORY.md</code></strong> (committed, ≤ 200 lines) — generic learnings that help all forkers: workflow patterns, design principles, documentation standards, quality thresholds that transfer across domains.</li>
-<li><strong><code>.claude/state/personal-memory.md</code></strong> (gitignored, no size cap) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.</li>
+<li><strong>Native auto memory</strong> (<code>~/.claude/projects/&lt;project&gt;/memory/</code>, machine-local, never committed) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.</li>
 </ul>
-<p>When a fork user does <code>git clone</code>, they get the generic <code>MEMORY.md</code>. Their own <code>personal-memory.md</code> builds up locally as they work.</p>
+<p>When a fork user does <code>git clone</code>, they get the generic <code>MEMORY.md</code>. Their own auto memory builds up locally as they work.</p>
 </section>
 <section id="promote-memory-graduating-learnings-v1.9.0" class="level4" data-number="4.8.0.2">
 <h4 data-number="4.8.0.2" class="anchored" data-anchor-id="promote-memory-graduating-learnings-v1.9.0"><span class="header-section-number">4.8.0.2</span> <code>/promote-memory</code> — graduating learnings (v1.9.0)</h4>
@@ -5045,14 +5047,14 @@ Phase 4: Only then extend
 </div>
 <div class="callout-body-container callout-body">
 <p>Replication-first verifies the <em>current</em> state. A separate question: how do we keep manuscript and code in sync over the lifetime of a paper, especially during R&amp;R?</p>
-<p>The answer is a per-paper <code>quality_reports/passports/&lt;paper-slug&gt;.yaml</code> that records, for each numeric claim in the manuscript, the script + line + output that produced it. Schema includes <code>tolerance</code>, <code>last_verified_on</code>, <code>status</code> (PASS / FAIL / STALE / UNVERIFIED). <a href="#all-skills"><code>/audit-reproducibility</code></a> reads and rewrites the passport in place; <a href="#all-skills"><code>/commit</code></a> reads it to block commits when a load-bearing claim is FAIL or STALE.</p>
+<p>The answer is a per-paper <code>quality_reports/passports/&lt;paper-slug&gt;.yaml</code> that records, for each numeric claim in the manuscript, the script + line + output that produced it. Schema includes <code>tolerance</code>, <code>last_verified_on</code>, <code>status</code> (PASS / FAIL / STALE / UNVERIFIED). <a href="#all-skills"><code>/audit-reproducibility</code></a> reads and rewrites the passport in place; a FAIL or STALE on a load-bearing claim is a must-fix before you commit.</p>
 <p>Starter file: <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/templates/passport-template.yaml"><code>templates/passport-template.yaml</code></a>. Copy once per paper. Pattern attributed to <a href="https://github.com/Imbad0202/academic-research-skills">Imbad0202/academic-research-skills</a> “Material Passport” concept (scope-reduced for this template: numeric claims only).</p>
 </div>
 </div>
 </section>
 <section id="pattern-6-multi-agent-review" class="level2" data-number="5.6">
 <h2 data-number="5.6" class="anchored" data-anchor-id="pattern-6-multi-agent-review"><span class="header-section-number">5.6</span> Pattern 6: Multi-Agent Review</h2>
-<p>The <code>/slide-excellence</code> skill runs up to 6 <a href="#agents---specialized-reviewers">specialized agents</a> in parallel:</p>
+<p>The <code>/slide-excellence</code> skill runs up to 7 <a href="#agents---specialized-reviewers">specialized agents</a> in parallel:</p>
 <pre><code>/slide-excellence Lecture5_Topic.tex
   |
   +-- Agent 1: Visual Audit (slide-auditor)
@@ -5060,7 +5062,8 @@ Phase 4: Only then extend
   +-- Agent 3: Proofreading (proofreader)
   +-- Agent 4: TikZ Review (tikz-reviewer, if applicable)
   +-- Agent 5: Content Parity (if Quarto version exists)
-  +-- Agent 6: Substance Review (domain-reviewer)
+  +-- Agent 6: R Code Review (r-reviewer, if the deck embeds R code)
+  +-- Agent 7: Substance Review (domain-reviewer)
   |
   +-- Synthesize: Combined quality score + prioritized fix list</code></pre>
 </section>
@@ -5433,7 +5436,7 @@ Decision point (1-2 hours):
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>For submission-ready manuscripts, <code>/review-paper --peer &lt;journal&gt;</code> runs an <strong>editor + two dispositioned referees + editorial decision</strong>, calibrated to the target journal. Editor calibration reads <code>.claude/references/journal-profiles.md</code>; the template ships profiles for <strong>AER, QJE, JPE, ECMA, JoE</strong> (econ) and <strong>APSR, AJPS, JOP</strong> (poli-sci). Other fields: add a profile, ~40 lines each.</p>
+<p>For submission-ready manuscripts, <code>/review-paper --peer &lt;journal&gt;</code> runs an <strong>editor + two dispositioned referees + editorial decision</strong>, calibrated to the target journal. Editor calibration reads <code>.claude/references/journal-profiles.md</code>; the template ships profiles for <strong>AER, QJE, JPE, ECMA, ReStud</strong> (econ) and <strong>APSR, AJPS, JOP</strong> (poli-sci). Other fields: add a profile, ~40 lines each.</p>
 <p>The methods-referee is <strong>paper-type-aware</strong> — the same skill picks different sanity checks based on what kind of paper this is:</p>
 <table class="caption-top table">
 <colgroup>
@@ -6411,7 +6414,7 @@ research-spec.md  ─────────────→  preregistration-dr
 <div class="callout-body-container callout-body">
 <p>Two disciplines are already concrete in this template:</p>
 <ul>
-<li><strong>Economics</strong> — top-4 + top-field journal profiles (AER, QJE, JPE, ECMA, JoE), R-centric <code>r-code-conventions.md</code>, econometrics example in domain-reviewer.md.</li>
+<li><strong>Economics</strong> — top-5 journal profiles (AER, QJE, JPE, ECMA, ReStud), R-centric <code>r-code-conventions.md</code>, econometrics example in domain-reviewer.md.</li>
 <li><strong>Political Science</strong> — APSR, AJPS, JOP journal profiles (v1.8.0), <code>formal-theory</code> + <code>survey-experiment</code> paper types in methods-referee, poli-sci example in domain-reviewer.md.</li>
 </ul>
 <p>Both fields are wired into <code>.claude/references/discipline-cards.md</code>, which <code>/research-ideation</code>, <code>/interview-me</code>, <code>/preregister</code>, and the editor agent read when you give them a discipline without a target journal. Cards document paper-type frequency, dominant journals, preregistration norms (OSF / AsPredicted / AEA RCT / ClinicalTrials.gov), significance-stars conventions, SE conventions, and dominant code language (R / Stata / Python).</p>
@@ -6610,7 +6613,7 @@ research-spec.md  ─────────────→  preregistration-dr
 <ul>
 <li><strong><code>effort: high</code></strong> is useful for review skills that need deep reasoning (e.g., paper critique). Use <code>effort: low</code> for simple formatting skills to save tokens.</li>
 <li><strong><code>context: fork</code></strong> runs the skill in a fresh subagent context, protecting your main conversation from large outputs. Good for skills that produce verbose reports.</li>
-<li><strong><code>allowed-tools</code></strong> prevents skills from accidentally using destructive tools. A read-only review skill should use <code>[&quot;Read&quot;, &quot;Grep&quot;, &quot;Glob&quot;]</code>.</li>
+<li><strong><code>disallowed-tools</code></strong> genuinely removes tools while a skill runs — use it to make review skills read-only. (<code>allowed-tools</code> alone does <strong>not</strong> sandbox; see the callout above.)</li>
 </ul>
 </div>
 </div>
@@ -6899,7 +6902,7 @@ research-spec.md  ─────────────→  preregistration-dr
 <tr class="even">
 <td>Promote-Memory Council</td>
 <td><code>.claude/agents/promote-memory-council.md</code></td>
-<td>Five-critic council (generality / staleness / redundancy / evidence / format) for <code>[LEARN]</code> promotion from personal-memory.md to MEMORY.md; invoked by <code>/promote-memory</code> (v1.9.0)</td>
+<td>Five-critic council (generality / staleness / redundancy / evidence / format) for <code>[LEARN]</code> promotion from native auto memory to MEMORY.md; invoked by <code>/promote-memory</code> (v1.9.0)</td>
 </tr>
 <tr class="odd">
 <td>Sim Reviewer</td>
@@ -7133,7 +7136,7 @@ research-spec.md  ─────────────→  preregistration-dr
 <tr class="odd">
 <td><code>/promote-memory</code></td>
 <td><code>.claude/skills/promote-memory/</code></td>
-<td>Five-critic council that votes on whether candidate <code>[LEARN]</code> entries should be promoted from personal-memory.md to MEMORY.md (v1.9.0)</td>
+<td>Five-critic council that votes on whether candidate <code>[LEARN]</code> entries should be promoted from native auto memory to MEMORY.md (v1.9.0)</td>
 </tr>
 <tr class="even">
 <td><code>/stata-replication</code></td>
@@ -7220,6 +7223,16 @@ research-spec.md  ─────────────→  preregistration-dr
 <td><code>.claude/skills/new-skill/</code></td>
 <td>Scaffold a convention-compliant skill (interview → write <code>SKILL.md</code> with gate-passing frontmatter) (v2.0)</td>
 </tr>
+<tr class="odd">
+<td><code>/diagnose</code></td>
+<td><code>.claude/skills/diagnose/</code></td>
+<td>Root-cause a wrong or failing empirical result — reproduce → minimise → bisect → instrument → fix; <code>--no-fix</code> localizes without editing (v2.0)</td>
+</tr>
+<tr class="even">
+<td><code>/submission-disclosures</code></td>
+<td><code>.claude/skills/submission-disclosures/</code></td>
+<td>Submission-time disclosure block: journal-matched AI-use, CRediT roles, conflict-of-interest, and data-availability statements (v2.1)</td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -7265,6 +7278,16 @@ research-spec.md  ─────────────→  preregistration-dr
 <td><code>prompt-shaping.md</code></td>
 <td>Ambient prompt-shaping habit (replaces the retired <code>/prompt</code> and <code>/prompt-only</code> skills)</td>
 </tr>
+<tr class="even">
+<td>Progress Reports</td>
+<td><code>progress-reports.md</code></td>
+<td>GitHub as memory — issues as defect memory, <code>quality_reports/</code> as work memory, <code>MEMORY.md</code> as lesson memory</td>
+</tr>
+<tr class="odd">
+<td>Repo Hygiene</td>
+<td><code>repo-hygiene.md</code></td>
+<td>Scratch must not become main — enforced by <code>check-repo-hygiene.py</code> on every commit</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Path-scoped</strong> (load only when working on matching files):</p>
@@ -7286,6 +7309,26 @@ research-spec.md  ─────────────→  preregistration-dr
 <td>Verification Protocol</td>
 <td><code>verification-protocol.md</code></td>
 <td><code>.tex</code>, <code>.qmd</code>, <code>docs/</code></td>
+</tr>
+<tr class="even">
+<td>Agent-Authored Code</td>
+<td><code>agent-authored-code.md</code></td>
+<td><code>**/*.sh</code>, <code>**/*.py</code></td>
+</tr>
+<tr class="odd">
+<td>Inference Robustness</td>
+<td><code>inference-robustness.md</code></td>
+<td><code>scripts/**/*.R</code>, <code>scripts/**/*.do</code></td>
+</tr>
+<tr class="even">
+<td>Issue Ledger</td>
+<td><code>issue-ledger.md</code></td>
+<td><code>.github/**</code>, <code>**/ISSUE_TEMPLATE/**</code></td>
+</tr>
+<tr class="odd">
+<td>Writing With AI</td>
+<td><code>writing-with-ai.md</code></td>
+<td><code>**/*.tex</code>, <code>**/*.qmd</code></td>
 </tr>
 <tr class="even">
 <td>Single Source of Truth</td>
