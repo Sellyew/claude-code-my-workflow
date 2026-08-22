@@ -140,6 +140,6 @@ the sensitivity statistics with their values, and **every attempt including the 
 ## Cross-references
 
 - [`verification-ladder.md`](../../references/verification-ladder.md) — rung 4 (analytic verification) and rung 5 (the ledger)
-- [`/did-event-study`](../did-event-study/SKILL.md) — the DiD path; honest DiD lives there and is driven, never reimplemented
+- Honest DiD is **driven, never reimplemented**: `HonestDiD` (R) / `honestdid` (Stata), per [`did-conventions.md`](../../rules/did-conventions.md)
 - [`/simulation-study`](../simulation-study/SKILL.md) — when the question is finite-sample performance, not robustness
 - [`/preregister`](../preregister/SKILL.md) — reserve a holdout before the search, not after

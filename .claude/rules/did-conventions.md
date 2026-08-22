@@ -11,7 +11,7 @@ paths:
 
 # DiD / Event-Study Conventions (Sant'Anna practitioner standard)
 
-Methodological standards for difference-in-differences and event-study work, after Callaway & Sant'Anna (2021), Sant'Anna & Zhao (2020), and Roth, Sant'Anna, Bilinski & Poe (2023, *"What's Trending in DiD?"*). The skill [`/did-event-study`](../skills/did-event-study/SKILL.md) implements this; this rule keeps any DiD work in the repo consistent with it.
+Methodological standards for difference-in-differences and event-study work, after Callaway & Sant'Anna (2021), Sant'Anna & Zhao (2020), and Roth, Sant'Anna, Bilinski & Poe (2023, *"What's Trending in DiD?"*). The skill `did-event-study` (skill removed 2026-08-22, owner veto) implements this; this rule keeps any DiD work in the repo consistent with it.
 
 **The governing principle (from the DiD-vault audit standard): the paper and the original author code are the source of truth; translated wrappers and printed numbers are derived artifacts to be verified against them.** If a result looks implausible, debug the wrapper — sample, weights, clustering, data construction, software engine, target mapping — *before* interpreting it.
 
@@ -67,6 +67,6 @@ The opinionated defaults here reflect **Pedro Sant'Anna's sign-off** (2026-06-09
 - ❌ Interpret an implausible number before **debugging the wrapper**.
 
 ## Cross-references
-- [`.claude/skills/did-event-study/SKILL.md`](../skills/did-event-study/SKILL.md) — the pipeline.
+- *(The `/did-event-study` pipeline skill was removed 2026-08-22 by owner decision — unvetted methodology does not ship in the owner's own field. This rule stands as the conventions reference; drive the canonical packages directly.)*
 - [`.claude/rules/replication-protocol.md`](replication-protocol.md) · [`.claude/rules/r-code-conventions.md`](r-code-conventions.md) · [`.claude/rules/simulation-conventions.md`](simulation-conventions.md).
 - Canonical resources: <https://psantanna.com/did-resources/> (the JEL Practitioner's Guide, *What's Trending*, the course, all packages).

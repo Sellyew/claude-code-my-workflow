@@ -60,7 +60,6 @@ Rank by *cost of being wrong*, not by how often they run:
 2. **`claim-verifier`** — HIGH-WARN gate-refuses `/commit`.
 3. **`/audit-reproducibility`** — gates the replication package.
 4. **`/challenge`** — its output becomes a robustness claim in a paper.
-5. **`/did-event-study`** — drives estimators whose defaults change the estimand.
 
 ## The relationship to `/vaccinate`
 

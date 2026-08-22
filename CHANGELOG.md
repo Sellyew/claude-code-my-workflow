@@ -8,6 +8,17 @@ If you have forked this template, see the **Upgrading** section at the bottom fo
 
 ## v2.5.0 — 2026-08-21
 
+### Removed — `/did-event-study` (owner veto, 2026-08-22)
+
+The staggered-DiD pipeline skill is **removed**. The owner — whose own methods it drove — has
+not vetted its current content, and **methodological prescriptions in the owner's field do not
+ship without the owner's current sign-off**. A recorded sign-off from an earlier version does
+not transfer to later content. `did-conventions.md` remains as the conventions reference;
+honest-DiD and the estimators are driven through the canonical packages directly
+(`did`/`DRDID`/`HonestDiD` in R, `csdid`/`drdid`/`honestdid` in Stata). The skill's eval
+measurement is preserved in the qualification ledger as a record, annotated with the removal.
+
+
 A **verification and currency release.** The substrate moved underneath the template over ten
 weeks — a tool was renamed, two model generations shipped, and a fixed upstream bug left a
 stale blocker in the backlog — while every gate stayed green. v2.5 fixes the facts, and then
@@ -78,7 +89,7 @@ fixes the reason the gates did not notice.
 - **`disallowed-tools` on 9 read-only skills.** `/proofread`, `/review-r`, `/visual-audit` and
   friends keep `Write` (for their report) but can no longer `Edit` the artifact they were told
   to only report on. Previously nothing stopped them.
-- **Frontmatter conformance.** Audited continuously by the `check-spec-conformance` gate — all 61 skills at release — against the
+- **Frontmatter conformance.** Audited continuously by the `check-spec-conformance` gate — all 60 skills at release — against the
   [Agent Skills spec](https://agentskills.io/specification): names, description length, and
   the 500-line body guidance all pass (median body: 121 lines). `author`/`version` — read by
   neither the spec nor Claude Code — moved under `metadata:`.
@@ -151,7 +162,7 @@ routines, where *did not run* is a failure rather than silence.
 - **`pdf-processing.md` extended for corpora.** The rule was right for one paper and does not
   scale by multiplication; more than two or three documents means one subagent per document.
 
-**Inventory at release: 61 skills, 18 agents, 37 rules, 7 hooks, 15 references, 8 gates**
+**Inventory at release: 60 skills, 18 agents, 37 rules, 7 hooks, 15 references, 8 gates**
 (was 52 / 18 / 32 / 7 / 9 / 3 at v2.1.0).
 
 ### Upgrading from v2.1

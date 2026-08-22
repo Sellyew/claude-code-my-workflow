@@ -35,5 +35,4 @@ judgements belong to you.
 ## Priority order
 
 Rank by **cost of being wrong**, not by frequency of use:
-`/review-paper --peer` → `claim-verifier` → `/audit-reproducibility` → `/challenge` →
-`/did-event-study`.
+`/review-paper --peer` → `claim-verifier` → `/audit-reproducibility` → `/challenge`.
