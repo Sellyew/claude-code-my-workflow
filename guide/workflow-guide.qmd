@@ -2,7 +2,8 @@
 title: "My Claude Code Setup"
 subtitle: "A Comprehensive Guide to AI-Assisted Academic Workflows: Slides, Papers, Analysis, and Beyond"
 author: "Pedro H. C. Sant'Anna"
-date: "2026-05-31"
+date: "2026-08-22"
+version: "2.5.0"
 date-modified: last-modified
 format:
   html:
@@ -45,7 +46,7 @@ This workflow solves all of these problems. You describe what you want --- "tran
 
 ## What Makes Claude Code Different
 
-Claude Code runs on your computer with full access to your file system, terminal, and git. It works as a **CLI tool**, a **VS Code extension**, or through the **Claude Desktop app** --- same capabilities, same configuration, different interface. Here is what that enables:
+Claude Code runs on your computer with full access to your file system, terminal, and git. It works as a **CLI tool**, a **VS Code extension**, or through the **Claude Desktop app** — the same core workflow through different interfaces (permission modes and a few configuration keys genuinely differ by surface; check the permission-modes docs for yours). Here is what that enables:
 
 | Capability | What It Means for You |
 |-----------|----------------------|
@@ -168,14 +169,14 @@ This guide describes the full system --- 18 agents, 60 skills, 36 rules. That is
 
 # Getting Started {#sec-setup}
 
-You need three things: install Claude Code, fork the repo, and paste a prompt. Claude handles everything else.
+You need four things: install Claude Code, fork the repo, run `./scripts/install-hooks.sh` once (this wires the real pre-commit gate — until you run it, the hook file sits inert), and paste a prompt. Claude handles everything else. (The gate scripts need Python 3, which macOS and most Linux distros already ship.)
 
 ## Prerequisites {#sec-prerequisites}
 
 | Requirement | What It Is | How to Get It |
 |-------------|-----------|---------------|
 | **Claude Code** | The AI tool that powers this workflow | `curl -fsSL https://claude.ai/install.sh | bash` ([docs](https://code.claude.com/docs/en/overview)) |
-| **Node.js 18+** | Required to run Claude Code | [nodejs.org](https://nodejs.org) |
+| **Node.js 18+** | Only for the npm install route — the recommended native installer bundles its own runtime | [nodejs.org](https://nodejs.org) |
 | **Claude account** | Authentication for Claude | [Claude Pro or Max subscription](https://claude.ai) or [Anthropic API key](https://console.anthropic.com) (pay per token) |
 | **git** | Version control (for fork/clone) | Pre-installed on Mac; `brew install git` or [git-scm.com](https://git-scm.com) |
 
@@ -195,7 +196,7 @@ You need three things: install Claude Code, fork the repo, and paste a prompt. C
 
 **API access** (pay per token): For heavy users or CI/CD. Use [effort levels](#sec-effort) and the [multi-model strategy](#multi-model-strategy-cost-vs-quality) to control costs.
 
-Claude Code itself is free and open source. You pay only for the Claude model usage.
+Claude Code itself is free to install (the source is public on GitHub, but under Anthropic's commercial terms — not an open-source license). You pay only for the Claude model usage.
 :::
 
 ::: {.callout-tip}
@@ -216,7 +217,7 @@ That's it. Everything else — agents, hooks, rules — runs automatically in th
 ::: {.callout-tip collapse="true"}
 ## Trouble on Day 1?
 
-**"command not found: claude":** Install Claude Code first: `curl -fsSL https://claude.ai/install.sh | bash`. Requires Node.js 18+ (`node --version` to check).
+**"command not found: claude":** Install Claude Code first: `curl -fsSL https://claude.ai/install.sh | bash` (the native installer — no Node.js needed; only the npm route requires Node 18+).
 
 **Claude seems to ignore the configuration files:** Make sure you ran `claude` from inside the project directory (not a parent folder). Claude reads `.claude/` and `CLAUDE.md` from the current working directory.
 
@@ -441,7 +442,7 @@ What's mechanically implemented today: `/commit` (verifier + quality_score), `/q
 
 ## Quality Review: The 80/90/95 System {#sec-quality}
 
-The [quality-gates rule](#sec-blocks) (`quality-gates.md`) defines scoring thresholds that `/commit` and review skills apply. Thresholds are **advisory** — enforced inside specific skills **and**, once you run `./scripts/install-hooks.sh`, by a real git pre-commit hook (`.githooks/pre-commit`) that runs the full backtest gate suite plus the quality (≥80) gate on every commit. Bypass it sparingly with `SKIP_QUALITY_GATE=1` or `--no-verify`. Every file gets a quality score from 0 to 100:
+The [quality-gates rule](#sec-blocks) (`quality-gates.md`) defines scoring thresholds that `/commit` and review skills apply. Thresholds are **advisory** — enforced inside specific skills **and**, once you run `./scripts/install-hooks.sh`, by a real git pre-commit hook (`.githooks/pre-commit`) that runs the full backtest gate suite plus the quality (≥80) gate on every commit. Bypass it sparingly with `SKIP_QUALITY_GATE=1` or `--no-verify`. Every substantive artifact (`.tex`, `.qmd`, `.R`) gets a quality score from 0 to 100:
 
 | Score | Threshold | Meaning | Action |
 |-------|-----------|---------|--------|
@@ -465,7 +466,7 @@ Points are deducted for issues:
 
 ### Mandatory Verification
 
-The verification protocol (`.claude/rules/verification-protocol.md`) requires that Claude compile, render, or otherwise verify every output before reporting a task as complete. Skills that implement the orchestrator pattern enforce this as Step 2: VERIFY. This means Claude **cannot** say "done" from within those skills without actually checking the output.
+The verification protocol (`.claude/rules/verification-protocol.md`) requires that Claude compile, render, or otherwise verify every output before reporting a task as complete. Skills that implement the orchestrator pattern enforce this as Step 2: VERIFY. This means Claude **cannot** say "done" from within those skills without actually checking the output. One honest caveat: the *mechanical* quality gate is static analysis plus a best-effort render — when Quarto or XeLaTeX is unavailable or times out, it records `UNVERIFIED` rather than failing. Treat `UNVERIFIED` notes as *not cleared*, and rely on the verifier agent (which actually compiles) for execution-level assurance.
 
 ::: {.callout-warning}
 ## Don't Skip Verification
@@ -498,7 +499,9 @@ model doing a job, and neither announces when it has stopped working.
 ## Twenty planted bugs, and a clean bill of health
 
 Twenty bugs were deliberately planted in a working codebase, and the review agents were asked
-to check it again. **They reported everything was fine.** Recall: 0 out of 20.
+to check it again. **They reported everything was fine.** Recall: 0 out of 20. (A working-session
+incident from this template's own development, June 2026 — it predates the qualification ledger,
+and it is the reason the ledger exists: gate results now come with a recorded, replayable row.)
 
 Nothing in the output distinguished that from a genuinely clean run. The reviewers were
 confident, fluent, and completely wrong — and there was no way to tell from reading the report.
@@ -589,7 +592,7 @@ and being heard about rung five.
 
 ### And review does not substitute for robustness
 
-In a controlled study, 150 autonomous agents were given the same data and the same questions.
+In a controlled study ([Gao & Xiao 2026, "Nonstandard Errors in AI Agents", arXiv:2603.16744](https://arxiv.org/abs/2603.16744) — a preprint studying six market-quality hypotheses on NYSE TAQ data, so evidence from one empirical-finance setting, not all of social science), 150 autonomous agents were given the same data and the same questions.
 Effect-size interquartile ranges reached about **10.7 %/yr**, and the spread concentrated in
 **discrete measure-choice forks** — dollar versus share volume, trade-level versus Amihud —
 not in estimation noise. Within a measure family, agents agreed to about 0.25 %/yr.
@@ -691,7 +694,7 @@ Move everything else into `.claude/rules/` files (with path-scoping so they only
 ::: {.callout-important}
 ## Keep It Lean
 
-CLAUDE.md loads every session. If it exceeds ~150 lines, Claude starts ignoring rules silently. Put detailed standards in path-scoped rules (`.claude/rules/`) instead --- they only load when Claude works on matching files, so they don't compete for attention.
+CLAUDE.md loads every session. Keep it lean --- official guidance suggests staying under ~200 lines, and adherence degrades as it grows (overloaded files lose rules silently). Put detailed standards in path-scoped rules (`.claude/rules/`) instead --- they only load when Claude works on matching files, so they don't compete for attention.
 :::
 
 ## Rules --- Domain Knowledge That Auto-Loads {#rules---domain-knowledge-that-auto-loads}
@@ -908,7 +911,7 @@ model: opus   # pinned per agent-fleet.md (v2.0: no agent inherits)
 ::: {.callout-tip}
 ## Cost Savings
 
-If you configure model-per-agent, a typical Beamer-to-Quarto translation runs the critic on Opus (2--4 rounds) while the fixer runs on Sonnet (same rounds). This can save roughly 40--60% compared to running everything on Opus, with no quality loss on the fixing step.
+If you configure model-per-agent, a typical Beamer-to-Quarto translation runs the critic on Opus (2--4 rounds) while the fixer runs on Sonnet (same rounds). In our use this saves roughly 40--60% compared to running everything on Opus, without observed quality loss on the fixing step — a routing heuristic from our own projects, not a benchmarked guarantee.
 :::
 
 ### Advanced Agent Configuration {#sec-agent-config}
@@ -959,7 +962,7 @@ The Apr 2026 [TTL change cost analysis](https://dev.to/whoffagents/claude-prompt
 | **Sonnet tier** | ~20% | Review and critique: r-reviewer, slide-auditor, proofreader, quarto-fixer |
 | **Opus tier** | ~10% | High-judgment work: editor, domain-referee, methods-referee, claim-verifier, manuscript review |
 
-Set per-agent via `model:` in `.claude/agents/<name>.md` frontmatter. Typical savings vs. all-Opus: **50–80% on routed skills**, no quality loss on the mechanical tier. The community-converged ratio is documented in [Augment Code's routing data](https://augmentcode.com) and aligns with Aider's architect/editor split; we cite Anthropic's [Apr 8 2026 "Decoupling brain from hands"](https://www.anthropic.com/engineering) as the primary-source endorsement of the pattern.
+Set per-agent via `model:` in `.claude/agents/<name>.md` frontmatter. Typical savings vs. all-Opus in our use: **50–80% on routed skills**, with no quality loss observed on the mechanical tier (heuristic, not a benchmark). The community-converged ratio is documented in [Augment Code's routing data](https://augmentcode.com) and aligns with Aider's architect/editor split; we cite Anthropic's [Apr 8 2026 "Decoupling brain from hands"](https://www.anthropic.com/engineering) as the primary-source endorsement of the pattern.
 
 **3. Effort budgeting.** The Effort Levels section earlier covered the `low | medium | high | xhigh | max` ladder. **the current Opus tier defaults to `high`** — and its `high` does roughly what 4.7's `xhigh` did, for fewer tokens. So: let `high` be the default; drop to `medium`/`low` to save cost on mechanical work; reach for `xhigh` only for extended exploration (deep search, big refactors, the hardest `/review-paper` runs); `ultracode` (xhigh + dynamic workflows) for repo-scale autonomous tasks.
 
@@ -1016,7 +1019,7 @@ Starting 2026-06-15, `claude -p` headless subprocess calls (used by `/coarse-rev
 | **Don't ask** | `dontAsk` | Auto-denies tools unless pre-approved in allowlist | Restricted environments where only allowlisted tools run |
 | **Plan** | `plan` | Read-only --- no edits allowed | Exploring code, reviewing before acting |
 | **Auto** | `auto` | Classifier-gated; everything runs unless flagged risky. **Since 2026-08-14 this is the default starting mode** for new interactive terminal and VS Code sessions on Pro, Max, and Team, and it needs no opt-in flag on Bedrock, Google Cloud's Agent Platform, or Microsoft Foundry | Long autonomous tasks with safety net --- the recommended mode for trusted repos when bypass is too permissive |
-| **Bypass** | `bypassPermissions` | Skips all permission prompts | CI/CD pipelines, headless scripts (still prompts on protected paths: `.git`, `.vscode`, `.idea`, `.husky`, `.claude` minus carve-outs `commands`/`agents`/`skills`/`worktrees`) |
+| **Bypass** | `bypassPermissions` | Skips **all** permission prompts and safety checks — including writes to protected paths (`.git`, `.vscode`, `.idea`, `.husky`, `.claude`). Anthropic's docs advise reserving it for isolated environments | CI/CD, headless scripts, and — eyes open — trusted-repo daily driving: nothing prompts, so pair it with plan-first and the shipped `git-guardrails` hook |
 
 Set via CLI flag (`claude --permission-mode plan`), the `/config` command, or `permissions.defaultMode` in `settings.json`.
 
@@ -1052,7 +1055,7 @@ Plan mode and bypass permissions sound like opposites, but they chain into a sin
 ::: {.callout-warning}
 ## Plan approval is not an enforcement boundary
 
-Approving a plan via `ExitPlanMode` releases the session to your `defaultMode` — typically `bypassPermissions`. Once there, any subsequent tool call (Edit, Write, Bash) executes under the full allowlist in your `settings.json`, not a scope derived from the plan. A mistaken implementation can still edit unrelated files or run destructive shell commands with no second checkpoint.
+Approving a plan via `ExitPlanMode` hands the session to the mode set at the approval prompt — current Claude Code versions present explicit choices there (approve into auto mode, approve with manual edit review, keep planning); on this template's bypass-default setup the approved plan proceeds without per-tool prompts. Once there, any subsequent tool call (Edit, Write, Bash) executes under the full allowlist in your `settings.json`, not a scope derived from the plan. A mistaken implementation can still edit unrelated files or run destructive shell commands with no second checkpoint.
 
 Treat this flow as a convenience pattern, not a security control. If you need a hard enforcement boundary, keep `defaultMode: "default"` and approve each high-risk tool individually, or run the whole session in `plan` mode and copy actions out manually.
 :::
@@ -1072,9 +1075,9 @@ Plan drafted, saved to quality_reports/plans/YYYY-MM-DD_description.md
      v
 User approves via ExitPlanMode UI
      |
-     | Claude Code returns the session to defaultMode.
-     | If defaultMode = bypassPermissions, execution now runs
-     | without approval prompts.
+     | The approval prompt sets the post-plan mode (current versions
+     | offer explicit choices there). On a bypass-default setup, the
+     | approved plan proceeds with no per-tool prompts.
      v
 Orchestrator executes the plan end-to-end --- no prompts.
 ```
@@ -1083,7 +1086,7 @@ Orchestrator executes the plan end-to-end --- no prompts.
 
 - You always see the approach before any edits happen (plan mode is read-only).
 - Once you approve, every downstream action --- edits, bash, multi-file refactors --- runs without interruption.
-- No need to remember to toggle bypass mid-session. The handoff is automatic.
+- No mid-session toggling — the approval prompt is the single handoff point (read its options once; they set the post-plan mode).
 - Fits cleanly with the plan-first rule enforced by this repo.
 
 **Prerequisite:** your `defaultMode` must be `bypassPermissions` in at least one CLI layer (typically the project or project-local layer). Without that, exiting plan mode returns you to `default` and you're back to per-tool prompts.
@@ -1209,9 +1212,9 @@ See Pattern 1 in [Workflow Patterns](#sec-patterns) for the full protocol.
 
 ### Session Logs --- Why-Not-Just-What History (auto-written)
 
-Git commits record what changed, but not *why*. Session logs fill this gap. Claude writes to `quality_reports/session_logs/` at three points: right after plan approval, incrementally during implementation (as decisions happen), and at session end. This means the log captures reasoning *as it happens*, before auto-compression can discard it.
+Git commits record what changed, but not *why*. Session logs fill this gap. Claude writes to `quality_reports/session_logs/` at three points: right after plan approval, incrementally during implementation (as decisions happen), and at session end. This means the log can capture reasoning *as it happens*, before auto-compression can discard it — when the incremental-logging habit is followed.
 
-Because relying on instructions alone is fragile (Claude forgets during long sessions), a **Stop hook** (`.claude/hooks/log-reminder.py`) fires after every response. In v2.0 it no longer merely nags — it **auto-writes the session log** for every meaningful change-set, so the why-history is captured without depending on Claude remembering to do it.
+Because relying on instructions alone is fragile (Claude forgets during long sessions), a **Stop hook** (`.claude/hooks/log-reminder.py`) fires after every response. In v2.0 it no longer merely nags — it **auto-writes a session-log scaffold** (changed files, active plan, timestamp) for every meaningful change-set, so a log always *exists*. The **why** — decisions, rejected alternatives — is appended incrementally per the session-logging rule; the hook guarantees the file, not the reasoning.
 
 New sessions can read these logs to understand not just the current state of the project, but the reasoning behind it. See Pattern 1 in [Workflow Patterns](#sec-patterns) for the full protocol.
 
@@ -1247,7 +1250,7 @@ The template includes 7 hooks for logging, notifications, context survival, and 
 
 Verification and Beamer-Quarto sync are enforced via auto-loaded rules, which are the right tool for nuanced judgment. Hooks are reserved for enforcement that *must* survive context compression.
 
-**Hook handler types.** The examples above use `command` hooks (shell scripts), but Claude Code supports four handler types:
+**Hook handler types.** The examples above use `command` hooks (shell scripts), but Claude Code supports five handler types:
 
 | Type | How It Works | Best For |
 |------|-------------|----------|
@@ -1255,6 +1258,7 @@ Verification and Beamer-Quarto sync are enforced via auto-loaded rules, which ar
 | **`prompt`** | Injects text into Claude's conversation --- no script needed | Soft reminders: "Check that equations compile before saving" |
 | **`http`** | POSTs to an external endpoint | CI/CD integration, logging to external services |
 | **`agent`** | Spawns a subagent that can use tools to verify conditions | Complex validation requiring multi-step checks |
+| **`mcp_tool`** | Invokes a tool on a connected MCP server | Zotero / Stata / database integrations without shell or HTTP wrappers |
 
 **PreToolUse input modification.** PreToolUse hooks can now **modify tool inputs**, not just block or allow. Your hook script can return modified JSON to rewrite parameters before the tool executes --- for example, auto-correcting file paths or enforcing naming conventions.
 
@@ -1381,7 +1385,7 @@ Non-trivial task arrives
   +-- Step 4: Present plan to user
   +-- Step 5: User approves (or revises)
   +-- Step 6: Save initial session log (capture context while fresh)
-  +-- Step 7: Orchestrator takes over (see Pattern 2)
+  +-- Step 7: You invoke the implementing skill; the orchestrator runs inside it (see Pattern 2)
   +-- Step 8: Update session log + plan status to COMPLETED
 ```
 
@@ -1419,7 +1423,7 @@ For multi-project academics, start each week by asking Claude to read all sessio
 
 ## Pattern 2: Contractor Mode (Orchestrator) {#pattern-2-contractor-mode-orchestrator}
 
-Once a plan is approved, the orchestrator takes over. It is the natural continuation of Pattern 1: the plan says *what*, the orchestrator handles *how* --- autonomously.
+Once a plan is approved and you invoke the implementing skill, the orchestrator takes over inside that skill. It is the natural continuation of Pattern 1: the plan says *what*, the orchestrator handles *how* --- autonomously within the skill's scope (plan approval alone triggers nothing; see "A Runtime, Not a Daemon").
 
 ### The Mental Model
 
@@ -1434,7 +1438,7 @@ User: "Translate Lecture 5 to Quarto"
   |
   |-- User: "Approved"
   |
-  +-- Orchestrator activates:
+  +-- Orchestrator activates (inside the invoked skill):
         |
         Step 1: IMPLEMENT
         |  Execute plan steps (create QMD, translate content, etc.)
@@ -1572,7 +1576,9 @@ Phase 2: Translate (e.g., Stata -> R)
 
 Phase 3: Verify match
   +-- Compare every target: paper value vs. our value
-  +-- Tolerance: < 0.01 for estimates, < 0.05 for SEs
+  +-- Tolerance: per-claim, typed — |x−y| ≤ atol + rtol·|reported|, with units and
+  |   display rounding declared per claim (see replication-protocol.md; a bare
+  |   absolute threshold is meaningless across probabilities, dollars, and logs)
   +-- If mismatch: STOP. Investigate before proceeding.
 
 Phase 4: Only then extend
@@ -1716,7 +1722,7 @@ Like handing your draft to a colleague who wasn't in the room when you wrote it.
 
 ## Research Workflows {#sec-research-workflows}
 
-Patterns 1--8 apply broadly, with course materials as the primary example. The next four patterns are designed for **research projects** --- papers, simulations, and empirical analysis --- where the rhythm is different: ideas are uncertain, experiments may fail, and code is often written to answer a question rather than to ship. Patterns 13--14 then extend the foundation to reproducibility standards and presentation rhetoric.
+Patterns 1--8 apply broadly, with course materials as the primary example. The next four patterns are designed for **research projects** --- papers, simulations, and empirical analysis --- where the rhythm is different: ideas are uncertain, experiments may fail, and code is often written to answer a question rather than to ship. Patterns 13--14 then extend the foundation to reproducibility standards and presentation rhetoric, and Patterns 15--19 build the credibility layer: independent adversarial audits, preregistration, reviewer vaccination, the external oracle, and the assumption blast radius.
 
 ### Pattern 9: Parallel Agents for Research Tasks {#pattern-9-parallel-agents}
 
@@ -1923,13 +1929,15 @@ your-project/                     ← main branch (stays clean)
    Run tests, render, review against worktree only
          ↓
 4. SYNC TO MAIN (when ready)
-   git checkout main
+   cd ../..                # back to the primary worktree (main is checked out THERE;
+                           # `git checkout main` inside the secondary worktree fails)
    git merge --squash quarto/lecture-06
    git commit -m "feat: add Lecture 6 Quarto version"
          ↓
 5. CLEANUP
    git worktree remove .worktrees/lecture-06-quarto
-   git branch -d quarto/lecture-06
+   git branch -D quarto/lecture-06   # -D: after a squash merge, git does not see the
+                                     # branch as ancestrally merged, so -d refuses
 ```
 
 #### Commands Reference
@@ -1945,10 +1953,10 @@ git worktree list
 git worktree remove .worktrees/[name]
 
 # Delete the branch (after removal)
-git branch -d [branch-name]
+git branch -D [branch-name]   # -D needed after --squash (no merge ancestry)
 
 # Squash-merge into main
-git checkout main
+cd [primary-worktree]         # main lives in the primary worktree
 git merge --squash [branch-name]
 git commit -m "feat: description of changes"
 ```
@@ -1994,7 +2002,7 @@ Pattern 5 covers matching *someone else's* results before extending them. This p
 
 #### The AEA Data Editor Standard
 
-The [Template README for Social Science Replication Packages](https://social-science-data-editors.github.io/template_README/) is the compliance standard for the AEA, Review of Economic Studies, Economic Journal, and other major journals. It requires eight structured sections:
+The [Template README for Social Science Replication Packages](https://social-science-data-editors.github.io/template_README/) is the de-facto standard across the AEA, Review of Economic Studies, Economic Journal, and other major journals — the AEA's policy states its use is *"strongly encouraged"* (not required), while the underlying information it organizes *is* required. It defines eight structured sections:
 
 | Section | What It Covers |
 |---------|---------------|
@@ -2007,7 +2015,7 @@ The [Template README for Social Science Replication Packages](https://social-sci
 | Table/Figure Mapping | Every exhibit mapped to the specific program and line that generates it |
 | References | Proper bibliographic citations for all data sources |
 
-The **Table/Figure Mapping** row is exactly what `passport.yaml` (v1.9.0) machine-encodes: each numeric claim → script + line + output file + tolerance + verified-on timestamp. The AEA requires the *spreadsheet-style* version; the passport is the *programmatic* version. They're complementary — generate the AEA spreadsheet from the passport when you submit.
+The **Table/Figure Mapping** row is exactly what `passport.yaml` (v1.9.0) machine-encodes: each numeric claim → script + line + output file + tolerance + verified-on timestamp. The Data Editor's template asks for the *spreadsheet-style* version; the passport is the *programmatic* version. They're complementary — generate the AEA spreadsheet from the passport when you submit.
 
 #### Pre-Submission Checklist
 
@@ -2019,7 +2027,7 @@ The **Table/Figure Mapping** row is exactly what `passport.yaml` (v1.9.0) machin
 - [ ] README follows the [template](https://social-science-data-editors.github.io/template_README/) with all 8 sections
 - [ ] PDF version of README included in root directory
 - [ ] Data citations appear in both README and manuscript
-- [ ] LICENSE.txt specifies code license (MIT/BSD) and data license (CC-BY)
+- [ ] LICENSE.txt specifies code license (MIT/BSD) and a data license **you are entitled to grant** — CC-BY only for data you created and may redistribute; secondary/administrative data carries its providers' restrictions with it (AEA policy: authors convey inherited permissions and restrictions)
 
 **Code:**
 
@@ -2047,7 +2055,7 @@ The **Table/Figure Mapping** row is exactly what `passport.yaml` (v1.9.0) machin
 ```
 project/
 ├── README.pdf              # Following AEA template
-├── LICENSE.txt             # Code: MIT/BSD; Data: CC-BY
+├── LICENSE.txt             # Code: MIT/BSD; Data: as entitled (see checklist)
 ├── data/
 │   ├── raw/                # Source data (untouched)
 │   └── derived/            # Processed/analysis data
@@ -2077,7 +2085,7 @@ This is the template-executor architecture --- and you are already using it:
 
 The `/learn` skill already implements version-controlled knowledge accumulation: each discovery saved as a SKILL.md file with problem, solution, and verification steps --- the same pattern sometimes called "structured knowledge bases."
 
-Key insight: *"For a fixed pipeline version and fixed inputs, the workflow produces identical numerical outputs and retains a complete audit trail of intermediate artifacts and logs."*
+Key insight: *"For a fixed pipeline version and fixed inputs, the workflow produces identical numerical outputs and retains a complete audit trail of intermediate artifacts and logs"* — **given a captured environment**: package versions, BLAS, thread counts, and RNG streams all move low-order digits, which is exactly what [`/capture-environment`](#all-skills) records.
 :::
 
 ### Pattern 14: The Rhetoric of Decks {#pattern-14-rhetoric-of-decks}
@@ -2132,11 +2140,11 @@ For the complete philosophical treatment --- from Aristotle's three modes of per
 
 **Principle:** Run N independent audit passes, each focused on ONE dimension. Each auditor sees only the artifact --- not previous audits --- to prevent groupthink and anchoring bias.
 
-This pattern differs from the parallel multi-agent review in [Pattern 6](#pattern-6-multi-agent-review). There, agents run simultaneously and findings are merged. Here, audits run **sequentially**, each producing an independent report. The independence is the point: a citation auditor shouldn't be influenced by what the prose auditor flagged.
+This pattern differs from the multi-agent review in [Pattern 6](#pattern-6-multi-agent-review) in what carries the independence: each audit is a **forked, single-lens review that cannot see the others' reports**. The shipped `/seven-pass-review` runs the seven lenses as parallel forked reviewers (isolation, not ordering, is what keeps a citation auditor uninfluenced by the prose auditor); running them one at a time by hand remains useful when you want to read one report before commissioning the next.
 
 #### The Seven-Audit Protocol (for Papers)
 
-Inspired by [ClaudeCodeTools "The Editor"](https://github.com/aspi6246/ClaudeCodeTools), this protocol runs seven sequential passes before submission:
+Inspired by [ClaudeCodeTools "The Editor"](https://github.com/aspi6246/ClaudeCodeTools), this protocol runs seven independent passes before submission:
 
 1. **Abstract audit** --- Does the abstract accurately reflect findings? Is it a compelling "storefront"?
 2. **Introduction structure** --- Does the intro follow a recognized template (classic, puzzle-first, contribution-first)?
@@ -2152,7 +2160,7 @@ Use `/review-paper` for a comprehensive single-pass review. When you need deeper
 
 ```
 You: "Run the seven-audit protocol on my paper"
-Claude: [Runs 7 sequential forked reviews, each blind to the others]
+Claude: [Runs 7 parallel forked reviews, each blind to the others]
        → Produces 7 independent reports
        → Synthesizes into prioritized revision checklist
 ```
@@ -2163,7 +2171,7 @@ Claude: [Runs 7 sequential forked reviews, each blind to the others]
 
 ### Pattern 16: Preregistration and Submission Discipline {#pattern-16-preregistration}
 
-**Principle:** Lock in your hypotheses, design, and analysis plan **before** you see the realised data. Preregistration is the strongest defence against p-hacking, HARKing, and forking-paths, and it's increasingly mandatory for credibility in social-science venues. Pair it with `/checkpoint` for a verifiable trail of what you committed to and when.
+**Principle:** Lock in your hypotheses, design, and analysis plan **before** you see the realised data. Preregistration is the strongest defence against p-hacking, HARKing, and forking-paths, and it's increasingly mandatory for credibility in social-science venues. Pair it with `/checkpoint` for a session-side record of what you committed to and when — and for anything dispute-grade (a real preregistration), a committed artifact or registry entry: the checkpoint file itself is gitignored session state, not evidence.
 
 #### When preregistration matters
 
@@ -2690,13 +2698,13 @@ Skills can include dynamic values using string substitutions and live command ou
 | `${CLAUDE_SESSION_ID}` | Current session identifier | Unique log file names |
 | `${CLAUDE_SKILL_DIR}` | Path to the skill's directory | Reference supporting files bundled with the skill |
 
-**Dynamic context injection** with `` `!command` `` syntax:
+**Dynamic context injection** with `` !`command` `` syntax:
 
 ```markdown
 ## Context
-Current git status: `!git status --short`
-Recent changes: `!git log --oneline -5`
-Available lectures: `!ls Slides/*.tex`
+Current git status: !`git status --short`
+Recent changes: !`git log --oneline -5`
+Available lectures: !`ls Slides/*.tex`
 ```
 
 When Claude loads the skill, it runs these commands and injects the live output into the skill text. This is powerful for skills that need to adapt to the current project state.

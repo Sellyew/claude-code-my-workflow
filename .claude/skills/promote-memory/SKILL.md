@@ -68,7 +68,7 @@ Each critic returns YES/NO + rationale. The promotion threshold is **majority (3
 - **5 YES** — promote without modification.
 - **4 YES** — promote with a one-line note about the dissenting concern.
 - **3 YES** — promote but address the dissenting critics' concerns first (typically: trim, add evidence, fix format).
-- **2 or fewer YES** — do not promote. Either fix the entry per the dissenting critics' feedback and re-submit, or leave in personal-memory.md.
+- **2 or fewer YES** — do not promote. Either fix the entry per the dissenting critics' feedback and re-submit, or leave it in auto memory.
 
 ## Steps
 
@@ -119,20 +119,20 @@ For each entry:
 
 ### Step 5: User approves the promotions
 
-The user reviews the report and explicitly approves which entries to promote. The skill writes approved entries to MEMORY.md, removes the same entries from personal-memory.md (or marks them with `# promoted YYYY-MM-DD` for audit), and surfaces a summary.
+The user reviews the report and explicitly approves which entries to promote. The skill writes approved entries to MEMORY.md, marks the same entries in their auto-memory topic files with `# promoted YYYY-MM-DD` for audit, and surfaces a summary.
 
 Do **not** auto-promote — even on 5-of-5 YES votes. The user's approval is the final gate.
 
 ## Output
 
 - Per-entry council report (verdicts, rationales, recommendations) — to the conversation.
-- On approval: MEMORY.md updated (append at appropriate `[LEARN:category]` section), personal-memory.md updated (entry marked promoted).
+- On approval: MEMORY.md updated (append at appropriate `[LEARN:category]` section), the auto-memory topic file updated (entry marked promoted).
 - A `quality_reports/memory_promotion_<date>.md` audit file recording the full council session for forensics.
 
 ## Anti-patterns
 
 - **Auto-promoting on 5-of-5 YES.** Even unanimous critic agreement can be wrong; the user's domain judgment is the final gate.
-- **Re-running the council on the same entry repeatedly** hoping for a different result. If 4 critics consistently say NO, the entry doesn't belong in MEMORY.md — file it in personal-memory.md and stop.
+- **Re-running the council on the same entry repeatedly** hoping for a different result. If 4 critics consistently say NO, the entry doesn't belong in MEMORY.md — leave it in auto memory and stop.
 - **Skipping the Evidence critic** because the entry "looks obvious." Evidence is what makes the entry portable across forkers; obvious-to-you ≠ obvious-to-them.
 - **Demoting via this skill.** It only promotes. Demotion is a manual edit + commit.
 

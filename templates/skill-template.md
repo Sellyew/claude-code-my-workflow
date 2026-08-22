@@ -112,7 +112,7 @@ disallowed-tools: ["Edit", "Write", "Bash"]    # actually remove the write path
 - `$ARGUMENTS` — full argument string (e.g., `/skill-name Lecture01` → `Lecture01`)
 - `$0`, `$1` — positional arguments (0-based)
 - `${CLAUDE_SKILL_DIR}` — path to the skill's directory (for bundled supporting files)
-- `` `!git log --oneline -5` `` — dynamic command output injected when skill loads
+- `` !`git log --oneline -5` `` — dynamic command output injected when skill loads
 
 See the [guide's Skill Frontmatter Reference](https://psantanna.com/claude-code-my-workflow/workflow-guide.html#skill-frontmatter) for details and examples.
 

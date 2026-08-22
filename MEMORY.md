@@ -137,7 +137,7 @@ The key insight: each pattern enforces independence differently. Critic-fixer us
 
 ## v1.8.0 Cycle Lessons (2026-04-27)
 
-[LEARN:permissions] **`.claude/` is hard-protected; no user setting fully unprotects it** (protected list is hard-coded: `.git`, `.vscode`, `.idea`, `.husky`, `.claude` minus `commands/agents/skills/worktrees`). Bypass mode still prompts there; only **auto mode** routes protected paths through a classifier instead. Since 2026-08-14 auto mode is the built-in starting mode on Pro/Max/Team (and available on Bedrock / Google Cloud / Foundry). Forkers without it will see prompts on `.claude/references|rules|hooks|scripts` edits regardless of settings.
+[LEARN:permissions] **Protected-path behavior is mode-dependent — re-verify, never assume** (re-verified 2026-08-22 vs the permission-modes doc: `bypassPermissions` disables prompts and safety checks INCLUDING protected paths — the earlier "`.claude/` always prompts" version of this entry was stale). Auto mode classifier-gates risky actions and since 2026-08-14 is the built-in starting mode on Pro/Max/Team. Forkers in default mode still see prompts on `.claude/` edits.
 
 [LEARN:vscode] **`claudeCode.allowDangerouslySkipPermissions` is a typo trap** — the canonical key has NO `claudeCode.` prefix (unlike `claudeCode.initialPermissionMode`). The wrong key is silently ignored. Documented in `TROUBLESHOOTING.md`.
 
