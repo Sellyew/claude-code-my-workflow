@@ -51,9 +51,15 @@
         "visual",
         "code-quality",
         "parity",
-        "disclosure"
+        "disclosure",
+        "abstract",
+        "intro",
+        "methods",
+        "results",
+        "robustness",
+        "structure"
       ],
-      "description": "which review lens produced this"
+      "description": "which review lens produced this. Metadata only \u2014 NOT part of the finding id, so two lenses finding the same defect dedup to one. Enum extended 2026-08-21 to cover the seven-pass structural lenses; a producer with a genuinely new lens extends the enum in the same commit that introduces the producer."
     },
     "credibility_question": {
       "enum": [

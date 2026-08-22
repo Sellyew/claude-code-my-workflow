@@ -1,0 +1,6 @@
+{"case":"detects-stale-gate","rep":1,"mode":"with","hits":2,"asserts":3}
+{"case":"detects-stale-gate","rep":1,"mode":"without","hits":3,"asserts":3}
+{"case":"detects-stale-gate","rep":2,"mode":"with","hits":3,"asserts":3}
+{"case":"detects-stale-gate","rep":2,"mode":"without","hits":0,"asserts":3}
+{"case":"detects-stale-gate","rep":3,"mode":"with","hits":3,"asserts":3}
+{"case":"detects-stale-gate","rep":3,"mode":"without","hits":0,"asserts":3}

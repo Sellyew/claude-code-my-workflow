@@ -47,7 +47,7 @@ In a single message, spawn 7 `Agent` tool calls (one per lens). Each subagent ge
 - The manuscript path (to re-read with its own context).
 - The lens-specific prompt (below).
 - Instructions to write to `quality_reports/seven_pass_[stem]/lens_[N]_[lens-name].md`.
-- A closing `findings:` + `scorecard:` block in the shared schema ([`orchestration-schemas.md`](../../references/orchestration-schemas.md)): `severity: CRITICAL | MAJOR | MINOR`, with `evidence` and `change_my_mind` on every CRITICAL/MAJOR. Phase 2 reduces over these typed findings — it does not re-read the prose.
+- A **JSON findings array** conforming to [`finding-schema.json`](../../references/finding-schema.json), written to `quality_reports/seven_pass_[stem]/lens_[N]_[lens-name].json` beside the prose report. Severities: `blocker | major | minor | nit`. Every finding computes its `id` with `python3 scripts/validate-findings.py --id FILE LINE LOCUS` and carries `rule`, `evidence`, and a `failing_case`. Phase 2 **validates each array first** (`python3 scripts/validate-findings.py <file>` — exit 0 required; a lens whose report does not validate has not reviewed), then reduces over the typed findings — it does not re-read the prose. Because ids are lens-independent, the same defect found by two lenses dedups to one finding automatically.
 
 This is the **fan-out** primitive from [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md); `Agent` subagents are the portable mechanism (the agents that fill lenses 3/6 are in [`agent-fleet.md`](../../references/agent-fleet.md)).
 

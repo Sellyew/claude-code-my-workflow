@@ -53,25 +53,31 @@ def main():
     # Instead: compare a fingerprint of the SOURCE against the fingerprint the
     # last render recorded. Content, not clock.
     render = []
+    import hashlib
+    stamp_path = os.path.join(ROOT, ".render-stamp")
+    recorded = {}
+    if os.path.exists(stamp_path):
+        for line in open(stamp_path):
+            parts = line.strip().split(":")
+            if len(parts) == 3:
+                recorded[parts[0]] = (parts[1], parts[2])   # (source_hash, output_hash)
     for src, out in [("guide/workflow-guide.qmd", "guide/workflow-guide.html"),
                      ("guide/workflow-guide.qmd", "docs/workflow-guide.html")]:
         s_path, o_path = os.path.join(ROOT, src), os.path.join(ROOT, out)
         if not (os.path.exists(s_path) and os.path.exists(o_path)):
             continue
-        import hashlib
         src_hash = hashlib.sha256(open(s_path, "rb").read()).hexdigest()[:16]
-        stamp = os.path.join(ROOT, ".render-stamp")
-        recorded = {}
-        if os.path.exists(stamp):
-            for line in open(stamp):
-                if ":" in line:
-                    k, v = line.strip().split(":", 1)
-                    recorded[k] = v
-        if recorded.get(out) != src_hash:
-            render.append(f"{out} was not rendered from the current {src} "
-                          f"(source {src_hash}, stamp {recorded.get(out, 'none')}) — "
-                          f"re-render: cd guide && quarto render workflow-guide.qmd && "
-                          f"./scripts/stamp-render.sh")
+        out_hash = hashlib.sha256(open(o_path, "rb").read()).hexdigest()[:16]
+        rec = recorded.get(out)
+        if rec is None:
+            render.append(f"{out}: no render stamp — run scripts/stamp-render.sh after rendering")
+        elif rec[0] != src_hash:
+            render.append(f"{out}: stamped for a DIFFERENT source ({rec[0]} vs {src_hash}) — "
+                          f"re-render: cd guide && quarto render workflow-guide.qmd, sync docs, "
+                          f"then ./scripts/stamp-render.sh")
+        elif rec[1] != out_hash:
+            render.append(f"{out}: output modified since it was stamped ({rec[1]} vs {out_hash}) — "
+                          f"either an unsynced copy or a hand-edit; re-render and re-stamp")
 
     # currency expiry — a verified_on date that has aged out
     expired = []

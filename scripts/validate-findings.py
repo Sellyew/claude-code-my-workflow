@@ -39,12 +39,14 @@ def validate(data, schema):
             if "enum" in spec and v not in spec["enum"]:
                 errs.append(f"{w}.{k}: {v!r} not in {spec['enum']}")
             t = spec.get("type")
-            if t == "integer" and not isinstance(v, int): errs.append(f"{w}.{k}: must be integer")
+            # NB: isinstance(True, int) is True in Python; JSON Schema treats
+            # boolean and integer as distinct types. (Codex, PR #140 round 2.)
+            if t == "integer" and (isinstance(v, bool) or not isinstance(v, int)): errs.append(f"{w}.{k}: must be integer (boolean is not)")
             if t == "string" and not isinstance(v, str): errs.append(f"{w}.{k}: must be string")
             if t == "boolean" and not isinstance(v, bool): errs.append(f"{w}.{k}: must be boolean")
             if "pattern" in spec and isinstance(v, str) and not re.fullmatch(spec["pattern"], v):
                 errs.append(f"{w}.{k}: {v!r} does not match {spec['pattern']}")
-            if "minimum" in spec and isinstance(v, int) and v < spec["minimum"]:
+            if "minimum" in spec and isinstance(v, int) and not isinstance(v, bool) and v < spec["minimum"]:
                 errs.append(f"{w}.{k}: below minimum {spec['minimum']}")
         # id must be reproducible from its own coordinates
         if all(k in f for k in ("id", "file", "line", "locus")):

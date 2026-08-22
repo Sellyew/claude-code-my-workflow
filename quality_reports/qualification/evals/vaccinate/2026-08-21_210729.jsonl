@@ -1,0 +1,6 @@
+{"case":"repo-specific-fact","rep":1,"mode":"with","hits":2,"asserts":2}
+{"case":"repo-specific-fact","rep":1,"mode":"without","hits":2,"asserts":2}
+{"case":"repo-specific-fact","rep":2,"mode":"with","hits":2,"asserts":2}
+{"case":"repo-specific-fact","rep":2,"mode":"without","hits":1,"asserts":2}
+{"case":"repo-specific-fact","rep":3,"mode":"with","hits":2,"asserts":2}
+{"case":"repo-specific-fact","rep":3,"mode":"without","hits":1,"asserts":2}

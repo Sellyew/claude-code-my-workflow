@@ -8,20 +8,41 @@ This is a **reference**, not a runtime: a Claude Code session has no JSON valida
 
 ## 1. `FINDING` — one issue a reviewer raises
 
-Every reviewer subagent (lens, referee, critic, auditor) emits a list of findings in this shape:
+Every reviewer subagent (lens, referee, critic, auditor) emits findings as a **JSON array**
+conforming to [`finding-schema.json`](finding-schema.json) — the machine-checked contract.
+This sketch is a readable rendering of that schema, not a second contract (it was, once, and
+the two drifted — Codex caught a producer ordering the old shape while the validator required
+the new one):
 
-```yaml
-findings:
-  - id: F1                       # stable within this run (lens-prefixed is fine: M1, P3)
-    lens: methods                # the reviewing lens / dimension / agent name
-    severity: CRITICAL           # CRITICAL | MAJOR | MINOR   (the ONE vocabulary)
-    location: "Sec 4.2, Table 2 col 3"   # where in the artifact (page/slide/line/cell)
-    finding: "Identification rests on conditional PT but the text claims unconditional."
-    evidence: "p.11 'parallel trends holds unconditionally' vs Eq.(4) conditions on X_i."
-    recommendation: "State the conditional PT assumption explicitly, or drop the covariates."
-    change_my_mind: "A sentence in Sec 4 reconciling Eq.(4) with the unconditional claim."
-    confidence: high             # high | medium | low  — the reviewer's own certainty
+```json
+[
+  {
+    "id": "<sha1 of 'file:line:locus'>",
+    "file": "main.tex",
+    "line": 214,
+    "locus": "Table 2, col 3",
+    "lens": "methods",
+    "severity": "blocker",
+    "rule": "conditional PT must be stated when covariates enter the estimand",
+    "claim": "Identification rests on conditional PT but the text claims unconditional.",
+    "evidence": "p.11 'parallel trends holds unconditionally' vs Eq.(4) conditions on X_i.",
+    "failing_case": "covariate-dependent treatment timing: Eq.(4) fails while the text's claim stands",
+    "suggested_fix": "State the conditional PT assumption explicitly, or drop the covariates.",
+    "mechanical": false,
+    "confidence": "high"
+  }
+]
 ```
+
+- **`id` is computed, never invented**: `python3 scripts/validate-findings.py --id FILE LINE LOCUS`.
+  Deterministic and lens-independent, so the same defect found by two lenses dedups to one.
+- **Reports are bare arrays** — no `findings:` wrapper.
+- **Validate before reducing**: `python3 scripts/validate-findings.py <report>.json` (exit 0
+  required). A reviewer whose report does not validate has not reviewed.
+- The old prose fields map as §7's table records: `location`→`file`+`line`+`locus`,
+  `finding`→`claim`, `recommendation`→`suggested_fix`, `CRITICAL`→`blocker`. The concept
+  behind `change_my_mind` lives on inside `failing_case` — state the concrete configuration
+  or missing hypothesis, which is also exactly what would reverse the finding.
 
 **Severity is the single cross-skill vocabulary.** Map every skill's local words onto it:
 

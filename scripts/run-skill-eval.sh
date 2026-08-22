@@ -14,6 +14,13 @@
 # A fresh session matters: leftover context from authoring a skill masks gaps in
 # what the skill actually says. You will believe it states something it only implied.
 #
+# SANDBOXED: every headless call runs with Write/Edit/Bash disallowed (verified
+# behaviorally 2026-08-21: a write-instruction probe produced no file). Without
+# this, an eval case asking "write me X from scratch" actually WROTE X into
+# scripts/R/ — the harness deposited into the working tree the very anti-pattern
+# the skill under test exists to prevent. Symmetric in both arms, so the
+# comparison stays fair; we grade the text response only.
+#
 # MUST be run from a normal shell, not from inside a Claude Code session —
 # nested `claude -p` fails with error_during_execution.
 set -uo pipefail
@@ -81,8 +88,8 @@ else
     MARKER_EXPECT="$(grep -m1 '^# ' ".claude/skills/$SKILL/SKILL.md" | sed 's/^# //' | cut -c1-40)"
 fi
 echo "── manipulation check (behavioral: retrieve a fact only the skill contains) ──"
-ON_RESP="$(timeout 180 claude -p "/$SKILL $MARKER_Q" --output-format text 2>/dev/null)"
-OFF_RESP="$(timeout 180 claude -p "/$SKILL $MARKER_Q" --setting-sources user --output-format text 2>/dev/null)"
+ON_RESP="$(timeout 180 claude -p "/$SKILL $MARKER_Q" --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)"
+OFF_RESP="$(timeout 180 claude -p "/$SKILL $MARKER_Q" --setting-sources user --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)"
 ON=0; OFF=0
 grep -qiF "$MARKER_EXPECT" <<<"$ON_RESP"  && ON=1
 grep -qiF "$MARKER_EXPECT" <<<"$OFF_RESP" && OFF=1
@@ -118,11 +125,11 @@ for case_file in "$CASES"/*.md; do
     for r in $(seq 1 "$REPS"); do
         for mode in with without; do
             if [ "$mode" = "with" ]; then
-                resp="$(timeout 180 claude -p "/$SKILL $prompt" --output-format text 2>/dev/null)"
+                resp="$(timeout 180 claude -p "/$SKILL $prompt" --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)"
             else
                 # --setting-sources user is the mechanism verified to actually drop
                 # project skills; skillOverrides / deny rules / --disallowedTools do not.
-                resp="$(timeout 180 claude -p "$prompt" --setting-sources user --output-format text 2>/dev/null)"
+                resp="$(timeout 180 claude -p "$prompt" --setting-sources user --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash" --output-format text 2>/dev/null)"
             fi
             # Each assertion line may list ALTERNATIVES separated by " | ".
             # A correct answer phrased differently must still count; single-substring

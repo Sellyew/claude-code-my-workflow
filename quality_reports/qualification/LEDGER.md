@@ -11,6 +11,7 @@ Verdicts: **PASS** (detects its named class at the stated threshold) · **FAIL**
 | Date | Target | Artifact | Defect classes | N | Recall | FPR | Baseline | Verdict |
 |---|---|---|---|---|---|---|---|---|
 | 2026-08-21 | `check-model-versions.sh` | `README.md` | T1 superseded-model-as-current | 1 | 1/1 | 0/0 on clean control | `grep -c "Opus 4.8"` also detects; gate's value is its allow-marker logic | **PASS** |
+| 2026-08-21 | `check-model-versions.sh` (replicate — script unchanged since prior row, per `git log`) | `README.md` | T1, two flavors: superlative + version line · bare superseded version string, no superlative | 2 | 2/2, both localized to `README.md:442` | 0/0 on restored clean control | bare grep false-alarms on allow-marked historical mentions; gate's value remains SSoT-anchor + allow logic | **PASS** |
 | 2026-08-21 | `check-skill-integrity.py` | `.claude/skills/capture-environment/SKILL.md` | T3 body invokes a tool absent from `allowed-tools` | 1 | 1/1 | 0/0 on clean control | none simpler (needs frontmatter↔body parse) | **PASS** |
 
 | 2026-08-21 | `scripts/backtest.sh` (all 6 gates) | `README.md` | broken link · stale model · count drift · unfalsifiable superlative | 4 | **3/4** | 0/0 on clean control | n/a (composite) | **FAIL** → fixed, see next row |
