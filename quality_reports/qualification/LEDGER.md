@@ -21,6 +21,27 @@ Verdicts: **PASS** (detects its named class at the stated threshold) · **FAIL**
 | 2026-08-21 | `scripts/backtest.sh` — **full stress test, all 7 gates** | `README.md`, `CLAUDE.md`, `docs/index.html`, `scripts/`, a skill | count drift (compound) · count drift (template verb) · superseded model · broken link · broken anchor · superlative · stale auto-mode claim · root scratch file · draft copy · undeclared tool | 10 | **10/10** | **0/1** on the clean-repo control | n/a (composite) | **PASS** |
 | 2026-08-21 | `check-surface-sync.py` coverage of `docs/index.html` | landing page | count drift on the published page | 1 | 1/1 | 0/0 | n/a | **PASS** (see note) |
 
+## Harness qualification (2026-08-21)
+
+The eval harness is itself a check, so it had to be qualified before any result it produces
+counts. Three defects were found by running it, and one of them made every prior number
+meaningless:
+
+| Defect | How it presented | Fix |
+|---|---|---|
+| N=1 replicate | same case scored 3/3 and then 1/3 ten minutes later | default N=3 + a variance gate that exits 3 when sd > 0.5 |
+| `nottrigger` written backwards | scored 1/1 whatever happened | `nottrigger-*` cases now invert the assertion |
+| single-substring grading | correct answers phrased differently scored as misses | assertions list alternatives; any one counts |
+| **the manipulation never happened** | **`--settings skillOverrides`, `Skill(name)` deny rules, and `--disallowedTools Skill` all FAIL to remove a project skill in headless mode.** Both arms had the skill. A clean, low-variance, entirely false result was about to be recorded here. | `--setting-sources user` verified to actually drop project skills; a **mandatory manipulation check now aborts the run** when both arms look identical |
+
+> **The variance gate measured precision, not validity.** Three identical measurements of the
+> wrong thing are perfectly precise. Only the positive control — *did the manipulation take?* —
+> catches that, and it is now the first thing the harness runs.
+
+| 2026-08-21 | **`scripts/run-skill-eval.sh` (the harness itself)** | negative control: unrelated question | harness must NOT invent a benefit | 1 case × 3 reps | delta **0** (3/3 vs 3/3, sd 0.00) | 0 — no false benefit | n/a | **PASS** |
+| 2026-08-21 | **`scripts/run-skill-eval.sh` (the harness itself)** | positive control: a fact present only in `defect-library.md` | harness must detect a real benefit | 1 case × 3 reps | **+2** (6/6 vs 4/6, sd 0.00) | — | baseline cannot know the fact | **PASS** |
+| 2026-08-21 | **manipulation check** | skill visibility probe | did the with/without manipulation take? | 2 probes | with=1, without=0 | — | — | **PASS** |
+
 ## Skill evals — not yet run
 
 Distinct from gate qualification. `/vaccinate` asks *can this checker detect a planted defect?*

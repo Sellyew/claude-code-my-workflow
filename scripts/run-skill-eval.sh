@@ -48,6 +48,30 @@ if ! grep -q "OK" <<<"$SMOKE"; then
 fi
 echo "  ok"
 
+# ── MANIPULATION CHECK ─────────────────────────────────────────────────────────
+# The one question that decides whether every number below means anything:
+# DID THE MANIPULATION ACTUALLY HAPPEN? If both arms are identical, we are
+# comparing baseline to baseline and any delta is noise wearing a lab coat.
+#
+# Verified 2026-08-21: `--settings skillOverrides`, a `Skill(name)` deny rule, and
+# `--disallowedTools Skill` all FAIL to remove a project skill in headless mode.
+# `--setting-sources user` does remove it (project skills stop loading).
+# This check exists because a prior version of this harness silently compared
+# baseline against baseline and produced a clean, low-variance, entirely false result.
+PROBE="Reply with ONLY the number of skills whose name starts with '${SKILL:0:4}' that you can invoke."
+ON="$(timeout 120 claude -p "$PROBE" --output-format text 2>/dev/null | tr -dc '0-9' | head -c 3)"
+OFF="$(timeout 120 claude -p "$PROBE" --setting-sources user --output-format text 2>/dev/null | tr -dc '0-9' | head -c 3)"
+echo "── manipulation check: skill visible with=${ON:-?} without=${OFF:-?} ──"
+if [ "${ON:-0}" = "${OFF:-0}" ]; then
+    echo "" >&2
+    echo "eval: ABORT — the manipulation did not take. The skill is equally visible in" >&2
+    echo "      both arms (${ON:-?} vs ${OFF:-?}), so any measured delta would be noise" >&2
+    echo "      between two identical conditions. Fix the disable mechanism before" >&2
+    echo "      recording anything." >&2
+    exit 3
+fi
+echo "  ok — arms are genuinely different"
+
 pass=0; total=0; pass_off=0
 for case_file in "$CASES"/*.md; do
     [ -f "$case_file" ] || continue
@@ -66,9 +90,11 @@ for case_file in "$CASES"/*.md; do
     for r in $(seq 1 "$REPS"); do
         for mode in with without; do
             if [ "$mode" = "with" ]; then
-                resp="$(claude -p "$prompt" --output-format text 2>/dev/null)"
+                resp="$(timeout 180 claude -p "/$SKILL $prompt" --output-format text 2>/dev/null)"
             else
-                resp="$(claude -p "$prompt" --settings '{"skillOverrides":{"'"$SKILL"'":"off"}}' --output-format text 2>/dev/null)"
+                # --setting-sources user is the mechanism verified to actually drop
+                # project skills; skillOverrides / deny rules / --disallowedTools do not.
+                resp="$(timeout 180 claude -p "$prompt" --setting-sources user --output-format text 2>/dev/null)"
             fi
             # Each assertion line may list ALTERNATIVES separated by " | ".
             # A correct answer phrased differently must still count; single-substring
