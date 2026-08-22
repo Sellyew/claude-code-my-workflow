@@ -2180,7 +2180,7 @@ The template ships three styles via `/preregister --style`:
 |---|---|---|---|---|
 | **OSF** ([osf.io/registries](https://osf.io/registries)) | `osf` | Broad social science (default for psych, poli-sci, sociology) | Long-form, ~10–20 pages | Yes, with versioning |
 | **AsPredicted** ([aspredicted.org](https://aspredicted.org)) | `aspredicted` | Behavioural / experimental short-form | 9 questions, ~2 pages | Locked once submitted |
-| **AEA RCT Registry** ([socialscienceregistry.org](https://socialscienceregistry.org)) | `aea-rct` | Economics field experiments (mandatory for AEA journals since 2018) | Structured fields, ~3–5 pages | Limited fields editable |
+| **AEA RCT Registry** ([socialscienceregistry.org](https://www.socialscienceregistry.org)) | `aea-rct` | Economics field experiments (mandatory for AEA journals since 2018) | Structured fields, ~3–5 pages | Limited fields editable |
 
 For **public health / clinical trials**, use ClinicalTrials.gov or ISRCTN directly — this template's `/preregister` doesn't cover those formats. They're on the v2.0-backlog.
 
@@ -2244,7 +2244,7 @@ Any cited literature in the preregistration runs through `/verify-claims` (Chain
 - **Forking paths** — every data-dependent choice is either declared MUST or disclosed as exploratory.
 - **Selective reporting** — the data-sharing plan + named robustness specifications make selective reporting visible to referees.
 
-For econometrics, see Christensen & Miguel (2018) on transparency in development economics. For political science, see [Monogan (2015)](https://www.cambridge.org/core/journals/ps-political-science-and-politics/article/research-preregistration-in-political-science/) on the political-science case. For psychology, see the OSF Preregistration Guide.
+For econometrics, see Christensen & Miguel (2018) on transparency in development economics. For political science, see [Monogan (2015)](https://doi.org/10.1017/S1049096515000189) on the political-science case. For psychology, see the OSF Preregistration Guide.
 
 ---
 
