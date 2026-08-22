@@ -49,7 +49,7 @@ Give each divergence a **stable ID** and a **kind**, in a tracked `divergence-ki
 
 | Kind | Meaning |
 |---|---|
-| `behavioral-default` | both are correct; the defaults differ (e.g. universal vs varying base period; not-yet-treated vs never-treated controls) |
+| `behavioral-default` | both are correct; the defaults differ (e.g. a small-sample correction applied by default in one implementation; a different default bandwidth selector) |
 | `language-surface` | the construct has no analogue in the target language |
 | `stata-surface` / `api-surface` | the source exposes something the port deliberately does not |
 | `internal-api` | a non-exported internal, out of scope for parity |
@@ -58,8 +58,8 @@ Give each divergence a **stable ID** and a **kind**, in a tracked `divergence-ki
 
 ```csv
 divergence_id,divergence_kind,summary
-F051-DIV001,behavioral-default,port defaults to universal base period; reference defaults to varying
-F051-DIV002,behavioral-default,port defaults to not-yet-treated controls; reference defaults to never-treated
+F051-DIV001,behavioral-default,port applies HC1 small-sample correction by default; reference defaults to HC3
+F051-DIV002,behavioral-default,port defaults to analytic SEs; reference defaults to bootstrap
 PY010-DIV002,upstream-conflict,Python raises where R warns; R governs parity decisions
 ```
 

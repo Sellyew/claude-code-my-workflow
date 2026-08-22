@@ -25,7 +25,7 @@ the new one):
     "severity": "blocker",
     "rule": "conditional PT must be stated when covariates enter the estimand",
     "claim": "Identification rests on conditional PT but the text claims unconditional.",
-    "evidence": "p.11 'parallel trends holds unconditionally' vs Eq.(4) conditions on X_i.",
+    "evidence": "p.11 states the assumption unconditionally vs Eq.(4) conditions on X_i.",
     "failing_case": "covariate-dependent treatment timing: Eq.(4) fails while the text's claim stands",
     "suggested_fix": "State the conditional PT assumption explicitly, or drop the covariates.",
     "mechanical": false,
@@ -231,7 +231,7 @@ A generic "provide evidence" is too weak. Each lens owes a specific proof:
 Apply before verification:
 
 - A **documented, defensible alternative** is `EXPLAINED`, not a defect. A different-but-named
-  choice (not-yet-treated vs never-treated controls; universal vs varying base period) is
+  choice (a clustering small-sample correction; a bandwidth-selection rule; an MC seed) is
   recorded, never "fixed".
 - A **deliberate simplification for teaching** is not a substantive error.
 - **Prose taste** is not a finding unless it changes meaning.

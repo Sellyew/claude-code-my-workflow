@@ -113,7 +113,7 @@ A tolerance check resolves to one of four dispositions:
 - **EXPLAINED** — outside tolerance, **but** the author has recorded a *concrete, named alternative specification* that accounts for the gap (see the downgrade rule). Surfaced in the report and carried into a response-to-referees; does **not** block.
 - **UNMATCHED** — no computed counterpart found (Phase 3 confidence < 0.7). Never auto-downgradable.
 
-**A mismatch is not automatically a failure.** In applied work the most common out-of-tolerance result is a *defensible alternative spec*, not a bug — `reghdfe` vs `feols` clustering df, never-treated vs not-yet-treated comparison group, conditional vs unconditional parallel trends, a different MC seed/reps, or display rounding. The skill's job is to *stage the disagreement* for a human auditor, not to pronounce the code right and the paper wrong. (The df-adjustment note in "Stata-specific notes" below is the canonical example of a named alternative.)
+**A mismatch is not automatically a failure.** In applied work the most common out-of-tolerance result is a *defensible alternative spec*, not a bug — `reghdfe` vs `feols` clustering df, a different bandwidth-selection rule, a different MC seed/reps, or display rounding. The skill's job is to *stage the disagreement* for a human auditor, not to pronounce the code right and the paper wrong. (The df-adjustment note in "Stata-specific notes" below is the canonical example of a named alternative.)
 
 **The manuscript is not the oracle.** When the computed value disagrees with the manuscript, do not presume the code is correct and the paper stale — nor the reverse. A refactor may have broken a previously-correct table (the *on-disk output* is the buggy one), or the paper may carry an old number. The computed value is a **challenger**, not ground truth. Report a mismatch as "one of {paper, code} must change — isolate which," never "revert the code to match the paper." This prevents the trap of reverting a genuine bug-fix just to make the paper 'reproduce.'
 
@@ -121,7 +121,7 @@ A tolerance check resolves to one of four dispositions:
 
 A FAIL may be downgraded to EXPLAINED **only** when a *specific named alternative* is recorded for that exact claim — in the passport entry's `notes:` field (passport mode) or the audit report's author-note column (default mode). Example of a valid note:
 
-> "never-treated vs not-yet-treated comparison group; under not-yet-treated the published value is −1.19, within rounding of the script's −1.187. CODE-CORRECTED pending."
+> "reghdfe vs feols clustering-df adjustment; under the reghdfe small-sample correction the published value is −1.19, within rounding of the script's −1.187. CODE-CORRECTED pending."
 
 The author is the **auditor**: the skill stages the two-sided comparison (reported value *and* computed value, both shown); the human writes the one-line named alternative; the skill records it and thereafter respects it. Tag the resolution `PAPER-CORRECTED`, `CODE-CORRECTED`, or `DEFENSIBLE-ALTERNATIVE`.
 
@@ -170,7 +170,7 @@ Write `quality_reports/reproducibility_audit_[manuscript-name].md`:
 ## EXPLAINED (out of tolerance; defensible named alternative recorded — non-blocking, carry into response-to-referees)
 | Claim | Reported | Computed | Named alternative (why the gap is defensible) | Resolution |
 |---|---|---|---|---|
-| Table3_col2_ATT | -1.187 | -1.19 | never-treated vs not-yet-treated comparison group | DEFENSIBLE-ALTERNATIVE |
+| Table3_col2_ATT | -1.187 | -1.19 | reghdfe vs feols clustering-df adjustment | DEFENSIBLE-ALTERNATIVE |
 
 ## UNMATCHED (manual review)
 | Claim | Raw context | Candidate sources |

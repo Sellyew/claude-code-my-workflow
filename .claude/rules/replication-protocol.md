@@ -68,7 +68,7 @@ Before writing any R code:
 
 **The mismatch does not presume the code is correct.** The on-disk output is a *challenger*, not an oracle — a refactor may have broken a previously-correct table, so the *manuscript* number may be the right one and the code the stale/buggy side. Frame it as "one of {paper, code} must change — isolate which," never "revert the code to match the paper."
 
-**A defensible alternative is not a failure.** If the gap is explained by a *concrete, named alternative specification* (e.g. never-treated vs not-yet-treated comparison group, conditional vs unconditional parallel trends, `reghdfe` vs `feols` clustering df, MC seed/reps, display rounding), record that named alternative and mark the claim **EXPLAINED** rather than FAIL — see the `status` semantics below. A blank or vague note ("unclear") never downgrades a FAIL.
+**A defensible alternative is not a failure.** If the gap is explained by a *concrete, named alternative specification* (e.g. `reghdfe` vs `feols` clustering df, a different bandwidth-selection rule, MC seed/reps, display rounding), record that named alternative and mark the claim **EXPLAINED** rather than FAIL — see the `status` semantics below. A blank or vague note ("unclear") never downgrades a FAIL.
 
 ### Replication Report
 
@@ -155,8 +155,9 @@ claims:
       Optional notes — e.g., "matches paper to 3 decimals; SE differs in 4th
       decimal due to clustering df adjustment, within tolerance."
       To downgrade a FAIL to EXPLAINED, this field MUST name a concrete
-      alternative spec, e.g. "never-treated vs not-yet-treated comparison
-      group; under not-yet-treated the published −1.19 matches the script."
+      alternative spec, e.g. "reghdfe vs feols clustering-df adjustment;
+      under the reghdfe small-sample correction the published −1.19 matches
+      the script."
 ```
 
 ### `status` semantics

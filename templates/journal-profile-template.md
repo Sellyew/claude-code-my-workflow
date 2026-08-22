@@ -47,7 +47,7 @@ The 6 dispositions used across the `--peer` pipeline:
 | Disposition | Prior |
 |---|---|
 | STRUCTURAL | "Where's the mechanism? Where's the model?" |
-| CREDIBILITY | "Show me pre-trends. What's the experiment?" |
+| CREDIBILITY | "Show me the research design. What's the experiment?" |
 | MEASUREMENT | "How is this measured? What about attrition / construct validity?" |
 | POLICY | "Does this apply outside your sample? So what?" |
 | THEORY | "What does the theory predict?" |

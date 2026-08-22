@@ -1847,7 +1847,7 @@ The methods-referee is **paper-type-aware** — the same skill picks different s
 
 | Paper type | Methods-referee tilts toward | Sanity checks include |
 |---|---|---|
-| `reduced-form` | identification credibility, parallel-trends defence, robustness range | DiD pre-trends, IV first-stage, overlap, balance |
+| `reduced-form` | identification credibility, robustness range | IV first-stage, overlap, balance |
 | `structural` | model identification, counterfactual credibility, fit | moment-matching, sensitivity to functional form, out-of-sample |
 | `theory+empirics` | model-data correspondence | does the empirical estimand identify the theoretical object? |
 | `descriptive` | measurement validity, generalisability | sampling frame, missingness, comparator choice |
