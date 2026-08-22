@@ -6,7 +6,9 @@
 #
 #   1. surface-sync        counts + enumerative tables match what is on disk
 #   2. skill-integrity     frontmatter <-> body tool parity, anchors, flag parity
-#   3. model-versions      no superseded model presented as current (external SSoT + expiry)
+#   3. model-versions      no superseded model presented as current (internal
+#                         consistency against the model SSoT; the EXPIRY on that
+#                         SSoT is enforced by gate 6, staleness)
 #   4. links               every relative link and heading anchor resolves
 #   5. spec-conformance    every skill obeys the Agent Skills spec
 #   6. staleness           stale recommendations, source/render divergence, expired currency

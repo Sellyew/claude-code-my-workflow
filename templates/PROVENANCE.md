@@ -61,7 +61,7 @@ Record each reference's licence, including honest ambiguity.
 | Comparison | Tolerance | Why |
 | --- | --- | --- |
 | `<estimate>` vs `<oracle>` | `1e-8` relative | analytic identity; anything larger is a defect |
-| `<bootstrap SE>` vs `<oracle>` | `1e-3` relative | Monte Carlo noise at B = 999 |
+| `<bootstrap SE>` vs `<oracle>` | `5e-2` relative | bootstrap-SE sampling noise is ≈ SE/√(2(B−1)) ≈ 2.2% at B = 999; doubled for headroom. (A `1e-3` tolerance is defensible only with matched seeds/RNG streams on both sides.) |
 
 Fix tolerances **before** comparing. A tolerance loosened after a failed comparison converts
 evidence into decoration; if it must be loosened, record it here as an approved divergence.

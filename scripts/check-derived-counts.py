@@ -30,6 +30,11 @@ def n_translate_phases():
     ph = set(re.findall(r'^#{2,4} Phase (\d+)', read(".claude/skills/translate-to-quarto/SKILL.md"), re.M))
     return len(ph - {"0"})            # Phase 0 is pre-flight, not a translation phase
 
+def n_gates():
+    t = read("scripts/backtest.sh")
+    n = len(re.findall(r'^run "', t, re.M))
+    return n
+
 def n_seven_pass():
     t = read(".claude/skills/seven-pass-review/SKILL.md")
     return len(set(re.findall(r'^\| (\d) \|', t, re.M)))
@@ -42,6 +47,9 @@ CHECKS = [
     ("econ journal profiles", r'top-(\d+) journal profiles',      ["README.md", "guide/workflow-guide.qmd"], n_econ_journals()),
     ("TikZ snippets",         r'(\d+) production-ready',       ["guide/workflow-guide.qmd"], n_tikz()),
     ("translation phases",    r'(\d+) translation phases',       ["README.md", "guide/workflow-guide.qmd"], n_translate_phases()),
+    # The 7-vs-8 drift cluster: seven separate surfaces claimed the wrong gate
+    # count after gate 8 landed. Counted from backtest.sh itself.
+    ("backtest gates",        r'(?i)\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+) gates\b', ["README.md", "docs/index.html", "CLAUDE.md", "guide/workflow-guide.qmd", ".claude/skills/vaccinate/evals/README.md"], n_gates()),
     ("seven-pass lenses",     r'(\d+) forked subagents',         [".claude/skills/seven-pass-review/SKILL.md"], n_seven_pass()),
 ]
 
@@ -53,7 +61,11 @@ def main():
         for f in surfaces:
             for m in re.finditer(pat, read(f)):
                 found = True
-                claimed = int(m.group(1))
+                g = m.group(1)
+                WORDS = {"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,
+                         "seven":7,"eight":8,"nine":9,"ten":10}
+                claimed = WORDS.get(g.lower(), None) if not g.isdigit() else int(g)
+                if claimed is None: continue
                 ok = claimed == actual
                 print(f"  {label:<22} {f:<28} claims {claimed:>3}  actual {actual:>3}  {'ok' if ok else 'MISMATCH'}")
                 if not ok:

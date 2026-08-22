@@ -83,7 +83,7 @@ def main():
     expired = []
     mv = os.path.join(ROOT, ".claude/references/model-versions.md")
     if os.path.exists(mv):
-        t = open(mv).read()
+        t = open(mv, encoding='utf-8', errors='ignore').read()
         m = re.search(r'\*\*Expires:\*\*\s*(\d{4}-\d{2}-\d{2})', t)
         if m:
             today = subprocess.run(["date","+%Y-%m-%d"],capture_output=True,text=True).stdout.strip()
@@ -99,4 +99,8 @@ def main():
     return 1 if bad else 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:                      # promised exit 2 now exists
+        print(f"check-staleness: internal error: {e}", file=sys.stderr)
+        sys.exit(2)

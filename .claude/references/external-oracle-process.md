@@ -89,7 +89,7 @@ oracle -s did-proof-audit-r1 -p "$(cat prompt.md)" -f main.tex supplement.tex --
 | `--followup <slug>` | reopen the exact saved conversation; inherits profile, model, and verifies prior turns |
 | `--browser-follow-up "..."` | multi-turn in one run: answer → *"challenge your recommendation"* → *"final decision, smallest safe next step"* |
 | `--models "gpt-5.6-sol,gemini-3.1-pro"` | query several vendors in parallel (API engine) |
-| `--copy-markdown --render` | assemble the bundle and paste manually — **the degradation path if you have no Oracle install** |
+| `--copy-markdown --render` | assemble the bundle and paste it into ChatGPT by hand — the degradation path when **browser automation is unavailable** (no automation profile, expired login, broken capture). With no CLI at all, the fallback is the *contract*, not the tool: build the prompt per §4 and paste manually |
 | `oracle session <slug> --render` | reattach and recover a finished answer |
 
 ### Artifacts — where the evidence lives

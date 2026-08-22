@@ -14,6 +14,12 @@
 # A fresh session matters: leftover context from authoring a skill masks gaps in
 # what the skill actually says. You will believe it states something it only implied.
 #
+# SCOPE OF MEASUREMENT: the with-arm invokes the skill EXPLICITLY (/skill ...),
+# so this harness measures the value of the skill's CONTENT, not whether Claude
+# auto-triggers it on a bare prompt. nottrigger-* cases therefore measure content
+# leakage (the skill's signature output appearing where it should not), not
+# trigger discipline. Description-trigger testing needs auto-invocation tooling.
+#
 # SANDBOXED: every headless call runs with Write/Edit/Bash disallowed (verified
 # behaviorally 2026-08-21: a write-instruction probe produced no file). Without
 # this, an eval case asking "write me X from scratch" actually WROTE X into
@@ -26,12 +32,21 @@
 set -uo pipefail
 
 SKILL="${1:-}"; CASES="${2:-}"; REPS=3   # N=1 measures sampling noise, not the skill
-[ "${3:-}" = "--replicates" ] && REPS="${4:-1}"
+if [ "${3:-}" = "--replicates" ]; then
+    REPS="${4:-}"
+    case "$REPS" in ''|*[!0-9]*)
+        echo "eval: --replicates needs a positive integer, got '${REPS:-<empty>}'" >&2; exit 2;;
+    esac
+    [ "$REPS" -lt 2 ] && echo "eval: WARNING — N=1 cannot distinguish signal from noise; the variance gate is inert" >&2
+elif [ -n "${3:-}" ]; then
+    echo "eval: unknown argument '${3:-}'" >&2; exit 2
+fi
 
 if [ -z "$SKILL" ] || [ -z "$CASES" ]; then
     sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2
 fi
-command -v claude >/dev/null || { echo "eval: claude CLI not found" >&2; exit 2; }
+command -v claude  >/dev/null || { echo "eval: claude CLI not found" >&2; exit 2; }
+command -v timeout >/dev/null || { echo "eval: 'timeout' not found (macOS: brew install coreutils)" >&2; exit 2; }
 [ -d "$CASES" ] || { echo "eval: cases dir '$CASES' not found" >&2; exit 2; }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"      # resolved BEFORE any cd
@@ -120,7 +135,8 @@ for case_file in "$CASES"/*.md; do
         continue
     fi
     prompt="$(sed -n '/^## Prompt/,/^## Assert/p' "$case_file" | sed '1d;$d')"
-    asserts="$(sed -n '/^## Assert/,$p' "$case_file" | sed '1d' | grep -c '^- ')"
+    # bounded at the NEXT heading — trailing notes are not assertions (v2.5 audit)
+    asserts="$(awk '/^## Assert/{f=1;next} /^## /{f=0} f' "$case_file" | grep -c '^- ')"
     case_with=0; case_without=0
     for r in $(seq 1 "$REPS"); do
         for mode in with without; do
@@ -149,7 +165,7 @@ for case_file in "$CASES"/*.md; do
                     nottrigger-*) [ "$matched" -eq 0 ] && hits=$((hits+1)) ;;
                     *)            [ "$matched" -eq 1 ] && hits=$((hits+1)) ;;
                 esac
-            done < <(sed -n '/^## Assert/,$p' "$case_file" | grep '^- ')
+            done < <(awk '/^## Assert/{f=1;next} /^## /{f=0} f' "$case_file" | grep '^- ')
             printf '{"case":"%s","rep":%s,"mode":"%s","hits":%s,"asserts":%s}\n' \
                    "$name" "$r" "$mode" "$hits" "$asserts" >> "$RESULTS"
             if [ "$mode" = "with" ]; then
@@ -169,6 +185,10 @@ echo "  without skill: $pass_off / $total assertions"
 echo "  delta:         $((pass - pass_off)) assertions"
 echo "  raw:           $RESULTS"
 echo ""
+if [ ! -s "$RESULTS" ]; then
+    echo "eval: no results were produced (no valid cases ran) — nothing to report" >&2
+    exit 2
+fi
 python3 - "$RESULTS" <<'PYEOF'
 import json, sys, collections, statistics
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
@@ -180,12 +200,15 @@ noisy = []
 for (case, mode), hits in sorted(by.items()):
     if mode != "with": continue
     off = by.get((case, "without"), [])
-    sd = statistics.pstdev(hits) if len(hits) > 1 else 0.0
+    sd_w = statistics.pstdev(hits) if len(hits) > 1 else 0.0
+    sd_o = statistics.pstdev(off)  if len(off)  > 1 else 0.0
     flag = ""
-    if len(hits) > 1 and sd > 0.5:
+    # BOTH arms gate the verdict: a noisy baseline makes the delta just as
+    # uninterpretable as a noisy treatment arm (v2.5 audit).
+    if (len(hits) > 1 and sd_w > 0.5) or (len(off) > 1 and sd_o > 0.5):
         flag = "  <-- HIGH VARIANCE, result not interpretable"
         noisy.append(case)
-    print(f"  {case:<34} with={hits} (sd={sd:.2f})  without={off}{flag}")
+    print(f"  {case:<34} with={hits} (sd={sd_w:.2f})  without={off} (sd={sd_o:.2f}){flag}")
 if noisy:
     print("")
     print(f"  {len(noisy)} case(s) are too noisy to interpret. Raise replicates or")

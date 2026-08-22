@@ -32,8 +32,9 @@ functional-form error.
 ### Oster δ
 **Question:** how large must selection on unobservables be, relative to selection on
 observables, to drive the coefficient to zero?
-**Report:** δ **with the assumed `R²max`** — δ is meaningless without it. State the rule used
-(commonly `1.3 × R²` of the controlled regression) and show sensitivity to it.
+**Report:** δ **with the assumed `R²max`** — δ is meaningless without it. State the rule used —
+commonly `R²max = min(1.3 × R̃², 1)`, with Oster's cap, since an R²max above 1 is impossible —
+and show sensitivity to it.
 **Implementation:** `psacalc` (Stata), `robomit` (R).
 **Watch:** assumes proportional selection. Widely reported, frequently reported without its
 `R²max`, which makes it uninterpretable.
@@ -43,11 +44,12 @@ observables, to drive the coefficient to zero?
 ## Matched and stratified designs
 
 ### Rosenbaum Γ bounds
-**Question:** how much would treatment odds have to differ between matched units, due to an
-unobserved covariate, before the inference changes?
+**Question:** how much would treatment odds have to differ within a matched pair or set, due
+to an unobserved covariate, before the inference changes?
 **Report:** the Γ at which the p-value crosses the threshold, and the design sensitivity.
 **Implementation:** `sensitivitymv`, `rbounds` (R).
-**Watch:** for matched pairs. Do not apply to an unmatched regression and call it a bound.
+**Watch:** for matched designs — pairs, sets, or full matching. Do not apply to an unmatched
+regression and call it a bound.
 
 ---
 
@@ -76,7 +78,10 @@ which the headline uses and why.
 - **McCrary / Cattaneo density test** — manipulation of the running variable. `rddensity`.
 - **Covariate placebo** — predetermined covariates must not jump at the cutoff.
 - **Bandwidth sensitivity** — report the curve over bandwidths, not one MSE-optimal choice.
-- **Donut** — drop observations immediately at the cutoff; a result that dies is heaping-driven.
+- **Donut** — drop observations immediately at the cutoff to probe heaping and sorting.
+  Report the estimate and SE across donut radii, not just significance: a result that dies may
+  reflect manipulation, heaping, **or simply the precision loss** from discarding the most
+  informative observations. The donut localizes a concern; it does not adjudicate it.
 
 ---
 

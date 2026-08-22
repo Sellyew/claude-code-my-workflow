@@ -3343,7 +3343,7 @@ APPROVED   NEEDS WORK
 </div>
 <div class="callout-body-container callout-body">
 <p>While building v2.5 we ran the repo’s own consistency gates against a seeded defect: the sentence <code>This template has NN skills.</code> — with a count that did not match disk — was added to <code>README.md</code>.</p>
-<p><strong>All six gates stayed green.</strong> The count patterns are deliberately compound — they require several categories on one line — so that they do not fire on ordinary prose like “start with 2–3 skills”. A count carrying only a template verb fell straight through the gap.</p>
+<p><strong>Every gate then in the suite stayed green.</strong> The count patterns are deliberately compound — they require several categories on one line — so that they do not fire on ordinary prose like “start with 2–3 skills”. A count carrying only a template verb fell straight through the gap.</p>
 <p>The gate had been <strong>green and wrong</strong>, and only a seeded defect could tell the difference. It was fixed and then re-qualified <em>in both directions</em>: 3 of 3 seeded drifts caught, 0 of 3 false alarms on legitimate prose.</p>
 </div>
 </div>
@@ -3374,7 +3374,7 @@ APPROVED   NEEDS WORK
 </tbody>
 </table>
 <p>And one command runs the mechanical half of all of it:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./scripts/backtest.sh</span>    <span class="co"># eight gates: consistency, currency, links, spec, staleness, hygiene, derived counts</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./scripts/backtest.sh</span>    <span class="co"># eight gates: consistency, skill integrity, currency, links, spec, staleness, hygiene, derived counts</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Findings themselves are machine-checked rather than described: reviewers emit a JSON array validated against <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/finding-schema.json"><code>finding-schema.json</code></a> by <code>scripts/validate-findings.py</code>. Every finding must cite the <strong>rule</strong> it violates (a finding citing no rule is an opinion) and give a <strong>failing case</strong> — a concrete configuration that breaks the claim, not “this could be clearer”. Finding ids are deterministic, so deduplication across review rounds is exact rather than fuzzy.</p>
 </section>
 <section id="the-five-credibility-questions" class="level3" data-number="3.5.3">
@@ -3804,13 +3804,13 @@ APPROVED   NEEDS WORK
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>Current Anthropic lineup (verified 2026-06-10)
+<span class="screen-reader-only">Note</span>Current Anthropic lineup (re-verified 2026-08-21; expiry-gated via the model SSoT)
 </div>
 </div>
 <div class="callout-body-container callout-body">
 <p><strong>Fable 5</strong> (<code>claude-fable-5</code>, alias <code>fable</code>) is the most capable Claude Code model — opt-in via <code>/model fable</code> or the <code>best</code> alias, built for tasks larger than a single sitting; it investigates before acting and verifies its own work more often than smaller models. It is <strong>not</strong> the default on any account type and may bill to usage credits. <strong>Opus</strong> is the high-judgment tier and what this template routes referees, editors, and verifiers to. <strong>Sonnet</strong> is the workhorse mid-tier; <strong>Haiku</strong> is the fast/mechanical tier.</p>
-<p>Alias resolution is <strong>provider-dependent</strong>, and point versions move faster than any guide can. The single source of truth is <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/model-versions.md"><code>model-versions.md</code></a>, which carries the current versions, the per-provider alias table, and a <code>verified_on</code> date with an expiry — <code>scripts/check-model-versions.sh</code> fails the build when it goes stale. <strong>Do not hard-code a point version here.</strong></p>
-<p><strong>Retirement notice:</strong> Sonnet 4 and the original Opus 4 retire on <strong>2026-06-15</strong>. If your environment pins one of these (<code>ANTHROPIC_MODEL</code> env, hard-coded model IDs in CI, etc.), migrate before then. See <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the migration checklist.</p>
+<p>Alias resolution is <strong>provider-dependent</strong>, and point versions move faster than any guide can. The single source of truth is <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/model-versions.md"><code>model-versions.md</code></a>, which carries the current versions, the per-provider alias table, and a <code>verified_on</code> date with an expiry — <code>scripts/check-staleness.py</code> fails the build when that expiry passes, and <code>scripts/check-model-versions.sh</code> catches any superseded version presented as current. <strong>Do not hard-code a point version here.</strong></p>
+<p><strong>Retired (2026-06-15):</strong> Sonnet 4 and the original Opus 4 are gone. If your environment still pins one (<code>ANTHROPIC_MODEL</code> env, hard-coded model strings), requests fail — migrate to the current tiers in the SSoT.</p>
 </div>
 </div>
 <p>Not all agents need the same model. Each agent file has a <code>model:</code> field in its YAML frontmatter. In v2.0 all 18 agents are <strong>pinned</strong> to an explicit model + effort tier (no longer <code>inherit</code>), following the 70/20/10 routing pattern below. You can re-tune any agent to optimize cost:</p>
@@ -4372,7 +4372,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">LEARN:workflow</span><span class="co">]</span> Every Beamer edit must auto-sync to Quarto</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <section id="two-tier-memory-architecture-memory.md-vs-personal-memory.md" class="level4" data-number="4.8.0.1">
 <h4 data-number="4.8.0.1" class="anchored" data-anchor-id="two-tier-memory-architecture-memory.md-vs-personal-memory.md"><span class="header-section-number">4.8.0.1</span> Two-tier memory architecture (<code>MEMORY.md</code> vs <code>personal-memory.md</code>)</h4>
-<p>The template splits memory into two tiers (see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/meta-governance.md"><code>meta-governance.md</code></a>):</p>
+<p>The template splits memory into two tiers (see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/meta-governance.md"><code>meta-governance.md</code></a>):</p>
 <ul>
 <li><strong><code>MEMORY.md</code></strong> (committed, ≤ 200 lines) — generic learnings that help all forkers: workflow patterns, design principles, documentation standards, quality thresholds that transfer across domains.</li>
 <li><strong><code>.claude/state/personal-memory.md</code></strong> (gitignored, no size cap) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.</li>
@@ -4390,7 +4390,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <li><strong>Evidence</strong> — does it cite the originating incident / file / why?</li>
 <li><strong>Format</strong> — does it follow <code>[LEARN:category] wrong → right</code>?</li>
 </ol>
-<p>Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in <em>isolated forked contexts</em> — they cannot see each other’s votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/model-routing.md">model-routing.md</a>) since the review is mechanical-ish.</p>
+<p>Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in <em>isolated forked contexts</em> — they cannot see each other’s votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/model-routing.md">model-routing.md</a>) since the review is mechanical-ish.</p>
 <p>When to run: monthly as memory-maintenance, before sharing a fork, after a paper or course cycle ships, or wired as a <code>/loop</code> task.</p>
 </section>
 <section id="plans-compression-resistant-task-memory" class="level3" data-number="4.8.1">
@@ -5033,7 +5033,7 @@ Phase 4: Only then extend
 <p>In one course, we discovered that a widely-used R package silently produced <strong>incorrect estimates</strong> due to a subtle specification issue. This bug was caught 3 times in different scripts. Without the replication-first protocol, these wrong numbers would have been taught to PhD students.</p>
 </div>
 </div>
-<p><strong>Source-language coverage:</strong> The pattern is language-agnostic. The template ships <a href="#all-skills"><code>/data-analysis</code></a> for R-first projects and <a href="#all-skills"><code>/stata-replication</code></a> (v1.9.0) for Stata-first projects (mirrors <code>/data-analysis</code> exactly; same numbered-pipeline shape, different language; executes via the <code>stata-mcp</code> MCP server). Python-first projects follow the same convention with the path <code>scripts/python/_outputs/</code>. For Stata users, <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md"><code>stata-code-conventions.md</code></a> (v1.9.0) codifies the header (<code>version 18</code>, <code>clear all</code>, <code>set seed</code>/<code>set sortseed</code>), numbered pipeline (00–99), <code>esttab</code> for <code>\input{}</code> tables, clustering discipline (<code>reghdfe</code>), balance via <code>iebaltab</code>, and AEA Data Editor compliance.</p>
+<p><strong>Source-language coverage:</strong> The pattern is language-agnostic. The template ships <a href="#all-skills"><code>/data-analysis</code></a> for R-first projects and <a href="#all-skills"><code>/stata-replication</code></a> (v1.9.0) for Stata-first projects (mirrors <code>/data-analysis</code> exactly; same numbered-pipeline shape, different language; executes via the <code>stata-mcp</code> MCP server). Python-first projects follow the same convention with the path <code>scripts/python/_outputs/</code>. For Stata users, <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/stata-code-conventions.md"><code>stata-code-conventions.md</code></a> (v1.9.0) codifies the header (<code>version 18</code>, <code>clear all</code>, <code>set seed</code>/<code>set sortseed</code>), numbered pipeline (00–99), <code>esttab</code> for <code>\input{}</code> tables, clustering discipline (<code>reghdfe</code>), balance via <code>iebaltab</code>, and AEA Data Editor compliance.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -6357,7 +6357,7 @@ research-spec.md  ─────────────→  preregistration-dr
 <p><strong>Repository:</strong> <a href="https://github.com/SepineTam/stata-mcp">SepineTam/stata-mcp</a> <strong>Author:</strong> SepineTam (171+ stars, 91 releases, v1.17.3 as of May 2026)</p>
 <p>A mature MCP server that lets Claude Code execute Stata <code>.do</code> files via a command-guarded interface — refuses destructive shell ops (<code>!/shell/erase</code> etc.), monitors RAM, and pairs with the Stata Language Server. <strong>Install once per user:</strong> <code>claude mcp add stata-mcp --scope user -- uvx stata-mcp</code> (requires <code>uv</code> and a local Stata install).</p>
 <p><strong>Why it matters for this template:</strong> v1.9.0 added <a href="#sec-appendix"><code>/stata-replication</code></a> for Stata-first projects, which depends on this MCP server. R-first projects (the original template focus) continue to use <a href="#sec-appendix"><code>/data-analysis</code></a>; the two skills are parallel — same pipeline shape, different source language. AEA submissions where the original replication package is in Stata are the canonical use case.</p>
-<p>For end-to-end Stata workflows, see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md"><code>.claude/rules/stata-code-conventions.md</code></a> (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).</p>
+<p>For end-to-end Stata workflows, see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/stata-code-conventions.md"><code>.claude/rules/stata-code-conventions.md</code></a> (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).</p>
 </section>
 <section id="claudecodetools-the-editor-persona" class="level2" data-number="6.8">
 <h2 data-number="6.8" class="anchored" data-anchor-id="claudecodetools-the-editor-persona"><span class="header-section-number">6.8</span> ClaudeCodeTools: The Editor Persona</h2>
@@ -6987,8 +6987,8 @@ research-spec.md  ─────────────→  preregistration-dr
 </tr>
 <tr class="even">
 <td><code>/vaccinate</code></td>
-<td>Grade the grader: seed known defects + a clean control into a copy of a real artifact, run the check or review agent, report <strong>recall</strong> and <strong>false-positive rate</strong> into <code>quality_reports/qualification/LEDGER.md</code></td>
-<td>Before trusting any gate or referee simulation for a decision that matters</td>
+<td><code>.claude/skills/vaccinate/</code></td>
+<td>Grade the grader: seed known defects + a clean control, report <strong>recall</strong> and <strong>false-positive rate</strong> into <code>quality_reports/qualification/LEDGER.md</code></td>
 </tr>
 <tr class="odd">
 <td><code>/adjudicate-review</code></td>

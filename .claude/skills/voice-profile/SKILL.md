@@ -32,8 +32,11 @@ are best — they survived editing. Mix genres if you write in several (paper, r
 grant, teaching notes); the profile should note where your register changes.
 
 ```bash
-ls papers/*.pdf papers/*.tex | wc -l
+find <corpus-dir> -maxdepth 1 \( -name '*.pdf' -o -name '*.tex' \) | wc -l
 ```
+
+*(`find`, not a glob — in zsh an unmatched glob aborts the whole command, which
+reports 0 and defeats the count this step exists for.)*
 
 **Count before starting.** A corpus of eleven is a different task from four, and discovering
 that halfway through is how a session gets reset.
@@ -64,7 +67,7 @@ Read only the notes. A trait belongs in the profile if it appears across **most*
 corpus, not because one paper did it once. Record frequencies where you can: *"'note that'
 appears in 7 of 9 papers; 'delve' appears in none."*
 
-Write to `voice-profile.md` at the repo root. Include:
+Write to `voice-profile.md` at the repo root (allowlisted in the repo-hygiene gate). Include:
 
 - **Signature vocabulary** and **the avoid list** — words the author demonstrably does not use.
 - **Sentence rhythm**, with a number: median length, and where the long ones land.

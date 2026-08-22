@@ -1,9 +1,16 @@
 name: deploy-guide
 
-# Renders the workflow guide to docs/ on every push to main that touches the
-# guide source, so GitHub Pages stays in sync without a manual `quarto render`.
-# Opt-in: enable Actions on your fork and grant Pages write. Forkers who don't
-# publish a guide can delete this file.
+# Renders the workflow guide and publishes it to docs/ on every push to main
+# that touches the guide source, so GitHub Pages stays in sync without a manual
+# `quarto render`. Opt-in: enable Actions on your fork and grant Pages write.
+# Forkers who don't publish a guide can delete this file.
+#
+# Step order is load-bearing (v2.5 audit found the stamp running BEFORE the
+# docs/ sync, so any run with real work to do refused the divergent pair and
+# died without ever updating docs/):
+#   render -> sync docs -> stamp (verifies guide/docs identical) -> commit ALL
+#   THREE artifacts. Committing only docs/ would leave guide/ HTML and
+#   .render-stamp dirty on main and immediately fail the staleness gate.
 
 on:
   push:
@@ -22,17 +29,20 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@v2
       - name: Render guide
         run: quarto render guide/workflow-guide.qmd
-      - name: Stamp render fingerprint
-        run: ./scripts/stamp-render.sh
       - name: Sync to docs/
+        run: cp guide/workflow-guide.html docs/workflow-guide.html
+      - name: Stamp render fingerprint
+        run: ./scripts/stamp-render.sh   # refuses if guide/ and docs/ differ
+      - name: Verify gates on the result
+        run: ./scripts/backtest.sh
+      - name: Commit rendered artifacts
         run: |
-          cp guide/workflow-guide.html docs/workflow-guide.html
-          if [ -n "$(git status --porcelain docs/)" ]; then
+          if [ -n "$(git status --porcelain guide/workflow-guide.html docs/workflow-guide.html .render-stamp)" ]; then
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add docs/workflow-guide.html
-            git commit -m "ci: re-render guide → docs/ [skip ci]"
+            git add guide/workflow-guide.html docs/workflow-guide.html .render-stamp
+            git commit -m "ci: re-render guide → docs/ (stamped) [skip ci]"
             git push
           else
-            echo "docs/ already up to date."
+            echo "already up to date."
           fi

@@ -2,7 +2,7 @@
 
 The skills that fan out to reviewer subagents (`/seven-pass-review`, `/slide-excellence`, `/qa-quarto`, `/deep-audit`, `/review-paper --adversarial` and `--peer`) used to describe their findings as free-form markdown the synthesizer re-parsed by eye. This file is the **shared structured contract** they reduce over instead — so a synthesizer counts typed objects, a gate predicate is a deterministic check, and the same severity vocabulary means the same thing in every skill.
 
-This is a **reference**, not a runtime: a Claude Code session has no JSON validator in the loop. The schemas are the *target shape* each reviewer subagent returns (as a fenced ```yaml block at the end of its report) and the synthesizer reads. See [`.claude/rules/orchestrator-protocol.md`](../rules/orchestrator-protocol.md) for how the fan-out → reduce → judge → loop-until-dry runtime uses them.
+Reviewers emit a JSON **array** conforming to [`finding-schema.json`](finding-schema.json), written to a `.json` file beside the prose report and validated with `scripts/validate-findings.py` (exit 0 required) **before** the synthesizer reduces. That validator is the runtime; this file is the readable contract around it. See [`.claude/rules/orchestrator-protocol.md`](../rules/orchestrator-protocol.md) for how the fan-out → reduce → judge → loop-until-dry runtime uses them.
 
 ---
 
@@ -52,7 +52,7 @@ the new one):
 | Major Concern / "blocks submission" / Visual-Regression | CRITICAL or MAJOR (use CRITICAL if it blocks) |
 | Minor Concern / polish / Low | MINOR |
 
-- `change_my_mind` is required on every CRITICAL/MAJOR (the referee "what would change my mind" ask).
+- The old `change_my_mind` field is **gone** — its content lives in `failing_case`, which is required on every finding: the concrete configuration that breaks the claim is also exactly what would reverse the finding.
 - `confidence` is for the judge/verifier, not the author — a `low`-confidence CRITICAL is a prime candidate for the hallucination gate (§4).
 
 ## 2. `SCORECARD` — a reviewer's aggregate
@@ -80,9 +80,9 @@ The synthesizer's verdict is a **deterministic function of the typed findings**,
 | **PASS / APPROVED** | `sum(CRITICAL) == 0` across all lenses (and, for gate skills, every hard gate true) |
 | **REVISE** | `sum(CRITICAL) == 0` and `sum(MAJOR) > 0` |
 | **BLOCK / FAIL** | `sum(CRITICAL) > 0` |
-| **converged (loop-until-dry)** | a round produces **0 new** CRITICAL/MAJOR findings (deduped by `location`+`finding`) |
+| **converged (loop-until-dry)** | a round produces **0 new** blocker/major findings (deduped by the deterministic `id`) |
 
-"New" is measured against the running set of already-seen findings, deduped on `(location, finding)` — so a critic re-flagging an unfixed issue does not count as progress, and a fixer silently re-introducing one does not hide.
+"New" is measured against the running set of already-seen finding **ids** (`sha1(file:line:locus)` — exact, lens-independent) — so a critic re-flagging an unfixed issue does not count as progress, and a fixer silently re-introducing one does not hide.
 
 ## 4. Post-judge hallucination gate (the synthesizer cannot invent CRITICALs)
 
@@ -159,7 +159,7 @@ else PASS. Where older text says `CRITICAL`, read `blocker`.
 ```bash
 echo '[]' | python3 scripts/validate-findings.py            # smoke-test the harness first
 python3 scripts/validate-findings.py review-report.json     # validate a real report
-python3 scripts/validate-findings.py --id paper.tex 42 thm:main identification
+python3 scripts/validate-findings.py --id paper.tex 42 thm:main
 ```
 
 ### Deterministic finding ids — how dedup stops being fuzzy

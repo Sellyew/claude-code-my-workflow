@@ -1,6 +1,6 @@
 # Skill evals — the gap between *verified* and *measured*
 
-The seven gates in `./scripts/backtest.sh` prove the repo is **internally consistent and
+The gates in `./scripts/backtest.sh` prove the repo is **internally consistent and
 currently true**. They cannot prove that a skill's instructions actually produce good output.
 That is a different claim and it needs a different instrument.
 
@@ -23,7 +23,19 @@ If the with-skill run is not better, the skill is costing context for nothing.
 
 ## Running them
 
-The `skill-creator` plugin automates the loop:
+**The shipped harness is primary.** From a normal shell (NOT inside a Claude Code session —
+nested headless calls hang), at the repo root:
+
+```bash
+./scripts/run-skill-eval.sh <skill> .claude/skills/<skill>/evals/cases [--replicates N]
+```
+
+It runs the behavioral manipulation check first (each arm must *prove* skill access by
+retrieving a marker phrase — set per skill in `evals/marker.txt`), then grades each case in
+both arms, N=3 replicates by default, with a variance gate on **both** arms and every headless
+call sandboxed (no Write/Edit/Bash).
+
+The `skill-creator` plugin is an optional alternative that automates a richer loop:
 
 ```
 /plugin marketplace add anthropics/claude-plugins-official
@@ -95,6 +107,9 @@ Eval results go in the same ledger as qualification runs
 (`quality_reports/qualification/LEDGER.md`), with the skill name, the case count, pass rate
 with and without, and the token delta. **An eval with no recorded baseline is an anecdote.**
 
-> **Not yet run for this template.** No skill here has been eval'd. That is stated plainly
-> rather than left implicit — the qualification ledger lists which checks are unqualified by
-> name, and this is the same honesty applied to skills.
+> **Status (2026-08-22).** The harness itself is qualified (negative control: delta 0;
+> positive control: delta +2 on a skill-only fact; behavioral manipulation check). Raw runs
+> exist for five skills, but **no skill result has yet passed the variance gate under the
+> final harness and been recorded as a ledger row** — earlier runs were invalidated when the
+> manipulation check exposed that both arms had the skill. Results are recorded in
+> `quality_reports/qualification/LEDGER.md` as they land, including nulls.

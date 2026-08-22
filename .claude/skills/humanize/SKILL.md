@@ -173,7 +173,7 @@ Long chains of compound modifiers as a paragraph signature:
    line N | category | severity | current text | suggested rewrite or "remove"
    ```
 
-5. **Write report** to `quality_reports/humanize_<filename>_report.md`. Include:
+5. **Write report** to `quality_reports/audits/humanize_<filename>_report.md`. Include:
    - Per-category counts (HIGH / MED / LOW)
    - Per-finding table
    - Summary recommendation (rough thresholds):
@@ -188,6 +188,8 @@ Long chains of compound modifiers as a paragraph signature:
 
 ## Pairings
 
+| Situation | Do |
+|---|---|
 | When you've drafted prose with AI assistance | Run `/humanize` before submission. Pair with `/proofread` (grammar) and `/verify-claims` (citations). |
 | When you wrote in your own voice | Run `/humanize` anyway — your own prose drifts toward LLM patterns after long sessions of AI-assisted work. |
 | Submission-ready review | `/review-paper --peer [journal] --variance 3` for substance, `/humanize` for voice, `/verify-claims` for facts. |
@@ -200,7 +202,7 @@ If you find yourself reaching for an auto-rewriter, that's the signal to rewrite
 
 ## Output
 
-- Report at `quality_reports/humanize_<filename>_report.md` (gitignored).
+- Report at `quality_reports/audits/humanize_<filename>_report.md` (that subdirectory is gitignored).
 - Summary to the conversation: counts per category, top concentrated paragraphs, action recommendation.
 - **No file edits.** The user reads the report and applies changes manually.
 

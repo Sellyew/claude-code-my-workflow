@@ -43,6 +43,12 @@ meaningless:
 | 2026-08-21 | **`scripts/run-skill-eval.sh` (the harness itself)** | positive control: a fact present only in `defect-library.md` | harness must detect a real benefit | 1 case × 3 reps | **+2** (6/6 vs 4/6, sd 0.00) | — | baseline cannot know the fact | **PASS** |
 | 2026-08-21 | **manipulation check** | skill visibility probe | did the with/without manipulation take? | 2 probes | with=1, without=0 | — | — | **PASS** |
 
+| 2026-08-21 | `check-repo-hygiene.py` | tracked tree | root scratch · `_old` copy · numbered duplicate (sibling) · `_v2` filename · tracked `.aux` · unexpected top-level dir | 6 | 6/6 | **0/2** on controls (numbered pipeline stage; numbered file with no sibling) | `git status` alone sees none of these | **PASS** |
+| 2026-08-21 | `check-derived-counts.py` | README/guide/index | wrong journal count · wrong phase count · wrong snippet count · wrong gate count | 4 | 4/4 | 0/0 | bare grep cannot map claim→source-of-truth | **PASS** |
+| 2026-08-22 | `check-spec-conformance.py` | temp skill | empty `description:` (the greedy-regex bug had masked it) | 1 | 1/1 | 0/0 on clean control | — | **PASS** |
+| 2026-08-21 | `check-staleness.py` | README, guide/docs HTML | stale auto-mode claim · unfalsifiable superlative · hand-edited render · source-without-render · expired SSoT (date-shimmed) | 5 | 5/5 | 0/0 | mtime comparison (the approach it replaced) fails on fresh clones | **PASS** |
+| 2026-08-21 | `quality_score.py` | `.qmd` | broken R chunk + placeholder text (auto-fail path) | 1 | 1/1 (exit 2) | 0/1 — clean control scored 100/exit 0 | — | **PASS** |
+
 ## Skill evals — not yet run
 
 Distinct from gate qualification. `/vaccinate` asks *can this checker detect a planted defect?*
@@ -63,8 +69,6 @@ output as unverified.
 | `claim-verifier` (CoVe) | HIGH-WARN gate-refuses `/commit` |
 | `/audit-reproducibility` | gates the replication package |
 | `/seven-pass-review` | submission-readiness |
-| `quality_score.py` | the 80/90/95 thresholds |
-| `check-surface-sync.py` | pre-commit gate |
 | the 18-agent review fleet | every fan-out review |
 
 ## Notes
@@ -93,3 +97,15 @@ output as unverified.
 > After editing any checked surface, seed a defect into *that surface* and confirm it is still
 > seen. Total assertions went 29 → 34 across this release; a falling number is the signal to
 > look for.
+
+## Workflow audit (2026-08-22, overnight)
+
+A 14-component adversarial audit (85 agents: opus finders with mandatory verbatim quotes,
+refute-biased verifiers that reproduced failing cases — one ran both gates under a PATH-shimmed
+`date` to prove the expiry attribution wrong) returned **71 findings: 63 confirmed, 7
+downgraded, 1 refuted**. All 63 confirmed findings were fixed in the same night, including 3
+blockers (deploy.yml ordering that killed every real CI deploy; two false README claims) and
+five bugs in gates that had themselves been "qualified" — proof that qualification covers the
+seeded classes only, never the classes nobody seeded. 22 finder-stage minors were dropped
+un-verified by the per-component cap (logged at drop time); they are preserved in the workflow
+journal for later triage and are NOT counted as adjudicated.

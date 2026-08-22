@@ -5,8 +5,9 @@ them produce files. **Those four must not survive.** A repo where every abandone
 left in place is not a record of the work — it is noise that makes the real work unfindable,
 and it is the single fastest way for a project to feel unmaintained while the code is fine.
 
-Enforced by `scripts/check-repo-hygiene.py`, which runs inside `./scripts/backtest.sh` and
-therefore on every commit.
+Enforced by `scripts/check-repo-hygiene.py`, which runs inside `./scripts/backtest.sh` — and
+therefore on every commit **once `./scripts/install-hooks.sh` has been run** (a fresh clone's
+hook is inert until then), plus unconditionally in CI.
 
 ## The rule
 
@@ -16,7 +17,7 @@ Three destinations, and everything goes to exactly one:
 
 | Destination | For | Committed? |
 |---|---|---|
-| **The scratchpad** (outside the repo, or `explorations/`) | trying something; you do not yet know if it works | no (or `explorations/`, which is gitignored below the README) |
+| **The scratchpad** (outside the repo, or `explorations/`) | trying something; you do not yet know if it works | `explorations/` is **tracked** but exempt from the draft-name checks — its own protocol permits versioned/dated files there; clean it up when the exploration ends |
 | **The working tree** (`Slides/`, `Quarto/`, `scripts/`, `.claude/`) | the approach you chose and would defend | yes |
 | **An archive** (`master_supporting_docs/`, a dated `explorations/` subdir) | superseded work worth keeping for the record | yes, **with a README saying why** |
 
@@ -24,17 +25,22 @@ Three destinations, and everything goes to exactly one:
 
 - **Root clutter.** A file at the repository root that is not on the allowlist. Top-level space
   is for things a newcomer must see first; everything else lives in a directory.
-- **Draft names.** `untitled*`, `tmp*`, `scratch*`, `foo*`, `test123*`.
+- **Draft names.** `untitled`, `tmp`, `temp`, `scratch`, `foo`, `bar`, `baz`, `asdf`, `test123` —
+  as the filename or its prefix (`scratch_x.py` counts; `scratchpad-notes.md` also counts,
+  deliberately: rename it).
 - **Superseded copies.** `analysis_old.R`, `deck_backup.tex`, `notes_copy.md`. If it is worth
   keeping, archive it with a reason; otherwise delete it — **git already has the history.**
 - **Version-in-filename.** `model_v2.R`, `paper_final.tex`, `script_fixed.py`. That is what git
-  is for, and `_final` is never final.
-- **Accidental duplicates.** `notes 2.md`, `data(1).csv` — the signature of a copy-paste or a
-  download that nobody cleaned up.
+  is for, and `_final` is never final. *(Exempt: `explorations/` — its
+  [protocol](exploration-folder-protocol.md) deliberately allows `_v1`/`_v2` iteration there.)*
+- **Accidental duplicates.** `notes 2.md` **when `notes.md` also exists** (the true copy
+  signature — a bare `Lecture 2.tex` is an ordinary academic filename and is not flagged),
+  and `data(1).csv`.
 - **Tracked build artifacts.** `.aux`, `.log`, `.synctex.gz`, `.pyc`. Regenerable output does
   not belong in version control.
-- **Undocumented archives.** A directory holding superseded work with no README is
-  indistinguishable from abandoned clutter.
+- **Undocumented archives.** An archive directory with no README is indistinguishable from
+  abandoned clutter. *(The checker enforces this for the named archive roots —
+  `explorations/`, `master_supporting_docs/` — not for every directory in the tree.)*
 
 *Numbered pipeline stages are exempt* — `01_explore.R`, `02_clean.R`, `03_analyze.R` are
 idiomatic, not drafts.

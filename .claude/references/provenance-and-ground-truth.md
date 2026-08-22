@@ -81,9 +81,10 @@ fixture schemas, and declared performance budgets. Then each round *assigns* wha
 Keep a **tolerance registry**: per comparison, the tolerance and why. Fix tolerances *before*
 comparing, or you will tune them until the answer is the one you wanted.
 
-> **The `all.equal` scale trap (R).** `all.equal` silently degrades to an **absolute**
-> comparison when the target's magnitude is below `tolerance`. Small-SE cells can pass under
-> unbounded *relative* error. Pass an explicit
+> **The `all.equal` scale trap (R).** `all.equal` computes the mean magnitude over **only the
+> elements that differ**; when that mean falls below `tolerance`, the comparison silently
+> becomes **absolute** — so the trap fires even in a large, mostly-well-scaled vector whenever
+> the differing cells happen to be small (exactly where SEs live). Pass an explicit
 > `scale = max(mean(abs(target)), .Machine$double.eps)`, and close every parity file with a
 > `tested-set == registered-set` assertion so a silently skipped comparison cannot read as a
 > pass.

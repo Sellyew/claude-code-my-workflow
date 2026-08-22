@@ -85,7 +85,7 @@ report** — do not re-run the work.
 
 **9. Protocolize the critic/fixer loop, or it runs forever.**
 Bounded rounds with named signals and owners: **HOLD** (fixer retries, max N), **BLOCK**
-(escalate to the orchestrator), **STOP** (human). Three strikes escalates. Critics are
+(escalate to the orchestrator), **STOP** (human). The **two-strikes** rule escalates: the same finding id surviving rounds N and N+2 goes to the human, not to a third patch ([`orchestrator-protocol.md`](../rules/orchestrator-protocol.md)). Critics are
 read-only **by mechanism**, not by instruction. Creators never self-score. Verdicts cite
 invariant numbers, so a violation is a deduction rather than a taste.
 → [`.claude/rules/orchestrator-protocol.md`](../rules/orchestrator-protocol.md).

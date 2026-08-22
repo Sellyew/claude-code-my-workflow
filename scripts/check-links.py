@@ -15,9 +15,11 @@ SCAN = sorted(set(SCAN))
 
 def strip_code(t):
     t = re.sub(r'```.*?```', lambda m: "\n"*m.group(0).count("\n"), t, flags=re.S)
-    # CommonMark rule: a run of N backticks is closed by a run of N backticks.
-    # Match longest runs first so ``` and `` don't get shredded by the ` pass.
-    t = re.sub(r'(`{1,10})(.+?)\1', lambda m: ' ' * len(m.group(0)), t, flags=re.S)
+    # Fenced blocks first (may span lines), then INLINE spans constrained to a
+    # single line: with re.S a lone unpaired backtick paired with a distant one
+    # and swallowed every link in between (v2.5 audit).
+    t = re.sub(r'```.*?```', lambda m: '\n' * m.group(0).count('\n'), t, flags=re.S)
+    t = re.sub(r'(`{1,2})([^`\n]+?)\1', lambda m: ' ' * len(m.group(0)), t)
     return t
 
 def slug(h):
@@ -33,8 +35,11 @@ def slug(h):
     link. (PR #140.)
     """
     s = h.strip().lower()
-    s = re.sub(r'[`*_\[\]()]', '', s)
-    s = re.sub(r'[^\w\s-]', '', s)      # strip punctuation IN PLACE
+    # GitHub KEEPS underscores in anchors (heading "check_links" -> #check_links),
+    # so `_` must not be in the strip class. (v2.5 audit: stripping it produced
+    # false positives on correct links and false negatives on broken ones.)
+    s = re.sub(r'[`*\[\]()]', '', s)
+    s = re.sub(r'[^\w\s-]', '', s)      # strip punctuation IN PLACE (\w keeps _)
     return s.replace(' ', '-').strip('-')  # each space -> one hyphen, no collapsing
 
 anchors = {}

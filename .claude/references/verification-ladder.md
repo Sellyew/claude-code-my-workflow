@@ -42,7 +42,11 @@ drifts.**
 
 - `check-surface-sync.py` — counts and enumerative tables match disk
 - `check-skill-integrity.py` — frontmatter ↔ body tool parity, anchors, flag parity
-- `check-model-versions.sh` — model currency, **with an external oracle and an expiry**
+- `check-model-versions.sh` — superseded model versions presented as current (internal
+  consistency against the model SSoT)
+- `check-staleness.py` — the **expiry** on that SSoT (`Expires:` fails the gate when past),
+  stale recommendations, and source-vs-render divergence. The *external oracle* is the human
+  re-verification step in the SSoT's update protocol — no script fetches the docs
 - `.githooks/pre-commit` — runs the above on every commit (live only after `install-hooks.sh`)
 
 **A gate that proves internal consistency is not a currency gate.** Surfaces agreeing *with

@@ -44,13 +44,16 @@ output.
 ## 2. Resolve paths before any `cd`, not after
 
 ```bash
-# WRONG — HERE is computed after the cd, so it points at the wrong place
-cd "$(dirname "$0")/.."
-HERE="$(pwd)"
+# WRONG — $0 is RELATIVE when invoked as ./run.sh, so after any cd the
+# saved path points at the wrong place (or nowhere)
+SCRIPT_DIR="$(dirname "$0")"     # e.g. "."
+cd /tmp/workdir
+source "$SCRIPT_DIR/lib.sh"      # resolves against /tmp/workdir — breaks
 
-# RIGHT — resolve first, then move
-HERE="$(cd "$(dirname "$0")" && pwd)"
-cd "$HERE/.." || exit 2
+# RIGHT — resolve to an ABSOLUTE path before any cd
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd /tmp/workdir
+source "$SCRIPT_DIR/lib.sh"      # still correct from anywhere
 ```
 
 A script that works when invoked from the repo root and silently misbehaves from anywhere else

@@ -52,7 +52,7 @@ def validate(data, schema):
         if all(k in f for k in ("id", "file", "line", "locus")):
             want = finding_id(f["file"], f["line"], f["locus"])
             if f["id"] != want:
-                errs.append(f"{w}.id: {f['id'][:12]}… != sha1(file:line:locus:lens) {want[:12]}…")
+                errs.append(f"{w}.id: {f['id'][:12]}… != sha1(file:line:locus) {want[:12]}…")
         if "id" in f:
             if f["id"] in seen: errs.append(f"{w}.id: duplicate of findings[{seen[f['id']]}]")
             seen[f["id"]] = i

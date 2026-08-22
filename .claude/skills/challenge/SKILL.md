@@ -51,9 +51,11 @@ of the challenge.
 | **Comparison group** | never-treated / not-yet-treated |
 | **Reference period** | universal base / varying base |
 | **Winsorization** | none / 1% / 5% |
+| **Aggregation** | simple / group / calendar / event-time |
 
-> The last three are **not** neutral in staggered DiD. They change the estimand, not just the
-> estimate. Record them as estimand choices and say so in the report.
+> **Comparison group, reference period, and aggregation** are not neutral in staggered DiD —
+> they change the *estimand*, not just the estimate. Record them as estimand choices and say
+> so in the report ([`references/fork-catalog.md`](references/fork-catalog.md) labels every fork).
 
 **Ship `--dry-run` first.** Print the grid size and an estimated runtime before executing
 anything. A 6-fork grid with 3 options each is 729 fits.
@@ -78,8 +80,9 @@ convergence status.
 - **Your baseline's percentile** in its own distribution. If the headline sits at the 97th
   percentile of specifications you yourself called defensible, say so.
 
-> Never report the specification curve as a *test*. It has no null. It is a description of
-> fragility, and it should be read as one.
+> The descriptive curve is not a test — read it as a description of fragility. If you need
+> inference over the whole curve, use specification-curve analysis's **joint permutation test**
+> (Simonsohn, Simmons & Nelson 2020), which supplies the sharp null the picture alone lacks.
 
 ## Step 4 — Attack the identifying assumption
 

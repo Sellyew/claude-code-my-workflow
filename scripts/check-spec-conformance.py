@@ -29,7 +29,10 @@ def main():
             errs.append(f"{rel}: no YAML frontmatter"); continue
         fm, body = m.group(1), m.group(2)
         def field(k):
-            mm = re.search(rf'^{re.escape(k)}:\s*(.*?)(?=\n\S|\Z)', fm, re.S | re.M)
+            # Value = rest of THIS line plus indented continuation lines only.
+            # The old \s* skipped a blank value across the newline and returned
+            # the NEXT key's line, so an empty description: passed (v2.5 audit).
+            mm = re.search(rf'^{re.escape(k)}:[ \t]*(.*(?:\n[ \t]+\S.*)*)', fm, re.M)
             return mm.group(1).strip() if mm else None
         name = (field("name") or "").strip().strip('"\'')
         desc = field("description") or ""

@@ -1,7 +1,8 @@
 # Eval cases
 
-One file per case. The harness reads two sections and ignores everything else, so
-you can keep notes alongside.
+One file per case. The prompt is everything between `## Prompt` and `## Assert`; assertions
+are the `- ` lines from `## Assert` **to the next heading** — so keep notes either above
+`## Prompt`, or under their own heading after the Assert block.
 
 ```markdown
 ## Prompt

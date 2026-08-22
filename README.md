@@ -39,7 +39,7 @@ claude
 
 **Using VS Code?** Open the Claude Code panel instead. Everything works the same — see the [full guide](https://psantanna.com/claude-code-my-workflow/workflow-guide.html#sec-setup) for details.
 
-> **Avoid prompt fatigue.** Out of the box, Claude Code asks permission for every tool invocation. After the first few approvals, toggle **Auto-accept edits** mode (a keybinding; see the [permission modes section](https://psantanna.com/claude-code-my-workflow/workflow-guide.html#settings---permissions-and-hooks) of the guide) or run `claude --permission-mode acceptEdits`. For fully-autonomous runs on a trusted repo, **Bypass** mode skips prompts entirely. The template's `.claude/settings.json` pre-approves ~100 common Bash and Edit/Write patterns, so even at default permissions most work is unattended.
+> **Avoid prompt fatigue.** Out of the box, Claude Code asks permission for every tool invocation. After the first few approvals, toggle **Auto-accept edits** mode (a keybinding; see the [permission modes section](https://psantanna.com/claude-code-my-workflow/workflow-guide.html#settings---permissions-and-hooks) of the guide) or run `claude --permission-mode acceptEdits`. For fully-autonomous runs on a trusted repo, **Bypass** mode skips prompts entirely. The template's `.claude/settings.json` ships `defaultMode: bypassPermissions` with broad catch-all allows (`Bash(*)`, `Edit(**)`, `Write(**)` — 7 wildcard rules, not a curated list), so out of the box almost nothing prompts. That is a deliberate power-user default: to tighten it, set `defaultMode: "default"` in `.claude/settings.json` and approve tools as you go, or use auto mode (the platform default since 2026-08-14).
 
 Then paste the [starter prompt](https://psantanna.com/claude-code-my-workflow/workflow-guide.html#sec-first-session) from the guide, filling in your project details:
 
@@ -76,7 +76,7 @@ If both succeed, delete `Slides/HelloWorld.tex` and `Quarto/HelloWorld.qmd` and 
 
 You don't craft a perfect prompt — you **state a goal and let the work loop toward it under gates**. Specialist agents do the labor; enforcing gates decide when it's good enough; you adjudicate the disagreements they surface. Three things make that trustworthy:
 
-- **Real gates, not reminders.** One command — `./scripts/backtest.sh` — runs **eight gates**: surface-sync, skill integrity, model currency (with an external oracle and an expiry), link and anchor resolution, Agent Skills spec conformance, staleness (including source-vs-published divergence), and repo hygiene. A version-controlled pre-commit hook (run `./scripts/install-hooks.sh` once) runs it plus the quality check (≥80) on *every* commit — bypassing the skill no longer bypasses the review. A `git-guardrails` hook blocks destructive git (`reset --hard`, `clean -f`, `push --force`, `add -A`); the review runtime re-checks any reviewer-introduced "fatal" finding before it counts.
+- **Real gates, not reminders.** One command — `./scripts/backtest.sh` — runs **eight gates**: surface-sync, skill integrity, model currency against the SSoT, link and anchor resolution, Agent Skills spec conformance, staleness (including source-vs-published divergence), and repo hygiene. A version-controlled pre-commit hook (run `./scripts/install-hooks.sh` once) runs it plus the quality check (≥80) on *every* commit — bypassing the skill no longer bypasses the review. A `git-guardrails` hook blocks destructive git (`reset --hard`, `clean -f`, `push --force`, `add -A`); the review runtime re-checks any reviewer-introduced "fatal" finding before it counts.
 - **Every gate is qualified, not just green.** Each one has been shown a planted defect and confirmed to go red, with recall and false-alarm rate recorded in [`quality_reports/qualification/LEDGER.md`](quality_reports/qualification/LEDGER.md). Checks that have *not* been qualified are listed there by name — because an unqualified check is not weak evidence, it is none. Run [`/vaccinate`](.claude/skills/vaccinate/SKILL.md) to qualify one.
 - **A real orchestration runtime.** Reviews fan out to forked specialist agents, reduce over a shared finding schema, judge with a hallucination gate, and loop until dry — see [`orchestrator-protocol.md`](.claude/rules/orchestrator-protocol.md).
 - **Ground truth as a process.** A mismatch isn't always a failure: a defensible, *named* alternative is recorded as `EXPLAINED` and carried into your response-to-referees, while genuine errors stay fail-closed.
@@ -127,7 +127,7 @@ Multiple complementary verification layers run before submission:
 - **`/verify-claims`** (v1.7.0) — Chain-of-Verification with a forked verifier that cannot self-confirm because it has never seen the draft. v1.9.0 adds HIGH/MED/LOW-WARN severity tiers; HIGH-WARN (fabricated citation, numerical contradiction) gate-refuses `/commit`.
 - **`/audit-reproducibility`** (v1.7.0; Stata coverage v1.9.0) — every numeric claim in the manuscript is cross-checked against the script output that produced it. v1.9.0 adds `passport.yaml` — a per-paper YAML state file with PASS/FAIL/STALE/UNVERIFIED status per claim.
 - **`/humanize`** (v1.9.0) — detect AI-voice tells (boilerplate transitions, hedging stacking, sycophancy) before submission. Read-only by design; auto-rewriting degrades quality.
-- **`/review-paper --variance N`** (v1.9.0) — runs N referees with sampled dispositions and reports a **decision distribution**, not a point estimate. Motivated by AgentReview (ACL 2024) finding 37% of decisions vary purely from disposition sampling.
+- **`/review-paper --variance N`** (v1.9.0) — runs N referees with sampled dispositions and reports a **decision distribution**, not a point estimate. Motivated by AgentReview (EMNLP 2024) finding 37% of decisions vary purely from disposition sampling.
 
 ---
 
@@ -148,7 +148,7 @@ It covers:
 
 The guide covers Claude Code's latest capabilities:
 
-- **Model lineup** — **Fable 5** (`claude-fable-5`, opt-in via `/model fable` or the `best` alias) is the most capable Claude Code model: Mythos-class, GA 2026-06-09, $10/$50 per MTok, 1M context (128k max output), built for long-horizon agentic work; it falls back to Opus 4.8 on flagged cyber/bio content and needs Claude Code ≥ 2.1.170. **Opus 4.8** (`claude-opus-4-8`) remains the API/account default (GA 2026-05-28, $5/$25 per MTok, 1M context, defaults to `high` effort) — and remains this template's routed high-judgment tier (see `model-routing.md` for why). Sonnet 4.6 is the workhorse (1M context); Haiku 4.5 the fast tier. Sonnet 4 + original Opus 4 retire 2026-06-15 → migrate to Sonnet 4.6 / Opus 4.8. *(Verified against Anthropic docs 2026-06-10.)*
+- **Model lineup** — **Fable 5** (`claude-fable-5`, opt-in via `/model fable` or the `best` alias) is the top tier for long-horizon work. Current Opus/Sonnet point versions and the **provider-dependent alias table** live in the single source of truth, [`model-versions.md`](.claude/references/model-versions.md) — surfaces here stay tier-abstract so they cannot go stale, and the staleness gate fails the build when the SSoT's own expiry passes.
 - **Effort levels** — `/effort` sets cost vs. thoroughness (`low` / `medium` / `high` / `xhigh` / `max`). **Opus 4.8 defaults to `high`** — its `high` does roughly what 4.7's `xhigh` did for fewer tokens, so reserve `xhigh` for extended exploration and `ultracode` (xhigh + dynamic workflows) for the largest autonomous runs.
 - **`/goal <verifiable condition>`** (v1.9.0; Anthropic May 2026) — keep working across turns until a fast model confirms the condition holds. Pairs with `/commit` quality gates for verified-end-state runs.
 - **`claude agents` dashboard** (v1.9.0; Anthropic May 2026) — single screen for parallel review work (`/review-paper --peer`, `/slide-excellence`).
@@ -432,7 +432,7 @@ See the [guide's ecosystem section](https://psantanna.com/claude-code-my-workflo
 
 - **What's new:** see [CHANGELOG.md](CHANGELOG.md). We follow loose semver — breaking changes get major bumps so you can decide when to pull updates.
 - **How to contribute:** see [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md). PRs welcome for generalizable improvements; fork-specific work stays in your fork.
-- **Pin to a version:** `git checkout v2.0.0` (current as of 2026-06-09).
+- **Pin to a version:** `git checkout $(git describe --tags --abbrev=0)` pins the newest tag (v2.5.0 at this writing — see [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 

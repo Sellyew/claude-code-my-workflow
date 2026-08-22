@@ -535,7 +535,7 @@ rigour.*
 While building v2.5 we ran the repo's own consistency gates against a seeded defect: the
 sentence `This template has NN skills.` — with a count that did not match disk — was added to `README.md`.
 
-**All six gates stayed green.** The count patterns are deliberately compound — they require
+**Every gate then in the suite stayed green.** The count patterns are deliberately compound — they require
 several categories on one line — so that they do not fire on ordinary prose like "start with
 2–3 skills". A count carrying only a template verb fell straight through the gap.
 
@@ -557,7 +557,7 @@ Three references carry it, loaded on demand rather than living in every session'
 And one command runs the mechanical half of all of it:
 
 ```bash
-./scripts/backtest.sh    # eight gates: consistency, currency, links, spec, staleness, hygiene, derived counts
+./scripts/backtest.sh    # eight gates: consistency, skill integrity, currency, links, spec, staleness, hygiene, derived counts
 ```
 
 Findings themselves are machine-checked rather than described: reviewers emit a JSON array
@@ -875,13 +875,13 @@ Claude Code also offers experimental **Agent Teams** --- multiple independent se
 ### Multi-Model Strategy: Cost vs. Quality {#multi-model-strategy-cost-vs-quality}
 
 ::: {.callout-note}
-## Current Anthropic lineup (verified 2026-06-10)
+## Current Anthropic lineup (re-verified 2026-08-21; expiry-gated via the model SSoT)
 
 **Fable 5** (`claude-fable-5`, alias `fable`) is the most capable Claude Code model — opt-in via `/model fable` or the `best` alias, built for tasks larger than a single sitting; it investigates before acting and verifies its own work more often than smaller models. It is **not** the default on any account type and may bill to usage credits. **Opus** is the high-judgment tier and what this template routes referees, editors, and verifiers to. **Sonnet** is the workhorse mid-tier; **Haiku** is the fast/mechanical tier.
 
-Alias resolution is **provider-dependent**, and point versions move faster than any guide can. The single source of truth is [`model-versions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/model-versions.md), which carries the current versions, the per-provider alias table, and a `verified_on` date with an expiry — `scripts/check-model-versions.sh` fails the build when it goes stale. **Do not hard-code a point version here.**
+Alias resolution is **provider-dependent**, and point versions move faster than any guide can. The single source of truth is [`model-versions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/references/model-versions.md), which carries the current versions, the per-provider alias table, and a `verified_on` date with an expiry — `scripts/check-staleness.py` fails the build when that expiry passes, and `scripts/check-model-versions.sh` catches any superseded version presented as current. **Do not hard-code a point version here.**
 
-**Retirement notice:** Sonnet 4 and the original Opus 4 retire on **2026-06-15**. If your environment pins one of these (`ANTHROPIC_MODEL` env, hard-coded model IDs in CI, etc.), migrate before then. See [TROUBLESHOOTING.md](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/TROUBLESHOOTING.md) for the migration checklist.
+**Retired (2026-06-15):** Sonnet 4 and the original Opus 4 are gone. If your environment still pins one (`ANTHROPIC_MODEL` env, hard-coded model strings), requests fail — migrate to the current tiers in the SSoT.
 :::
 
 Not all agents need the same model. Each agent file has a `model:` field in its YAML frontmatter. In v2.0 all 18 agents are **pinned** to an explicit model + effort tier (no longer `inherit`), following the 70/20/10 routing pattern below. You can re-tune any agent to optimize cost:
@@ -1172,7 +1172,7 @@ Use it for:
 
 #### Two-tier memory architecture (`MEMORY.md` vs `personal-memory.md`)
 
-The template splits memory into two tiers (see [`meta-governance.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/meta-governance.md)):
+The template splits memory into two tiers (see [`meta-governance.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/meta-governance.md)):
 
 - **`MEMORY.md`** (committed, ≤ 200 lines) — generic learnings that help all forkers: workflow patterns, design principles, documentation standards, quality thresholds that transfer across domains.
 - **`.claude/state/personal-memory.md`** (gitignored, no size cap) — machine-specific and user-specific learnings: TeX install quirks, file paths, personal effort preferences, tool-version workarounds.
@@ -1191,7 +1191,7 @@ The two-tier split poses one question: *who decides which `[LEARN]` entries grad
 4. **Evidence** — does it cite the originating incident / file / why?
 5. **Format** — does it follow `[LEARN:category] wrong → right`?
 
-Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in *isolated forked contexts* — they cannot see each other's votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per [model-routing.md](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/model-routing.md)) since the review is mechanical-ish.
+Majority (3+ of 5 YES) recommends promotion; the user approves the final move. Critics run in *isolated forked contexts* — they cannot see each other's votes — so dimensions are reviewed independently, no groupthink. Critics use Haiku (per [model-routing.md](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/model-routing.md)) since the review is mechanical-ish.
 
 When to run: monthly as memory-maintenance, before sharing a fork, after a paper or course cycle ships, or wired as a `/loop` task.
 
@@ -1583,7 +1583,7 @@ Phase 4: Only then extend
 In one course, we discovered that a widely-used R package silently produced **incorrect estimates** due to a subtle specification issue. This bug was caught 3 times in different scripts. Without the replication-first protocol, these wrong numbers would have been taught to PhD students.
 :::
 
-**Source-language coverage:** The pattern is language-agnostic. The template ships [`/data-analysis`](#all-skills) for R-first projects and [`/stata-replication`](#all-skills) (v1.9.0) for Stata-first projects (mirrors `/data-analysis` exactly; same numbered-pipeline shape, different language; executes via the `stata-mcp` MCP server). Python-first projects follow the same convention with the path `scripts/python/_outputs/`. For Stata users, [`stata-code-conventions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md) (v1.9.0) codifies the header (`version 18`, `clear all`, `set seed`/`set sortseed`), numbered pipeline (00–99), `esttab` for `\input{}` tables, clustering discipline (`reghdfe`), balance via `iebaltab`, and AEA Data Editor compliance.
+**Source-language coverage:** The pattern is language-agnostic. The template ships [`/data-analysis`](#all-skills) for R-first projects and [`/stata-replication`](#all-skills) (v1.9.0) for Stata-first projects (mirrors `/data-analysis` exactly; same numbered-pipeline shape, different language; executes via the `stata-mcp` MCP server). Python-first projects follow the same convention with the path `scripts/python/_outputs/`. For Stata users, [`stata-code-conventions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/stata-code-conventions.md) (v1.9.0) codifies the header (`version 18`, `clear all`, `set seed`/`set sortseed`), numbered pipeline (00–99), `esttab` for `\input{}` tables, clustering discipline (`reghdfe`), balance via `iebaltab`, and AEA Data Editor compliance.
 
 ::: {.callout-note}
 ## Claims provenance via `passport.yaml` (v1.9.0)
@@ -2492,7 +2492,7 @@ A mature MCP server that lets Claude Code execute Stata `.do` files via a comman
 
 **Why it matters for this template:** v1.9.0 added [`/stata-replication`](#sec-appendix) for Stata-first projects, which depends on this MCP server. R-first projects (the original template focus) continue to use [`/data-analysis`](#sec-appendix); the two skills are parallel — same pipeline shape, different source language. AEA submissions where the original replication package is in Stata are the canonical use case.
 
-For end-to-end Stata workflows, see [`.claude/rules/stata-code-conventions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/claude/rules/stata-code-conventions.md) (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).
+For end-to-end Stata workflows, see [`.claude/rules/stata-code-conventions.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/stata-code-conventions.md) (header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA Data Editor compliance).
 
 ## ClaudeCodeTools: The Editor Persona
 
@@ -2883,7 +2883,7 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | `/qa-quarto` | `.claude/skills/qa-quarto/` | Critic-fixer adversarial loop |
 | `/slide-excellence` | `.claude/skills/slide-excellence/` | Combined multi-agent review |
 | `/translate-to-quarto` | `.claude/skills/translate-to-quarto/` | Beamer to Quarto translation |
-| `/vaccinate` | Grade the grader: seed known defects + a clean control into a copy of a real artifact, run the check or review agent, report **recall** and **false-positive rate** into `quality_reports/qualification/LEDGER.md` | Before trusting any gate or referee simulation for a decision that matters |
+| `/vaccinate` | `.claude/skills/vaccinate/` | Grade the grader: seed known defects + a clean control, report **recall** and **false-positive rate** into `quality_reports/qualification/LEDGER.md` |
 | `/adjudicate-review` | `.claude/skills/adjudicate-review/` | Turn incoming findings — AI review, referee report, linter, second model — into verified fixes. Every finding is a CANDIDATE until checked against the source |
 | `/blast-radius` | `.claude/skills/blast-radius/` | Before and after changing anything shared (return value, schema, default, units), enumerate every consumer and actually run them |
 | `/credible-claims` | `.claude/skills/credible-claims/` | Research brief before delegating, claim record after. Keeps faster execution from being mistaken for credible evidence |

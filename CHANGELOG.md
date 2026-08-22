@@ -78,9 +78,9 @@ fixes the reason the gates did not notice.
 - **`disallowed-tools` on 9 read-only skills.** `/proofread`, `/review-r`, `/visual-audit` and
   friends keep `Write` (for their report) but can no longer `Edit` the artifact they were told
   to only report on. Previously nothing stopped them.
-- **Frontmatter conformance.** Audited all 52 skills against the
+- **Frontmatter conformance.** Audited continuously by the `check-spec-conformance` gate — all 61 skills at release — against the
   [Agent Skills spec](https://agentskills.io/specification): names, description length, and
-  the 500-line body guidance all pass (median body: 129 lines). `author`/`version` — read by
+  the 500-line body guidance all pass (median body: 121 lines). `author`/`version` — read by
   neither the spec nor Claude Code — moved under `metadata:`.
 
 ### Added — scheduling guidance that changes a recommendation
@@ -92,60 +92,24 @@ tasks**, not cloud routines.
 
 ### Verification of this release
 
-Every gate touched was **qualified, not just run**: a defect was seeded, the gate was confirmed
-to go red, the artifact was restored, and the gate confirmed green. Two rows are recorded in
-the qualification ledger; the checks that remain **unqualified are listed there by name**.
+Every one of the **eight** gates was qualified with seeded defects and a clean control, and
+each carries a row in `quality_reports/qualification/LEDGER.md`. The composite stress test —
+10 seeded defects spanning six gates in one pass, 10/10 caught, 0 false alarms — is recorded
+there too, alongside the per-gate seedings for the remaining two (spec-conformance:
+empty-description seed; derived-counts: wrong journal/phase/snippet/gate-count seeds).
 
-### Added — the record lives in the repo, not the transcript
-
-- **`progress-reports.md`** — three durable stores: GitHub **issues** as defect memory
-  (searchable across years, threaded evidence, linked to the fixing commit; a closed one
-  answers *"did we already look at this?"*), `quality_reports/` as **work** memory, `MEMORY.md`
-  as **lesson** memory. The always-omitted and most valuable section of a progress report is
-  *what was tried and abandoned, and why* — it stops the next session re-walking a dead end.
-- **`issue-ledger.md`** — the evidence standard: measurement denominator, a live positive or
-  negative control, explicit non-scope, measurable acceptance criteria, and a seven-section
-  closure comment. **No auto-closing keywords** (the merge is a code event; the closure is a
-  judgement) and **failed hypotheses stay visible**.
-- **Evidence contracts as issue forms** — an incomplete report is incomplete *by construction*.
-
-### Added — structure that stays clean
-
-- **`repo-hygiene.md` + `check-repo-hygiene.py`.** Agents try five approaches and four produce
-  files; those four must not survive. Rejects root clutter, draft names, superseded copies,
-  version-in-filename, accidental duplicates, tracked build artifacts, and undocumented
-  archives. Numbered pipeline stages are exempt — found as a false positive on this repo's own
-  `02_clean.R` and fixed before shipping.
-
-### Added — `/challenge`
-
-Specification curve over the discrete forks, then named sensitivity statistics (E-value,
-Cinelli–Hazlett RV, Oster δ, Rosenbaum Γ, Rambachan–Roth honest DiD) against the identifying
-assumption. Forks are labelled **estimand** vs **estimate** — comparison group, base period,
-and aggregation in staggered DiD change *what is being estimated*, and averaging over them is
-meaningless. Naive pre-testing is explicitly rejected in favour of honest DiD.
-
-### Changed — the landing page teaches
-
-Rebuilt from a sixteen-bullet inventory into: the problem → four persona paths → the seven
-verification rungs → the five credibility questions → inventory (below the fold) → honest
-scope. It now answers *"should I use this?"* before *"what is in it?"*.
-
-### Verification of this release
-
-**Full stress test: 10 seeded defects across all seven gates, 10/10 caught, 0 false alarms on
-the clean control.** Every gate carries a qualification-ledger row; the checks that remain
-unqualified are listed there by name.
-
-Three gates caught this release's own work before it shipped: the link checker caught a file
-move, the count gate caught the guide's own illustrative example reading as a real assertion,
-and the pre-commit hook aborted a commit outright.
+Three gates caught this release's own work before it shipped, and two external Codex review
+rounds (4 + 4 findings) were adjudicated with every finding reproduced before being acted on —
+7 confirmed and fixed, 1 refuted with line evidence. A 14-component adversarial workflow audit
+(85 agents, refute-biased verification) then confirmed 63 further defects, all fixed in this
+release; its full findings are preserved in the qualification ledger's audit note.
 
 And one finding worth more than the fixes: **rebuilding the landing page silently removed it
 from gate coverage.** Every gate stayed green because the page was no longer being *matched*.
 A gate that matches nothing reports nothing. Caught by seeding a defect into that specific
-surface; coverage restored and re-proved. Count assertions went **29 → 34**, and a falling
-number is now documented as the signal to investigate.
+surface; coverage restored and re-proved. A falling assertion count is now documented as the
+signal to investigate.
+
 
 ### Added — the laws from the working machine
 
@@ -187,7 +151,7 @@ routines, where *did not run* is a failure rather than silence.
 - **`pdf-processing.md` extended for corpora.** The rule was right for one paper and does not
   scale by multiplication; more than two or three documents means one subagent per document.
 
-**Inventory at release: 61 skills, 18 agents, 37 rules, 7 hooks, 14 references, 7 gates**
+**Inventory at release: 61 skills, 18 agents, 37 rules, 7 hooks, 15 references, 8 gates**
 (was 52 / 18 / 32 / 7 / 9 / 3 at v2.1.0).
 
 ### Upgrading from v2.1
@@ -441,7 +405,7 @@ Promotes the v1.8.0 `/preregister` and `/checkpoint` skills from appendix entrie
 
 ### Pass 2C — `/review-paper --variance N` reviewer-disposition variance mode (2026-05-20)
 
-Adds a fourth `--peer` mode to `/review-paper`: **`--variance` (with integer N, default 3)** runs N referees with independently sampled dispositions from the 6-way taxonomy, then the editor synthesizes the results into a **decision distribution** (not a point estimate). Motivated by AgentReview (ACL 2024, [arXiv:2406.12708](https://arxiv.org/abs/2406.12708)), which found ~37% of paper decisions vary purely from reviewer-disposition sampling.
+Adds a fourth `--peer` mode to `/review-paper`: **`--variance` (with integer N, default 3)** runs N referees with independently sampled dispositions from the 6-way taxonomy, then the editor synthesizes the results into a **decision distribution** (not a point estimate). Motivated by AgentReview (EMNLP 2024, [arXiv:2406.12708](https://arxiv.org/abs/2406.12708)), which found ~37% of paper decisions vary purely from reviewer-disposition sampling.
 
 #### Changed — `/review-paper` SKILL.md
 

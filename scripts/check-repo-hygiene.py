@@ -20,6 +20,9 @@ ROOT_ALLOW = {
     # the root because it is repo-wide and read by check-staleness.py; git does not
     # preserve mtimes, so content fingerprints are the only portable answer.
     ".render-stamp",
+    # Written by /voice-profile at the root (the skill documents this location);
+    # an author's voice profile is a legitimate committed artifact.
+    "voice-profile.md",
 }
 ROOT_ALLOW_DIRS = {
     ".claude", ".git", ".github", ".githooks", ".vscode", "Figures", "Preambles",
@@ -29,10 +32,13 @@ ROOT_ALLOW_DIRS = {
 
 # Names that mean "I was experimenting". These must not live in tracked source.
 DRAFT_PATTERNS = [
-    (r'(?i)^(untitled|tmp|temp|scratch|foo|bar|baz|asdf|test123)\b', "placeholder name"),
+    (r'(?i)^(untitled|tmp|temp|scratch|foo|bar|baz|asdf|test123)(?![a-z0-9])', "placeholder name"),
     (r'(?i)[-_ ](old|bak|backup|copy|orig|original|prev|deprecated)\.[a-z0-9]+$', "superseded copy — archive it or delete it"),
     (r'(?i)[-_ ](v\d+|final|new|latest|fixed|updated|real|actual)\.[a-z0-9]+$', "version-in-filename — that is what git is for"),
-    (r'^.+ \d+\.[a-z0-9]+$', "numbered duplicate (e.g. 'file 2.md') — an accidental copy"),
+    # 'name 2.md' is flagged ONLY when the base 'name.md' also exists — the true
+    # accidental-copy signature. Bare 'Lecture 2.tex' style names are ordinary
+    # academic filenames (v2.5 audit false-positive).
+    (None, None),
     (r'^.+\(\d+\)\.[a-z0-9]+$', "parenthesised duplicate — an accidental copy"),
     (r'(?i)^(copy of |untitled )', "unrenamed copy"),
 ]
@@ -50,7 +56,11 @@ def main():
         print("check-repo-hygiene: no tracked files (not a git repo?)", file=sys.stderr); return 2
     errs, warns = [], []
 
-    # 1. root clutter
+    # 1. root clutter — files AND top-level directories (ROOT_ALLOW_DIRS was
+    #    previously dead code; the audit caught that no directory check ran)
+    top_dirs = {f.split("/",1)[0] for f in files if "/" in f}
+    for d in sorted(top_dirs - ROOT_ALLOW_DIRS):
+        errs.append(f"{d}/: unexpected top-level directory — add to ROOT_ALLOW_DIRS with a reason, or relocate")
     for f in files:
         if "/" in f: continue
         if f not in ROOT_ALLOW:
@@ -59,11 +69,24 @@ def main():
 
     # 2. draft / scratch / duplicate naming anywhere
     NUMBERED_STAGE = re.compile(r'^\d+[-_]')   # 01_explore.R, 02_clean.R — pipeline stages, not drafts
+    tracked_set = set(files)
     for f in files:
         base = os.path.basename(f)
         if NUMBERED_STAGE.match(base):
             continue
+        # explorations/ is the sandbox BY DESIGN — its own protocol permits
+        # versioned and dated filenames there (exploration-folder-protocol.md).
+        if f.startswith("explorations/"):
+            continue
+        # sibling-required numbered-duplicate check
+        m2 = re.match(r'^(.*) \d+(\.[a-z0-9]+)$', base, re.I)
+        if m2:
+            sib = os.path.join(os.path.dirname(f), m2.group(1) + m2.group(2))
+            if sib in tracked_set:
+                errs.append(f"{f}: numbered duplicate of {sib} — an accidental copy")
+                continue
         for pat, why in DRAFT_PATTERNS:
+            if pat is None: continue
             if re.search(pat, base):
                 errs.append(f"{f}: {why}")
                 break
