@@ -189,7 +189,7 @@ This workflow is designed as a **single hub for an entire research program** —
 ## What's Included
 
 <details>
-<summary><strong>18 agents, 60 skills, 37 rules, 7 hooks</strong> (click to expand)</summary>
+<summary><strong>18 agents, 60 skills, 36 rules, 7 hooks</strong> (click to expand)</summary>
 
 ### Agents (`.claude/agents/`)
 
@@ -265,7 +265,7 @@ This workflow is designed as a **single hub for an entire research program** —
 | `/simulation-study` (v1.10.0) | Scaffold + run a reproducible Monte Carlo study — parameterized DGP, estimator grid, seeded replications, bias/RMSE/coverage/size/power with Monte Carlo SEs |
 | `/r-package-check` (v1.10.0) | R package release gate — `devtools::document()` + tests + `R CMD check --as-cran`, triage ERROR/WARNING/NOTE vs CRAN policy, `r-package-reviewer` pass |
 | `/replication-package` (v2.0) | Assemble a submission-ready DCAS / openICPSR replication package — standard README, dataset manifest, computational-requirements capture, Table/Figure → script:line map, confidential-data deposit note (blocks on `/audit-reproducibility` FAIL) |
-| `/challenge` | Stress-test a finding against the choices you didn't make — specification curve over the discrete forks, then named sensitivity statistics (E-value, Cinelli–Hazlett RV, Oster δ, honest DiD) against the identifying assumption |
+| `/challenge` | Stress-test a finding against the choices you didn't make — specification curve over the discrete forks, then named sensitivity statistics (E-value, Cinelli–Hazlett RV, Oster δ, Rosenbaum Γ) against the identifying assumption |
 | `/capture-environment` (v2.0) | Snapshot the computational environment for a replication package — renv.lock + sessionInfo.txt (R), requirements.txt / environment.yml / uv.lock (Python), Stata version + ado list, seeds/RNG, optional pinning Dockerfile |
 | `/power-analysis` (v2.0) | Power / required-N / minimum-detectable-effect for study design — two-arm RCT (clustering/ICC, unequal allocation), multi-arm corrections, simulation-based power for non-standard designs; feeds `/preregister` |
 | `/disclosure-check` (v2.0) | Statistical-disclosure-limitation pre-screen for restricted/confidential-data outputs (small cells, complementary-suppression gaps, dominance, PII); CRITICAL/WARNING/OK + gate |
@@ -341,7 +341,6 @@ Rules use path-scoped loading: **always-on** rules load every session (~100 line
 | `simulation-conventions` (v1.10.0) | `**/*simulation*.R`, `**/*_sim.R`, `explorations/**` | Monte Carlo discipline: DGP/estimand, L'Ecuyer seeding, Monte Carlo SE, coverage-vs-truth, raw-result storage |
 | `r-package-conventions` (v1.10.0) | `R/**`, `tests/**`, `DESCRIPTION`, `NAMESPACE`, `man/**` | R package-source standards: no `library()` in `R/`, roxygen NAMESPACE, Imports/Suggests, testthat 3e, CRAN policy |
 | `confidential-data` (v2.0) | `data/**`, `**/*.dta`, `**/restricted/**`, `**/confidential/**` | Restricted/IRB-data protocol: never commit raw data, disclosure clearance before release, restricted-data-safe multi-author git topology |
-| `did-conventions` (v2.0) | `**/*did*.R`, `**/*event*study*.R`, `**/*att_gt*`, `**/*csdid*.do`, `**/*drdid*` | DiD/event-study standards (Sant'Anna): LONG data + gname coding, doubly-robust default, control-group rule, uniform-band inference, mandatory pre-trend/HonestDiD/didFF diagnostics, replicate-and-verify-to-1e-6 |
 | `inference-robustness` (v2.0) | `scripts/**/*.R`, `**/*.do`, `**/*.py` | Multiple-testing (FWER/Romano-Wolf vs FDR/Anderson sharpened-q, pre-register the family) + specification-curve / leave-one-out / wild-cluster-bootstrap robustness |
 
 ### Templates (`templates/`)

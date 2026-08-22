@@ -20,20 +20,6 @@ different route). Estimand forks are reported separately — averaging over them
 | Weighting | unweighted · population · IPW | `estimand` |
 | Missing data | complete case · imputation · indicator | `estimate` |
 
-## Staggered DiD / event study
-
-| Fork | Alternatives | Kind |
-|---|---|---|
-| Comparison group | never-treated · not-yet-treated | **`estimand`** |
-| Base period | universal · varying | **`estimand`** |
-| Aggregation | simple · group · calendar · event-time | **`estimand`** |
-| Anticipation window | 0 · 1 · 2 periods | `estimand` |
-| Covariates | none · baseline · baseline + unit trends | `estimate` |
-| Estimator | doubly robust · outcome regression · IPW | `estimate` |
-| Event-time trimming | balanced vs unbalanced event window | `estimand` |
-
-> The first three are the classic silent estimand switches. Two papers reporting "the ATT" with
-> different choices here are not estimating the same thing.
 
 ## Regression discontinuity
 

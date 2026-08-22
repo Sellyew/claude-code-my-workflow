@@ -25,9 +25,9 @@ Write a document that defines *exactly what counts as a solution*, before the fi
   not: interchanging limits without justification, "by standard arguments", treating a
   plug-in estimator's error as second-order without the rate, assuming away boundary cases
   (unbounded weights, atoms in the propensity score, degenerate variance).
-- **Problem-specific traps.** For DiD-type problems: anticipation, staggered-timing
-  composition, comparison-group contamination. For semiparametrics: the tangent-space
-  calculation that quietly assumes more smoothness than stated.
+- **Problem-specific traps.** For semiparametrics: the tangent-space calculation that quietly
+  assumes more smoothness than stated; for bootstrap claims: the centering that changes under
+  the null nobody restated.
 - **Exit criteria.** What ends the attempt — a proof, a counterexample, or a named blocked
   route with the exact missing lemma. *A blocked route is a scientific outcome.*
 

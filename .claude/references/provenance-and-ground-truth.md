@@ -149,4 +149,3 @@ comparison may be closed as incomplete.*
 
 - [`verification-ladder.md`](verification-ladder.md) · [`external-oracle-process.md`](external-oracle-process.md)
 - [`.claude/rules/replication-protocol.md`](../rules/replication-protocol.md) — the tolerance contract
-- [`.claude/rules/did-conventions.md`](../rules/did-conventions.md) — never reimplement an estimator

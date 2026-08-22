@@ -48,14 +48,11 @@ of the challenge.
 | **Clustering level** | unit / treatment-assignment / two-way |
 | **Weighting** | unweighted / population / inverse-propensity |
 | **Functional form** | levels / logs / IHS / Poisson |
-| **Comparison group** | never-treated / not-yet-treated |
-| **Reference period** | universal base / varying base |
 | **Winsorization** | none / 1% / 5% |
-| **Aggregation** | simple / group / calendar / event-time |
 
-> **Comparison group, reference period, and aggregation** are not neutral in staggered DiD —
-> they change the *estimand*, not just the estimate. Record them as estimand choices and say
-> so in the report ([`references/fork-catalog.md`](references/fork-catalog.md) labels every fork).
+> Some forks change the **estimand**, not just the estimate — averaging over them is
+> meaningless. [`references/fork-catalog.md`](references/fork-catalog.md) labels every fork;
+> record estimand forks separately and say so in the report.
 
 **Ship `--dry-run` first.** Print the grid size and an estimated runtime before executing
 anything. A 6-fork grid with 3 options each is 729 fits.
@@ -95,7 +92,6 @@ See [`references/sensitivity-statistics.md`](references/sensitivity-statistics.m
 | Unobserved confounding | **E-value**; **Cinelli–Hazlett robustness value** |
 | Selection on observables → unobservables | **Oster δ** (with a stated R²max) |
 | Matched design | **Rosenbaum Γ** bounds |
-| DiD pre-trends | **Rambachan–Roth honest DiD** — *never* a naive pre-test |
 | RD | **McCrary/Cattaneo density**; covariate placebo |
 | IV | over-identification and placebo outcomes — the exclusion restriction is **not testable** |
 
@@ -126,8 +122,6 @@ the sensitivity statistics with their values, and **every attempt including the 
 - **Reporting only the specifications that agree** — a curve showing only supporting cells is a
   fishing expedition with better graphics.
 - **Treating a wide curve as failure.** Wide is a finding. Publish it and say what drives it.
-- **Naive pre-testing for parallel trends.** Failing to reject is not evidence of parallel
-  trends; that is what honest DiD exists for.
 - **Adding forks nobody would defend** to pad the denominator and dilute the fragile cells.
 
 ## Reference files
@@ -140,6 +134,5 @@ the sensitivity statistics with their values, and **every attempt including the 
 ## Cross-references
 
 - [`verification-ladder.md`](../../references/verification-ladder.md) — rung 4 (analytic verification) and rung 5 (the ledger)
-- Honest DiD is **driven, never reimplemented**: `HonestDiD` (R) / `honestdid` (Stata), per [`did-conventions.md`](../../rules/did-conventions.md)
 - [`/simulation-study`](../simulation-study/SKILL.md) — when the question is finite-sample performance, not robustness
 - [`/preregister`](../preregister/SKILL.md) — reserve a holdout before the search, not after

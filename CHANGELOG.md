@@ -15,8 +15,12 @@ not vetted its current content, and **methodological prescriptions in the owner'
 ship without the owner's current sign-off**. A recorded sign-off from an earlier version does
 not transfer to later content. `did-conventions.md` remains as the conventions reference;
 honest-DiD and the estimators are driven through the canonical packages directly
-(`did`/`DRDID`/`HonestDiD` in R, `csdid`/`drdid`/`honestdid` in Stata). The skill's eval
-measurement is preserved in the qualification ledger as a record, annotated with the removal.
+(`did`/`DRDID`/`HonestDiD` in R, `csdid`/`drdid`/`honestdid` in Stata). The veto applies to ALL unvetted DiD-prescriptive content, removed in the same release:
+the `did-conventions.md` rule, the staggered-DiD sections of `/challenge`'s fork catalogue,
+the honest-DiD entry in its sensitivity-statistics catalogue, the two DiD eval cases, and
+every one-line echo of those prescriptions in the references, guide, and landing page. What
+remains says only: use the canonical packages and the owner's published work. Eval
+measurements are preserved in the qualification ledger as records, annotated.
 
 
 A **verification and currency release.** The substrate moved underneath the template over ten

@@ -53,25 +53,6 @@ regression and call it a bound.
 
 ---
 
-## Difference-in-differences
-
-### Rambachan–Roth honest DiD
-**Question:** if parallel trends holds only *approximately*, how large a violation can the
-conclusion tolerate?
-**Report:** breakdown `M̄` under relative-magnitudes restrictions, and the sensitivity plot.
-Lead with relative magnitudes; smoothness restrictions are a secondary lens.
-**Implementation:** `HonestDiD` (R), `honestdid` (Stata).
-**Watch — this is the important one:** a **naive pre-test is not a substitute**. Failing to
-reject a pre-trend is not evidence of parallel trends; it is frequently evidence of low power,
-and pre-testing distorts the subsequent inference. Report honest DiD *instead of*, not
-alongside, "pre-trends look flat."
-
-### Comparison-group and base-period choices
-Never-treated vs not-yet-treated, and universal vs varying base period, are **estimand
-choices**, not robustness dials. Report them as forks in the specification curve and state
-which the headline uses and why.
-
----
 
 ## Regression discontinuity
 

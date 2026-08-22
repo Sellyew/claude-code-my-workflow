@@ -107,8 +107,7 @@ So: enumerate the forks and report the distribution.
 - **Specification curve / multiverse** over measure definition, sample filter, control set,
   clustering level, weighting, winsorization.
 - **Named computable sensitivity statistics** — turn "challenge the assumption" into a number:
-  Rambachan–Roth honest DiD (**never** naive pre-testing), Oster δ, E-value,
-  Cinelli–Hazlett robustness value, Rosenbaum Γ, McCrary/Cattaneo density.
+  Oster δ, E-value, Cinelli–Hazlett robustness value, Rosenbaum Γ, McCrary/Cattaneo density.
 - **Placebo and falsification** — negative outcomes, negative exposures, timing placebos.
 - Label each statistic **executable here** vs **describe-and-cite** — honesty about what your
   environment can actually run is itself a verification step.
