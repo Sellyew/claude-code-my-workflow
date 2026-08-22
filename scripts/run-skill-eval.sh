@@ -58,19 +58,47 @@ echo "  ok"
 # `--setting-sources user` does remove it (project skills stop loading).
 # This check exists because a prior version of this harness silently compared
 # baseline against baseline and produced a clean, low-variance, entirely false result.
-PROBE="Reply with ONLY the number of skills whose name starts with '${SKILL:0:4}' that you can invoke."
-ON="$(timeout 120 claude -p "$PROBE" --output-format text 2>/dev/null | tr -dc '0-9' | head -c 3)"
-OFF="$(timeout 120 claude -p "$PROBE" --setting-sources user --output-format text 2>/dev/null | tr -dc '0-9' | head -c 3)"
-echo "── manipulation check: skill visible with=${ON:-?} without=${OFF:-?} ──"
-if [ "${ON:-0}" = "${OFF:-0}" ]; then
-    echo "" >&2
-    echo "eval: ABORT — the manipulation did not take. The skill is equally visible in" >&2
-    echo "      both arms (${ON:-?} vs ${OFF:-?}), so any measured delta would be noise" >&2
-    echo "      between two identical conditions. Fix the disable mechanism before" >&2
-    echo "      recording anything." >&2
+# BEHAVIORAL manipulation check.
+#
+# Self-report probes ("can you see skill X? YES/NO") proved non-deterministic in
+# BOTH single-shot and best-of-3 forms — the same question answered 1, then 0,
+# then 1 across an hour. Asking a model about its own tool inventory is not a
+# measurement.
+#
+# Instead: make each arm PROVE it by explicit invocation. `/skill <question>`
+# forces the skill file into context in the with-arm; in the without-arm
+# (--setting-sources user) the skill does not exist, so the invocation cannot
+# draw on its content. We check for a MARKER: a distinctive string that appears
+# in the skill's own files and nowhere in the model's general knowledge.
+# Per-skill marker: evals/marker.txt line 1 = question, line 2 = expected substring.
+# Falls back to a generic ask-for-verbatim-heading probe.
+MARKER_FILE="$(dirname "$CASES")/marker.txt"
+if [ -f "$MARKER_FILE" ]; then
+    MARKER_Q="$(sed -n 1p "$MARKER_FILE")"
+    MARKER_EXPECT="$(sed -n 2p "$MARKER_FILE")"
+else
+    MARKER_Q="Quote verbatim the first markdown heading (the line starting with #) of your skill instructions."
+    MARKER_EXPECT="$(grep -m1 '^# ' ".claude/skills/$SKILL/SKILL.md" | sed 's/^# //' | cut -c1-40)"
+fi
+echo "── manipulation check (behavioral: retrieve a fact only the skill contains) ──"
+ON_RESP="$(timeout 180 claude -p "/$SKILL $MARKER_Q" --output-format text 2>/dev/null)"
+OFF_RESP="$(timeout 180 claude -p "/$SKILL $MARKER_Q" --setting-sources user --output-format text 2>/dev/null)"
+ON=0; OFF=0
+grep -qiF "$MARKER_EXPECT" <<<"$ON_RESP"  && ON=1
+grep -qiF "$MARKER_EXPECT" <<<"$OFF_RESP" && OFF=1
+echo "  marker retrieved: with=$ON  without=$OFF"
+if [ "$ON" = "0" ]; then
+    echo "eval: ABORT — the WITH arm could not retrieve the skill's own marker phrase." >&2
+    echo "      Either the skill is not loading under /$SKILL invocation, or MARKER_Q/" >&2
+    echo "      MARKER_EXPECT do not match this skill — set a per-skill marker." >&2
     exit 3
 fi
-echo "  ok — arms are genuinely different"
+if [ "$OFF" = "1" ]; then
+    echo "eval: ABORT — the WITHOUT arm retrieved the marker anyway; the disable did" >&2
+    echo "      not take, so the arms are not genuinely different." >&2
+    exit 3
+fi
+echo "  ok — with-arm proves skill access; without-arm demonstrably lacks it"
 
 pass=0; total=0; pass_off=0
 for case_file in "$CASES"/*.md; do

@@ -43,6 +43,8 @@ Cross-session context lives in [MEMORY.md](MEMORY.md); past plans, specs, and se
 
 **How we write** — [`writing-with-ai.md`](.claude/rules/writing-with-ai.md): internal vs external-facing documents, why a model cannot make its own output stop reading as model output, and the human-readable standard for anything with your name on it.
 
+**Theory work** — [`theory-proving.md`](.claude/references/theory-proving.md): proof contracts, portfolio search with isolated explorers, counterexample-hunting your own lemmas, adversarial audits, and the rule that an AI-generated proof is a claim, not a theorem.
+
 **The laws** — [`research-agent-laws.md`](.claude/references/research-agent-laws.md): 17 laws for running agents on research infrastructure, each paid for by a real incident.
 
 **How we remember** — the record lives in the repo, not the transcript:
