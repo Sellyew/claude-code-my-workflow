@@ -10,7 +10,7 @@ repository-code: "https://github.com/pedrohcgs/claude-code-my-workflow"
 url: "https://psantanna.com/claude-code-my-workflow/"
 license: MIT
 version: 2.5.0
-date-released: 2026-08-22
+date-released: 2026-08-23
 keywords:
   - claude-code
   - economics

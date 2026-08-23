@@ -6,7 +6,7 @@ If you have forked this template, see the **Upgrading** section at the bottom fo
 
 ---
 
-## v2.5.0 — 2026-08-22
+## v2.5.0 — 2026-08-23
 
 ### Removed — `/did-event-study` (owner veto, 2026-08-22)
 
