@@ -1137,7 +1137,7 @@ Starting 2026-06-15, `claude -p` headless subprocess calls (used by `/coarse-rev
 | **Don't ask** | `dontAsk` | Auto-denies tools unless pre-approved in allowlist | Restricted environments where only allowlisted tools run |
 | **Plan** | `plan` | Read-only --- no edits allowed | Exploring code, reviewing before acting |
 | **Auto** | `auto` | Classifier-gated; everything runs unless flagged risky. **Since 2026-08-14 this is the default starting mode** for new interactive terminal and VS Code sessions on Pro, Max, and Team, and it needs no opt-in flag on Bedrock, Google Cloud's Agent Platform, or Microsoft Foundry | Long autonomous tasks with safety net --- the recommended mode for trusted repos when bypass is too permissive |
-| **Bypass** | `bypassPermissions` | Skips **all** permission prompts and safety checks — including writes to protected paths (`.git`, `.vscode`, `.idea`, `.husky`, `.claude`). Anthropic's docs advise reserving it for isolated environments | CI/CD, headless scripts, and — eyes open — trusted-repo daily driving: nothing prompts, so pair it with plan-first and the shipped `git-guardrails` hook |
+| **Bypass** | `bypassPermissions` | Skips **all** permission prompts and safety checks — including writes to protected paths (`.git`, `.vscode`, `.idea`, `.husky`, `.claude`). Anthropic's docs advise reserving it for isolated environments | CI/CD, headless scripts, and — eyes open — trusted-repo daily driving: nothing prompts, so pair it with plan-first and the shipped `git-guardrails` hook — which narrows the common accidents rather than replacing the prompt you turned off |
 
 Set via CLI flag (`claude --permission-mode plan`), the `/config` command, or `permissions.defaultMode` in `settings.json`.
 
@@ -1365,7 +1365,7 @@ The template includes 8 hooks for logging, notifications, context survival, git 
 | Context monitor | `PostToolUse[Bash|Agent|Task]` | Progressive warnings at 40%/55%/65%/80%/90% context |
 | Git guardrails | `PreToolUse[Bash]` | Blocks destructive git (`reset --hard`, `clean -f`, `push --force`, `add -A`), and refuses a merge, rebase, or pull while the tree is dirty — including chains that would clean it first |
 | Claim reconcile | `PostToolUse[Write|Edit|MultiEdit]` | Flags stale numeric claims when analysis scripts change |
-| Root-of-trust guard | `PreToolUse[Bash]` | Denies shell writes into `.claude/settings*.json`, `.claude/hooks/`, and `.githooks/` — the files that define every other gate |
+| Root-of-trust guard | `PreToolUse[Bash]` | A tripwire, not a lock: denies *silent shell* writes into `.claude/settings*.json`, `.claude/hooks/`, and `.githooks/` — the files that define every other gate — and applies the destructive-git deny list to `bash -c` / `env -S` payloads. `Edit`/`Write`, a branch switch, or a bug in the hook can still replace them |
 
 Two of these deserve a note, because both encode a lesson rather than a preference. **Git guardrails** refuses a merge, rebase, or pull while the working tree is dirty: the operation either aborts mid-way or quietly folds uncommitted work into the result, and neither outcome announces itself. Stash with a label first, or set `ALLOW_DIRTY_MERGE=1` if you mean it (`--abort`, `--continue`, and `--autostash` are exempt — the last because git does the stashing itself).
 
@@ -1373,9 +1373,13 @@ It refuses **even when the same command line would have cleaned the tree first**
 
 The hook did not end up smaller, and the reason is the useful part of the lesson. What replaced the prediction was *parsing* — working out which part of a command line is a git invocation, and whether a flag is really a flag or just a word inside a message. That is a harder-looking job that is nonetheless **finite and checkable**: shell grammar can be read correctly, and when the reading is wrong a test says so. Predicting what a command will *do* to the working tree has no such floor. Trading an unbounded problem for a bounded one is worth paying code for; the mistake was ever being on the unbounded side.
 
-What it still cannot see is written in its docstring rather than implied away: a `git merge` carried inside `bash -c`, an interpreter, an alias, a script, or a Makefile; the op hidden inside a command substitution; a `cd` into a different repository; and anything that dirties the tree between the check and the run. **Root of trust** exists because the settings file and the hook directory are the layer everything else stands on: a shell one-liner can disable every guard in the repo in a single redirect, and nothing in the transcript looks unusual afterwards. Reads pass, and `Edit` / `Write` stay allowed so a change to a gate arrives as a reviewable diff rather than an invisible overwrite; the hatch is `ALLOW_ROOT_OF_TRUST_WRITE=1`.
+What it still cannot see is written in its docstring rather than implied away: a `git merge` carried inside `bash -c`, an interpreter, an alias, a script, or a Makefile; the op hidden inside a command substitution; a `cd` into a different repository; and anything that dirties the tree between the check and the run. The second hook — the file is `root-of-trust-guard.py`, and the honest description is a **silent-shell-write tripwire** — exists because the settings file and the hook directory decide whether any other gate runs at all: a shell one-liner can disable every gate in the repo in a single redirect, and nothing in the transcript looks unusual afterwards. Reads pass, and `Edit` / `Write` stay allowed so a change to a gate arrives as a reviewable diff rather than an invisible overwrite; the hatch is `ALLOW_ROOT_OF_TRUST_WRITE=1`.
 
-Know what that second one is and is not. It reads the command line as text, so it catches the direct forms — redirects, `tee`, `cp`/`mv`/`rm`, in-place edits — and the payload carriers it knows about (`bash -c`, `env -S`), including behind common wrappers. It cannot see inside an interpreter it does not read (`python3 -c`, `perl -e`), a path piped into a deleter, or an execution form nobody has enumerated yet; the hook's own docstring lists that residual rather than implying it does not exist. **It is defense-in-depth against the silent path, not a proof that the gates cannot be disabled** — the real backstops are that `Edit`/`Write` changes are reviewable and that you chose the bypass posture deliberately. A guard whose advertised coverage exceeds its actual coverage is worse than none, because you stop looking.
+Because that hook already unwraps `bash -c` and `env -S` payloads to find writes hidden inside them, it now hands the unwrapped payload to git-guardrails' *own* destructive-git deny list as well — imported, not copied, so the two hooks cannot drift apart on what counts as destructive. That closes a gap the two of them had left open between each other: `bash -c 'git reset --hard'` and `bash -c 'git clean -fdx'` named no protected path for the first hook to test and looked like one opaque word to the second, so neither denied them, while the unwrapped spellings had been denied all along. The clean-tree check is *not* shared, so `bash -c 'git merge main'` on a dirty tree is still seen by neither.
+
+Now the part the name gets wrong. A repo-local, mutable, fail-open textual scan is not a root of trust, and the file name is a filename rather than a claim. The scan reads the command line as text, so it catches the direct forms — redirects, `tee`, `cp`/`mv`/`rm`, in-place edits — and the payload carriers it knows about, including behind common wrappers. It cannot see inside an interpreter it does not read (`python3 -c`, `perl -e`), a path piped into a deleter, or an execution form nobody has enumerated yet. More to the point, the files it watches stay replaceable through four channels the template deliberately allows, none of which trips it: an `Edit` / `Write` / `MultiEdit` on those same files — including one that deletes the hook's own registration from `.claude/settings.json`; an ordinary `git switch` onto a branch whose tree carries different hooks; a clean merge or pull that imports the same change; and a bug in the hook itself, which fails open and becomes a no-op.
+
+So state its value exactly: **it changes the channel a modification arrives through — a reviewable diff instead of an invisible overwrite — and nothing more.** It is not a lock, and in a fresh fork there may be no other control behind it: a visible diff is retrospective visibility rather than authorisation, choosing `bypassPermissions` is a posture rather than a control, and a machine-wide hook in `~/.claude/hooks/` is optional and lives outside the repository. If you want a real one, it has to sit outside the worktree — a non-empty `deny` list in the permission system, or a machine-level hook — and it has to cover `Edit`/`Write` and branch transitions too. Note also what the audit trail is not: the transcript records that a loss happened, and `git reflog` / `ORIG_HEAD` recover a moved commit pointer, but neither holds the bytes of an uncommitted edit, an untracked file, or an ignored one — which is exactly what `reset --hard` and `clean -fdx` destroy. A guard whose advertised coverage exceeds its actual coverage is worse than none, because you stop looking.
 
 Verification and Beamer-Quarto sync are enforced via auto-loaded rules, which are the right tool for nuanced judgment. Hooks are reserved for enforcement that *must* survive context compression.
 
@@ -1389,21 +1393,31 @@ instrument-calibration files. Someone reorganises the hooks directory and update
 to match, but types `.claude/hooks/calibration_guard.py` where the file on disk is
 `calibration-guard.py`.
 
-Nothing breaks. There is no error, because a hook whose command cannot be found simply does not
-run; the session continues, tools are allowed, and the transcript reads exactly as it did the week
-before. The guard is in the settings file, in the README, and in the onboarding doc. It is not in
-the process. Weeks later a calibration file is overwritten by an agent that the hook had been
-written to stop.
+What is lost is the *guarding*, and the symptom that replaces it is never legible as *a hook is
+misconfigured*. Which symptom you get depends on how the hook was registered, and both are bad in
+their own way. This template registers all but one of its hooks as `python3 <path>`; a path Python
+cannot open exits **2**, and exit 2 from a `PreToolUse` hook means BLOCK (the handler table below
+states that contract). So a typo on one of the guards would deny *every* matching call, and the
+reason handed back is an interpreter error about a missing file — the loudest possible failure,
+and still not one a reader parses as a settings typo. Registered as a bare path instead, the
+missing file exits 127 (126 if it exists but is not executable): a non-blocking error that scrolls
+past while the session continues, tools are allowed, and the only thing that changed is the one
+thing nobody was watching. That is the lab's case. The guard is in the settings file, in the
+README, and in the onboarding doc. It is not in the process. Weeks later a calibration file is
+overwritten by an agent that the hook had been written to stop.
 
 Gate 9, ledger coverage, is the check that would have caught it: it opens every hook registered in
-`.claude/settings.json` and requires the file to exist, be invocable, and be tracked in git. A
-mistyped path fails the build the moment it is committed.
+`.claude/settings.json` and requires the file to exist, be invocable, and be tracked in git.
+Nothing else in the repo reads the settings file against the disk, so **a hook can be wired to
+nothing while every gate in the suite stays green** — the failure has no detector of its own. That
+is what Gate 9 is worth: a mistyped path fails the build the moment it is committed, instead of
+waiting for the day the guard was supposed to fire.
 
 But a wired hook is not yet a working hook. A guard can keep its path, keep firing, and stop
 denying — an over-broad exception, a regex loosened during a debugging session, an early
 `return allow` left in. Gate 10, the hook battery, drives each active guard with synthetic events
 and requires it to still go red on the failure it was written for, and to stay green on the clean
-controls. Sixty-seven cases, and it finishes in seconds.
+controls. Ninety-five cases, and it finishes in seconds.
 
 So check that a guard still objects, not only that it still fires: a control dies as easily by
 running and no longer objecting as by never running at all, and proof of wiring is not proof of
@@ -2247,6 +2261,9 @@ your-project/                     ← main branch (stays clean)
 4. SYNC TO MAIN (when ready)
    cd ../..                # back to the primary worktree (main is checked out THERE;
                            # `git checkout main` inside the secondary worktree fails)
+   git status --porcelain  # must be empty — git-guardrails denies a merge into a
+                           # dirty tree, and "kept working on main" is the whole
+                           # point of a worktree, so expect it NOT to be empty
    git merge --squash quarto/lecture-06
    git commit -m "feat: add Lecture 6 Quarto version"
          ↓
@@ -2273,9 +2290,33 @@ git branch -D [branch-name]   # -D needed after --squash (no merge ancestry)
 
 # Squash-merge into main
 cd [primary-worktree]         # main lives in the primary worktree
+git status --porcelain        # empty, or the merge is denied — clear it first (below)
 git merge --squash [branch-name]
 git commit -m "feat: description of changes"
+
+# ...if the primary worktree is dirty, either stash around the merge:
+git stash push -u -m "pre-merge: in-flight edits"   # -u, or untracked files stay behind
+git merge --squash [branch-name]
+git commit -m "feat: description of changes"
+git stash pop
+
+# ...or let git do the stashing, which the hook exempts (tracked changes only):
+git merge --squash --autostash [branch-name]
+git commit -m "feat: description of changes"
 ```
+
+**The primary worktree is normally dirty when you reach the sync step, and that is the pattern
+working, not failing.** You used a worktree so you could keep editing on `main` while the other
+branch ran; those edits are still sitting there. The `git-guardrails` hook denies `git merge` on a
+non-empty `git status --porcelain`, so the merge is refused exactly when the pattern did its job.
+Clear the tree first — stash with a label, merge, pop — or use `--autostash`, which the hook
+exempts because git establishes the clean precondition itself rather than the hook guessing that
+some earlier segment of the command line did. After a `--autostash` squash the merge result is
+*staged* and your restored in-flight edits are *unstaged*, so the plain `git commit` above records
+the merge and leaves your work alone. The one thing `--autostash` does not cover is untracked
+files: if the branch adds a file at a path you are holding untracked, git aborts with *"untracked
+working tree files would be overwritten"* after the autostash has already been taken. When
+porcelain shows `??` lines you care about, use the explicit `-u` stash.
 
 ::: {.callout-note}
 ## `worktree.baseRef` (Apr 2026 Week 19)
@@ -3338,7 +3379,7 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | Context monitor | PostToolUse[Bash\|Agent\|Task] (command) | `.claude/hooks/context-monitor.py` |
 | Git guardrails | PreToolUse (command) | `.claude/hooks/git-guardrails.py` — blocks `reset --hard` / `clean -f` / `push --force` / `add -A`; refuses merge / rebase / pull on a dirty tree, including chains that would clean it first (`ALLOW_DIRTY_MERGE=1`) |
 | Claim reconcile | PostToolUse (command) | `.claude/hooks/claim-reconcile.py` — flags stale numeric claims when scripts change, including edits to a declared `appears_in` display |
-| Root-of-trust guard | PreToolUse (command) | `.claude/hooks/root-of-trust-guard.py` — denies shell writes to `.claude/settings*.json`, `.claude/hooks/`, `.githooks/`; reads and `Edit`/`Write` still pass (`ALLOW_ROOT_OF_TRUST_WRITE=1`) |
+| Root-of-trust guard | PreToolUse (command) | `.claude/hooks/root-of-trust-guard.py` — best-effort tripwire against *silent* shell writes to `.claude/settings*.json`, `.claude/hooks/`, `.githooks/`, plus the destructive-git deny list applied to `bash -c` / `env -S` payloads; reads and `Edit`/`Write` still pass, so it changes the channel rather than locking the files (`ALLOW_ROOT_OF_TRUST_WRITE=1`) |
 
 **Additional hook events** available in Claude Code (not used in this template but available for custom hooks):
 

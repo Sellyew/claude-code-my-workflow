@@ -20,6 +20,18 @@
 # real .claude/ tree is never written to, and the throwaway git repository is
 # created inside the temp directory, never the repo under test.
 #
+# ISOLATION IS NOT `git -C`. This battery runs inside `.githooks/pre-commit`,
+# and git EXPORTS its repository into a hook's environment: GIT_DIR,
+# GIT_INDEX_FILE, GIT_WORK_TREE, GIT_COMMON_DIR, GIT_OBJECT_DIRECTORY,
+# GIT_PREFIX, GIT_NAMESPACE and siblings. GIT_DIR overrides repository
+# DISCOVERY; `-C` only changes the working directory. From a LINKED WORKTREE
+# those variables are ABSOLUTE, so the fixture's `init`/`add`/`commit` operated
+# on the USER'S repository — writing a junk `seed` commit onto their branch,
+# leaving a phantom deletion in their tree, and aborting the commit that
+# triggered the hook. (Found by /blast-radius, 2026-08-23; reproduced end to
+# end from a linked worktree of a fresh clone.) The whole GIT_* namespace is
+# therefore stripped below before any fixture is built, and cases e1-e3 pin it.
+#
 # HOOK_DIR overrides which hook directory is exercised. That is how the battery
 # itself is qualified: point it at a stub guard that always allows and it must
 # go red, because a battery that cannot fail is decoration.
@@ -28,12 +40,36 @@
 # stdout). Exit 2 = the battery could not run, which is a failure, not a pass.
 set -uo pipefail
 
+# ── strip the inherited git environment (see header) ───────────────────────
+# Prefix-based, not a fixed list: a git version that adds one more
+# repository-scoping variable must not silently re-open the hole. Only
+# GIT_EXEC_PATH is kept — it locates git's own helper programs, not a
+# repository. Names are listed here for grep-ability, but the loop is what
+# enforces it: GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_COMMON_DIR
+# GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_PREFIX
+# GIT_NAMESPACE GIT_CEILING_DIRECTORIES GIT_DISCOVERY_ACROSS_FILESYSTEM
+# GIT_GRAFT_FILE GIT_ATTR_SOURCE GIT_CONFIG_* GIT_INDEX_VERSION.
+for _gv in ${!GIT_@}; do
+    [ "$_gv" = "GIT_EXEC_PATH" ] && continue
+    unset "$_gv"
+done
+unset _gv
+# The same names, spelled for `env -u` in fire()/fire_in() below. The strip
+# above already covers every child, so this is the second, explicit layer: it
+# survives someone re-exporting one of these mid-script.
+UNSET_GIT_ENV=(-u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_COMMON_DIR
+               -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES
+               -u GIT_PREFIX -u GIT_NAMESPACE -u GIT_CEILING_DIRECTORIES
+               -u GIT_DISCOVERY_ACROSS_FILESYSTEM -u GIT_GRAFT_FILE
+               -u GIT_ATTR_SOURCE -u GIT_INDEX_VERSION)
+
 DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 if [ -z "${DIR:-}" ] || [ ! -d "$DIR" ]; then
     echo "hook-battery: cannot resolve script directory" >&2; exit 2
 fi
 ROOT="$(cd "$DIR/.." && pwd)"
 HOOKS="${HOOK_DIR:-$ROOT/.claude/hooks}"
+SELF_PATH="$DIR/$(basename "$0")"   # absolute; cases e1-e3 re-enter this script
 
 for h in root-of-trust-guard.py git-guardrails.py claim-reconcile.py; do
     if [ ! -f "$HOOKS/$h" ]; then
@@ -55,15 +91,42 @@ fi
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/hook-battery.XXXXXX")" || exit 2
 trap 'rm -rf "$TMP"' EXIT INT TERM
 
+# ── --fixture-selftest: the child half of cases e1-e3 ──────────────────────
+# Cases e1-e3 re-enter THIS script with git's hook environment deliberately
+# exported at a decoy repository, and check that the fixture build lands in the
+# fixture. It has to be a re-entry rather than an inline subshell: the defect
+# was that the strip above did not exist, so the only honest way to exercise it
+# is to run the real top-of-script path in a contaminated environment. Builds
+# one fixture repo, commits in it, prints its HEAD, exits.
+if [ "${1:-}" = "--fixture-selftest" ]; then
+    SELF="$TMP/selftest-repo"
+    mkdir -p "$SELF" || exit 2
+    git -C "$SELF" init -q >/dev/null 2>&1
+    : > "$SELF/untracked.txt"
+    git -C "$SELF" add untracked.txt >/dev/null 2>&1
+    git -C "$SELF" -c commit.gpgsign=false -c tag.gpgsign=false \
+        -c user.email=battery@example.invalid -c user.name=hook-battery \
+        commit -q -m "seed" >/dev/null 2>&1
+    if [ -n "$(git -C "$SELF" status --porcelain 2>/dev/null)" ]; then
+        echo "selftest-fixture-not-clean"; exit 1
+    fi
+    git -C "$SELF" rev-parse HEAD 2>/dev/null || { echo "selftest-no-head"; exit 1; }
+    exit 0
+fi
+
 PASS=0; FAIL=0; FAILED=()
 ok() { PASS=$((PASS + 1)); printf '  PASS  %s\n' "$1"; }
 no() { FAIL=$((FAIL + 1)); FAILED+=("$1"); printf '  FAIL  %s\n        %s\n' "$1" "$2"; }
 
 OUT=""; RC=0
 fire() {  # fire <hook-file> <event-json> [VAR=VAL ...]  -> sets OUT, RC
+    # The GIT_* strip is repeated here (it is already done process-wide) because
+    # a CASE may deliberately re-export one — c27/c28 do, to prove the guard
+    # reads the directory it was ASKED about. `env` applies -u first and the
+    # trailing VAR=VAL assignments second, so a case that wants one back gets it.
     local hook="$1" ev="$2"; shift 2
     OUT="$(env -u ALLOW_ROOT_OF_TRUST_WRITE -u ALLOW_DIRTY_MERGE -u CLAUDE_STRICT_PATHS \
-           "$@" python3 "$HOOKS/$hook" < "$ev" 2>/dev/null)"
+           "${UNSET_GIT_ENV[@]}" "$@" python3 "$HOOKS/$hook" < "$ev" 2>/dev/null)"
     RC=$?
 }
 fire_in() {  # fire_in <hook-process-cwd> <hook-file> <event-json> -> sets OUT, RC
@@ -72,8 +135,16 @@ fire_in() {  # fire_in <hook-process-cwd> <hook-file> <event-json> -> sets OUT, 
     # c25 needs the two to DIFFER, so it runs the guard from somewhere else.
     local dir="$1" hook="$2" ev="$3"
     OUT="$(cd "$dir" && env -u ALLOW_ROOT_OF_TRUST_WRITE -u ALLOW_DIRTY_MERGE \
-           -u CLAUDE_STRICT_PATHS python3 "$HOOKS/$hook" < "$ev" 2>/dev/null)"
+           -u CLAUDE_STRICT_PATHS "${UNSET_GIT_ENV[@]}" \
+           python3 "$HOOKS/$hook" < "$ev" 2>/dev/null)"
     RC=$?
+}
+
+verdict() {  # verdict <text> — hand a LOCALLY computed result to the expect_
+             # helpers, so a case that does not fire a hook (section (e), which
+             # tests the battery's own isolation) is still counted and reported
+             # through the same three helpers as every other case.
+    OUT="$1"; RC=0
 }
 
 expect_deny() {     # the guard must refuse
@@ -282,6 +353,76 @@ expect_silent "a23 clean control: read-only git (git log -- <protected>) stays a
 fire root-of-trust-guard.py "$TMP/a24.json"
 expect_silent "a24 clean control: read-only git (git status <protected>) stays allowed"
 
+# a25/a26: SCOPE — THIS project, not the pattern wherever it appears on the
+# machine. `is_protected()` matched path TEXT with no repository anchoring, so
+# the guard denied writes into ANY tree containing `.claude/hooks` or
+# `.githooks`: a throwaway fixture clone, a second checkout, the user's own
+# ~/.claude — while its deny message asserted the path was "part of THIS
+# repository's root of trust". It bought no protection (this repo's gates are
+# not in those trees) and it BLOCKED the qualification ledger's own gate-9
+# reproduction, whose seeded defect is a mistyped hook path written into a
+# fixture clone's settings.json. A path now counts only when it resolves inside
+# the project (CLAUDE_PROJECT_DIR → the repo the call runs in → the repo this
+# hook ships in); if none resolves, the guard falls back to the text match and
+# says so. a25 pins that the real project path is still denied when the event
+# carries an explicit cwd; a26 pins that the fixture-clone write is allowed.
+mkdir -p "$TMP/rot-clone/.claude/hooks" "$TMP/rot-clone/.githooks"
+printf '{}\n' > "$TMP/rot-clone/.claude/settings.json"
+cat > "$TMP/a25.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf disabled > .claude/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a26.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"sed -i '' 's/notify.sh/notifyy.sh/' $TMP/rot-clone/.claude/settings.json"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a25.json"
+expect_deny   "a25 a write into THIS project's root of trust is denied when the event names its cwd"
+fire root-of-trust-guard.py "$TMP/a26.json"
+expect_silent "a26 the same write into a fixture clone OUTSIDE the project is allowed (the ledger's gate-9 reproduction)"
+
+# a27-a30 (r12): BACKSLASH-NEWLINE LINE CONTINUATION. `_TOKEN` listed `\n` as a
+# separator while its word class could not consume backslash+newline, so an
+# ordinary multi-line command was read as TWO segments and the half carrying the
+# protected path was never scored. Executed against the pre-fix guard: a `rm -f`
+# whose operand sat on the continued line emitted NO decision, and the same
+# string through `bash -c` really deleted `.claude/hooks/git-guardrails.py`;
+# continued `cp`/`mv`/redirection into `settings.json` were silent too, while
+# every one-line spelling DENIED — the guarantee turned on where the author had
+# put a newline. Continuations are now spliced before tokenising. The two
+# controls are the other direction, and neither is padding:
+#   a29 — a REAL newline with no backslash must still SEPARATE commands, so a
+#         later READ is not folded into an earlier deleter's argument list.
+#   a30 — an ESCAPED backslash (a literal `\` argument) before a real newline is
+#         NOT a continuation. A naive `\\\n -> " "` join splices here and turns
+#         a29's shape into a false DENY; the fix consumes even backslash runs
+#         first, so only an odd trailing backslash joins.
+#
+# The JSON spellings these four turn on, defined once because the escaping is
+# where such a fixture goes quietly wrong: a JSON string carries a backslash as
+# `\\` and a newline as `\n`.
+JCONT='\\\n'      # `\` + newline  — a POSIX LINE CONTINUATION (joins the line)
+JNL='\n'          # a bare newline — an ordinary command SEPARATOR
+JBSNL='\\\\\n'    # `\\` + newline — a literal backslash, then a separator
+cat > "$TMP/a27.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f ${JCONT}    .claude/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a28.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf disabled > ${JCONT}    .claude/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a29.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f /tmp/hook-battery-no-such-file${JNL}cat .claude/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a30.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f /tmp/hook-battery-no-such-file${JBSNL}cat .claude/settings.json"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a27.json"
+expect_deny   "a27 r12: a DELETE of a protected path written across a LINE CONTINUATION is denied (this exact spelling went silent and really removed the guard file)"
+fire root-of-trust-guard.py "$TMP/a28.json"
+expect_deny   "a28 r12: a REDIRECTION into settings.json across a line continuation is denied (the quote-stripped backstop sees the joined line too)"
+fire root-of-trust-guard.py "$TMP/a29.json"
+expect_silent "a29 r12 control: a GENUINE newline still separates commands — a following read is not folded into the preceding rm's arguments"
+fire root-of-trust-guard.py "$TMP/a30.json"
+expect_silent "a30 r12 control: an ESCAPED backslash before a real newline is a literal backslash, not a continuation — the newline still separates (a naive backslash-newline join would false-deny here)"
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"
@@ -384,6 +525,31 @@ expect_silent "b13 r10 control: a FULLY QUOTED mention writes nothing and is sil
 fire git-guardrails.py "$TMP/b14.json"
 expect_silent "b14 r10 control: quoting the SAFE flag keeps it allowed (git push \"--force-with-lease\") — the port did not buy recall with substring matching"
 
+# b15-b17 (r12): the SAME backslash-newline defect as a27-a30, one hook over —
+# `_SEG_TOKEN` listed `\n` as a separator and its word class could not consume
+# backslash+newline, so a destructive flag that landed on the continued line was
+# invisible. Executed against the pre-fix guard on a dirty fixture, all SILENT:
+# `git clean \`+NL+`-xfd` (and run through bash it deleted the untracked file),
+# `git push \`+NL+`--force origin main`, `git reset \`+NL+`--hard HEAD~1`,
+# `git add \`+NL+`-A`, `git checkout \`+NL+`-- .`, `git restore \`+NL+`.`. Every
+# one-line spelling denied. b17 is the control in the other direction: the join
+# must not start denying the SAFE flag just because it was continued.
+cat > "$TMP/b15.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git clean ${JCONT}    -xfd"}}
+EOF
+cat > "$TMP/b16.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git push ${JCONT}--force origin main"}}
+EOF
+cat > "$TMP/b17.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git push ${JCONT}--force-with-lease origin main"}}
+EOF
+fire git-guardrails.py "$TMP/b15.json"
+expect_deny   "b15 r12: a destructive clean whose -xfd sits on a CONTINUED line is denied (this spelling was silent and deleted untracked files)"
+fire git-guardrails.py "$TMP/b16.json"
+expect_deny   "b16 r12: the same for a continued force push (git push \\<newline>--force origin main)"
+fire git-guardrails.py "$TMP/b17.json"
+expect_silent "b17 r12 control: the continued SAFE spelling (git push \\<newline>--force-with-lease) stays allowed — splicing continuations did not buy recall by denying every multi-line push"
+
 # ── (c) git-guardrails: the clean-tree precondition ────────────────────────
 # Needs a real repository to answer `git status --porcelain`, so build a
 # throwaway one inside the temp directory. Dirty first, then clean.
@@ -402,13 +568,41 @@ OTHER_REPO="$TMP/other-repo"
 mkdir -p "$OTHER_REPO"
 git -C "$OTHER_REPO" init -q >/dev/null 2>&1   # no files == a clean tree
 
-# ── r8: the rule this block now pins ───────────────────────────────────────
-# The clean-tree check STOPPED SIMULATING THE SHELL. It is a closed
-# whole-command allowlist: (1) no history op → silent; (2) an escape or
-# self-managing op (`--abort`/`--continue`/`--skip`/`--quit`/`--edit-todo`/
-# `--autostash`) → ALLOW without reading the tree; (3) otherwise read
-# `git status --porcelain` LIVE in the directory the invocation itself names
-# and DENY if it is non-empty — regardless of what any other segment claims.
+# A THIRD checkout, dirty in a way `git stash` can actually handle: ONE TRACKED
+# file modified, and no `??` entry anywhere. r13 needs this because `--autostash`
+# stopped being unconditionally exempt — it is now allowed only when porcelain
+# status reports no untracked entry — so the ALLOW direction of that rule cannot
+# be tested in $REPO, whose entire dirt IS an untracked file. Cases c19, c30 and
+# c42 run here; c9 is the same op in $REPO and must now DENY.
+TRACKED_REPO="$TMP/tracked-repo"
+mkdir -p "$TRACKED_REPO"
+git -C "$TRACKED_REPO" init -q >/dev/null 2>&1
+printf 'v1\n' > "$TRACKED_REPO/tracked.txt"
+git -C "$TRACKED_REPO" add tracked.txt >/dev/null 2>&1
+git -C "$TRACKED_REPO" -c commit.gpgsign=false -c tag.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    commit -q -m "seed" >/dev/null 2>&1
+printf 'v2\n' > "$TRACKED_REPO/tracked.txt"   # ` M tracked.txt`, no `??`
+
+# ── r8, AS AMENDED AT r13: the rule this block pins ────────────────────────
+# The clean-tree check STOPPED SIMULATING THE SHELL at r8, and r13 corrected two
+# things r8 got wrong. What it pins NOW, rule by rule:
+#   (0) an identified history op must be a STANDALONE SIMPLE COMMAND, or it is
+#       DENIED without reading the tree (r13). The reading is taken at
+#       PreToolUse, so a chain, pipeline, redirection, substitution, `cd` or
+#       assignment could act between the reading and git.
+#   (1) no history op as an actual command → silent.
+#   (2) an ESCAPE op (`--abort`/`--continue`/`--skip`/`--quit`/`--edit-todo`)
+#       → ALLOW without reading the tree. `--autostash` was in this list until
+#       r13 and is NOT any more: it reads the tree and is allowed only when
+#       there is no `??` entry, because git's autostash does not stash
+#       untracked files (c9 flipped to DENY; c42 is its control).
+#   (3) otherwise read `git status --porcelain` LIVE in the directory the
+#       invocation itself names and DENY if it is non-empty. An UNRESOLVED
+#       repository selector denies too, rather than falling back (r13).
+# r8's own heading called this "a closed whole-command allowlist". It was not —
+# an unidentified invocation (`bash -c '...'`) passes outside the rule entirely.
+# Corrected wording lives in the guard's docstring; see the r13 block below.
 #
 # DELETED IN r8, because each of these tested ONLY the simulator that is gone:
 #   old c7  `git stash push && git pull` ALLOW   — the stash-effect "clean" verdict
@@ -436,13 +630,16 @@ cat > "$TMP/c2.json" <<EOF
 {"tool_name":"Bash","tool_input":{"command":"git merge --abort"},"cwd":"$REPO"}
 EOF
 # c4: THE ACCEPTED COST, pinned. `git stash push -m x && git merge` used to be
-# ALLOWED (the remedy the old deny message recommended). It is now DENIED,
-# deliberately: the guard reads the tree, it does not simulate what the first
-# half of a chain would have done to it. Eight rounds of trying to simulate that
-# leaked eight times — including `git stash` not stashing UNTRACKED files at
-# all, so this very chain could leave the tree dirty and still be allowed. The
-# cost is one extra keystroke (run the two commands separately, which the guard
-# re-checks) against an unbounded soundness hole. DO NOT "fix" this back.
+# ALLOWED (the remedy the old deny message recommended). It is DENIED — since
+# r13 by RULE 0, before the tree is read at all, because a history op is
+# accepted only as a standalone simple command. Eight rounds of trying to
+# SIMULATE what the first half of such a chain would do leaked eight times,
+# including `git stash` not stashing UNTRACKED files at all, so this very chain
+# could leave the tree dirty and still be allowed. Note what r13 added: the
+# mirror image, `<a write> && git merge`, was ALLOWED on a clean tree the whole
+# time (c31) — the cost below was being paid in one direction only.
+# The cost is one extra TOOL CALL (run the two commands separately, which the
+# guard re-checks), not one keystroke. DO NOT "fix" this back.
 cat > "$TMP/c4.json" <<EOF
 {"tool_name":"Bash","tool_input":{"command":"git stash push -m wip && git merge feature-x"},"cwd":"$REPO"}
 EOF
@@ -490,7 +687,7 @@ EOF
 cat > "$TMP/c13.json" <<EOF
 {"tool_name":"Bash","tool_input":{"command":"git stash push -m wip && echo \`touch new2.R\` && git merge feature-x"},"cwd":"$REPO"}
 EOF
-# c14-c17: the rest of the closed allowlist.
+# c14-c17: the rest of the rule.
 #   c14 — rule 2 on a DIFFERENT op and a DIFFERENT escape flag (`rebase --continue`).
 #   c15 — `--no-autostash` does NOT qualify for rule 2: switching git's own
 #         stash-operate-restore OFF must face the live check.
@@ -545,7 +742,7 @@ cat > "$TMP/c18.json" <<EOF
 {"tool_name":"Bash","tool_input":{"command":"git merge -m \"wip --autostash later\" feature-x"},"cwd":"$REPO"}
 EOF
 cat > "$TMP/c19.json" <<EOF
-{"tool_name":"Bash","tool_input":{"command":"git merge --autostash -m \"keep --skip in the message\" feature-x"},"cwd":"$REPO"}
+{"tool_name":"Bash","tool_input":{"command":"git merge --autostash -m \"keep --skip in the message\" feature-x"},"cwd":"$TRACKED_REPO"}
 EOF
 cat > "$TMP/c20.json" <<EOF
 {"tool_name":"Bash","tool_input":{"command":"if true; then git merge feature-x; fi"},"cwd":"$REPO"}
@@ -568,6 +765,42 @@ EOF
 cat > "$TMP/c26.json" <<EOF
 {"tool_name":"Bash","tool_input":{"command":"git pull origin main  # finish the --continue later"},"cwd":"$REPO"}
 EOF
+# ── the INHERITED GIT ENVIRONMENT (found by /blast-radius, 2026-08-23) ──────
+# `tree_is_dirty()` shells out to `git status --porcelain` with a cwd and,
+# until this fix, no `env=`. git EXPORTS GIT_DIR / GIT_INDEX_FILE into every
+# hook it runs, ABSOLUTE when the commit came from a linked worktree — and
+# GIT_DIR overrides repository DISCOVERY, so `cwd=` was decoration: the guard
+# answered about whatever repository the environment named. Cases c1-c26 were
+# green in that environment FOR THE WRONG REASON — satisfied by reading the
+# session's own dirty repository rather than the fixture. Both directions are
+# pinned, because a fix that simply denied more would also have "passed" c27:
+#   c27 — event cwd DIRTY, environment pointing at a CLEAN repo  -> DENY
+#   c28 — event cwd CLEAN, environment pointing at the DIRTY one -> SILENT
+# c28 is the one that cannot be satisfied by over-denying.
+#
+# Both cases export GIT_WORK_TREE as well as GIT_DIR/GIT_INDEX_FILE, and that
+# is not padding: with GIT_DIR alone git still takes the WORKING TREE from the
+# process cwd, so the answer coincides with the right one and BOTH cases pass
+# against the unfixed guard — measured. Only when the environment names the
+# other repository COMPLETELY do the two readings disagree, which is what makes
+# these cases able to fail.
+cat > "$TMP/c28.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+# c29/c30 (r12): the clean-tree half of the line-continuation defect. With the
+# subcommand on the continued line the segment holding `git` had no subcommand
+# at all, so rule 1 answered "not a history op" and the tree was never read —
+# `git \`+NL+`merge feature-x` and `git \`+NL+`pull origin main` were SILENT on
+# the dirty fixture. c30 is the control the auditor asked for and it discriminates
+# in BOTH directions: with the continuation unspliced the exempt `--autostash`
+# lands in a SEPARATE segment, so the merge segment looks unexempt and DENIES —
+# a false deny of git's own stash-operate-restore. Splicing restores both.
+cat > "$TMP/c29.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git ${JCONT}merge feature-x"},"cwd":"$REPO"}
+EOF
+cat > "$TMP/c30.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge ${JCONT}--autostash feature-x"},"cwd":"$TRACKED_REPO"}
+EOF
 
 if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     fire git-guardrails.py "$TMP/c1.json"
@@ -575,7 +808,7 @@ if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     fire git-guardrails.py "$TMP/c2.json"
     expect_silent "c2 --abort stays allowed (it is how you get OUT of a dirty merge)"
     fire git-guardrails.py "$TMP/c4.json"
-    expect_deny   "c4 ACCEPTED COST: git stash push && git merge in ONE command is now DENIED on a dirty tree (the guard reads the tree, it does not simulate the chain — run the two as separate commands). Pinned so it is not 'fixed' back"
+    expect_deny   "c4 ACCEPTED COST: git stash push && git merge in ONE command is DENIED — at r13 by RULE 0 (a history op is accepted only as a STANDALONE simple command), before the tree is even read. Run the two as separate commands. Pinned so it is not 'fixed' back"
     fire git-guardrails.py "$TMP/c5.json"
     expect_deny   "c5 quoted git -C <path> merge on a DIRTY tree is still denied"
     fire git-guardrails.py "$TMP/c6.json"
@@ -585,11 +818,11 @@ if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     fire git-guardrails.py "$TMP/c8.json"
     expect_deny   "c8 git -C <other clean repo> stash && git merge on a DIRTY tree is denied (r6 bypass shape — the op's OWN cwd is what is read)"
     fire git-guardrails.py "$TMP/c9.json"
-    expect_silent "c9 git merge --autostash on a DIRTY tree is allowed (git stashes, merges and restores itself — it establishes the precondition)"
+    expect_deny   "c9 r13 (referee finding 1): git merge --autostash on a tree whose dirt is an UNTRACKED file is now DENIED — git's autostash does not stash untracked files, so it does NOT establish the precondition this check enforces. This case was expect_silent until r13, on a claim the referee reproduced as false"
     fire git-guardrails.py "$TMP/c10.json"
     expect_deny   "c10 git stash push && echo note > <tracked file> && git merge is denied (r7 bypass shape)"
     fire git-guardrails.py "$TMP/c11.json"
-    expect_deny   "c11 r8: cd <other repo> && git merge on a DIRTY session tree is denied (a cd cannot make the tree the guard reads look clean)"
+    expect_deny   "c11 r8/r13: cd <other repo> && git merge is denied — r8 because a cd cannot make the tree the guard reads look clean, r13 because a `cd` on a history op's command line now violates RULE 0 outright"
     fire git-guardrails.py "$TMP/c12.json"
     expect_deny   "c12 r8: git stash push && echo \$(touch f) && git merge is denied (a command substitution inside an 'inert' word used to preserve the clean mark)"
     fire git-guardrails.py "$TMP/c13.json"
@@ -605,7 +838,7 @@ if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     fire git-guardrails.py "$TMP/c18.json"
     expect_deny   "c18 r9: an exempt token inside an option VALUE (git merge -m \"wip --autostash later\") no longer satisfies rule 2 — the exemption is exact-token, not substring"
     fire git-guardrails.py "$TMP/c19.json"
-    expect_silent "c19 r9 control: a REAL --autostash is still exempt even when a -m value also names an exempt flag (the c18 fix did not buy recall with a false deny)"
+    expect_silent "c19 r9 control, MOVED to the tracked-dirt fixture at r13: a REAL --autostash is still allowed even when a -m value also names an exempt flag — over TRACKED dirt, which is what git's autostash actually handles"
     fire git-guardrails.py "$TMP/c20.json"
     expect_deny   "c20 r9: a compound-command keyword in front of the op (if true; then git merge x; fi) no longer hides it from the check"
     fire git-guardrails.py "$TMP/c21.json"
@@ -620,6 +853,16 @@ if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
     expect_deny   "c25 r9: a RELATIVE -C is resolved against the EVENT cwd, not the hook process's — fired from the other checkout, git -C . merge on the dirty event repo is denied"
     fire git-guardrails.py "$TMP/c26.json"
     expect_deny   "c26 r9: an exempt token inside a trailing shell COMMENT does not exempt the op"
+    fire git-guardrails.py "$TMP/c1.json" GIT_WORK_TREE="$OTHER_REPO" \
+         GIT_DIR="$OTHER_REPO/.git" GIT_INDEX_FILE="$OTHER_REPO/.git/index"
+    expect_deny   "c27 the INHERITED git environment does not answer for the event cwd: GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE pointing at a CLEAN repo, merge in the DIRTY event repo is still denied"
+    fire git-guardrails.py "$TMP/c28.json" GIT_WORK_TREE="$REPO" \
+         GIT_DIR="$REPO/.git" GIT_INDEX_FILE="$REPO/.git/index"
+    expect_silent "c28 the control for c27, which over-denying cannot satisfy: GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE pointing at the DIRTY repo, merge in a CLEAN event repo stays allowed"
+    fire git-guardrails.py "$TMP/c29.json"
+    expect_deny   "c29 r12: a history op whose SUBCOMMAND sits on a CONTINUED line (git \\<newline>merge feature-x) on a DIRTY tree is denied — the continuation used to split it into two segments and the tree was never read"
+    fire git-guardrails.py "$TMP/c30.json"
+    expect_silent "c30 r12 control, MOVED to the tracked-dirt fixture at r13: a continued --autostash (git merge \\<newline>--autostash feature-x) over TRACKED dirt is still allowed — unspliced, the exempt token lands in a SEPARATE segment, which now fails RULE 0 as well as the exemption test"
 else
     no "c1 merge on a DIRTY tree is denied" "fixture repo did not come up dirty"
     no "c2 --abort stays allowed" "fixture repo did not come up dirty"
@@ -646,6 +889,10 @@ else
     no "c24 a bare command wrapper (timeout 300 git pull) is denied" "fixture repo did not come up dirty"
     no "c25 a relative -C is resolved against the EVENT cwd" "fixture repo did not come up dirty"
     no "c26 an exempt token inside a trailing comment does not exempt the op" "fixture repo did not come up dirty"
+    no "c27 an inherited GIT_DIR does not answer for the event cwd (deny direction)" "fixture repo did not come up dirty"
+    no "c28 an inherited GIT_DIR does not answer for the event cwd (allow direction)" "fixture repo did not come up dirty"
+    no "c29 a history op with its subcommand on a CONTINUED line is denied on a dirty tree" "fixture repo did not come up dirty"
+    no "c30 control: a continued --autostash is still exempt" "fixture repo did not come up dirty"
 fi
 
 git -C "$REPO" add untracked.txt >/dev/null 2>&1
@@ -662,6 +909,116 @@ if [ -z "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
 else
     no "c3 clean control: the same merge on a CLEAN tree is allowed" \
        "fixture repo would not go clean"
+fi
+
+
+# ── (c) continued — r13: ENFORCEMENT AT EXECUTION TIME, NOT AT HOOK TIME ----
+# An independent frontier-model referee (2026-08-23) found the defect eleven
+# in-house rounds missed, because every one of them tested chains in ONE
+# direction. This hook decides at PreToolUse -- BEFORE bash runs the command --
+# so the referee's case, on a CLEAN repository:
+#
+#     printf '\n# local work\n' >> analysis.R && git merge main
+#
+# reads clean at hook time and is dirty when git executes. Rounds 4-12 DENIED the
+# chain that CLEANED the tree (c4) and ALLOWED the chain that DIRTIED it: the
+# whole false-deny cost, none of the safety, while the docstring's summary and
+# law 20 both claimed the stronger guarantee. A history op is therefore accepted
+# only as a STANDALONE SIMPLE COMMAND (rule 0) -- a genuinely closed grammar over
+# the text the parser sees, rather than a best-effort search for cleaners.
+#
+# These cases run on the CLEAN fixtures on purpose. On a dirty tree every one of
+# them would deny for the ordinary reason and the block could not discriminate at
+# all; on a clean tree, a deny can ONLY come from the rule under test. c32, c36,
+# c39 and c42 are the controls, and they are what stops rule 0 from being
+# satisfied by a guard that denies everything.
+cat > "$TMP/c31.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf 'x' >> analysis.R && git merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c32.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c33.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git pull | tail -5"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c34.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge \$(cat /tmp/hook-battery-branch-name)"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c35.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge --abort && echo done"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c36.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge -m \"wip && later\" feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c37.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C \"\$TARGET_REPO\" merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c38.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C /tmp/hook-battery-no-such-repo merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c39.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C $OTHER_REPO merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c40.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git --git-dir=$REPO/.git --work-tree=$REPO merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+cat > "$TMP/c41.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"GIT_DIR=$REPO/.git GIT_WORK_TREE=$REPO git merge feature-x"},"cwd":"$OTHER_REPO"}
+EOF
+
+if [ -z "$(git -C "$OTHER_REPO" status --porcelain 2>/dev/null)" ]; then
+    fire git-guardrails.py "$TMP/c31.json"
+    expect_deny   "c31 r13 THE REFEREE'S FAILING CASE: a write (printf >> analysis.R) chained before a history op is DENIED even though the tree is CLEAN right now -- the tree it reads is not the tree git will see. Allowed before r13"
+    fire git-guardrails.py "$TMP/c32.json"
+    expect_silent "c32 r13 CONTROL: the same op as a STANDALONE simple command on the same CLEAN tree is allowed -- rule 0 did not buy its recall by denying every history op"
+    fire git-guardrails.py "$TMP/c33.json"
+    expect_deny   "c33 r13: a PIPELINE carrying a history op is denied on a clean tree (another command runs in the same job)"
+    fire git-guardrails.py "$TMP/c34.json"
+    expect_deny   "c34 r13: a COMMAND SUBSTITUTION in the op's arguments is denied on a clean tree -- it executes before git does, and r8 already measured \$(touch f) writing to the tree"
+    fire git-guardrails.py "$TMP/c35.json"
+    expect_deny   "c35 r13: an ESCAPE flag does not license a CHAIN -- git merge --abort && echo done is denied, while the standalone spelling (c2) stays allowed"
+    fire git-guardrails.py "$TMP/c36.json"
+    expect_silent "c36 r13 CONTROL: shell metacharacters INSIDE a quoted option value are text, not syntax -- git merge -m \"wip && later\" is still allowed on a clean tree, so the rule-0 scan is quote-aware and did not regress to substring matching"
+    fire git-guardrails.py "$TMP/c37.json"
+    expect_contains "c37 r13 (referee finding 2): an UNRESOLVED -C target denies instead of falling back to the event cwd -- git -C \"\$TARGET_REPO\" with the variable unexpanded, fired from a CLEAN event repo, was SILENT before r13 because the guard read the wrong repository and liked what it saw" \
+                    "from that repository, or spell the path literally"
+    fire git-guardrails.py "$TMP/c38.json"
+    expect_deny   "c38 r13: the same for a -C naming a directory that simply does not exist -- an unanswered question is not an allow"
+    fire git-guardrails.py "$TMP/c39.json"
+    expect_silent "c39 r13 CONTROL: a -C that DOES resolve, at a clean repository, is still allowed -- denying unresolved selectors did not become denying every -C"
+    fire git-guardrails.py "$TMP/c40.json"
+    expect_deny   "c40 r13 (referee finding 3): --git-dir/--work-tree select a DIFFERENT repository with no -C and no cd (the referee reproduced native git doing it), so a history op carrying them is denied. Both repositories are CLEAN here, so nothing but the selector rule can produce this deny"
+    fire git-guardrails.py "$TMP/c41.json"
+    expect_deny   "c41 r13 (referee finding 3, environment form): GIT_DIR=/GIT_WORK_TREE= on the command line select another repository just as directly; every NAME=VALUE assignment on a history op's line is refused, so a future GIT_* variable cannot re-open this"
+else
+    no "c31 the referee's write-then-op chain is denied on a clean tree" "the OTHER_REPO fixture did not come up clean"
+    no "c32 control: a standalone op on a clean tree is allowed" "the OTHER_REPO fixture did not come up clean"
+    no "c33 a pipeline carrying a history op is denied" "the OTHER_REPO fixture did not come up clean"
+    no "c34 a command substitution in the op's arguments is denied" "the OTHER_REPO fixture did not come up clean"
+    no "c35 an escape flag does not license a chain" "the OTHER_REPO fixture did not come up clean"
+    no "c36 control: quoted metacharacters are text, not syntax" "the OTHER_REPO fixture did not come up clean"
+    no "c37 an unresolved -C target denies" "the OTHER_REPO fixture did not come up clean"
+    no "c38 a -C naming a missing directory denies" "the OTHER_REPO fixture did not come up clean"
+    no "c39 control: a resolvable -C at a clean repo is allowed" "the OTHER_REPO fixture did not come up clean"
+    no "c40 --git-dir/--work-tree on a history op is denied" "the OTHER_REPO fixture did not come up clean"
+    no "c41 GIT_DIR=/GIT_WORK_TREE= on a history op is denied" "the OTHER_REPO fixture did not come up clean"
+fi
+
+# c42: the ALLOW direction of the r13 --autostash rule, which c9 alone cannot
+# show. c9 proves --autostash is refused over UNTRACKED dirt; c42 proves it is
+# still accepted over TRACKED dirt, which is exactly what git's stash handles.
+# Without this case the referee's fix could have been "delete the exemption",
+# and the battery could not tell the two choices apart.
+cat > "$TMP/c42.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge --autostash feature-x"},"cwd":"$TRACKED_REPO"}
+EOF
+TRACKED_STATUS="$(git -C "$TRACKED_REPO" status --porcelain 2>/dev/null)"
+if [ -n "$TRACKED_STATUS" ] && ! printf '%s\n' "$TRACKED_STATUS" | grep -q '^??'; then
+    fire git-guardrails.py "$TMP/c42.json"
+    expect_silent "c42 r13 CONTROL for c9: git merge --autostash over dirt that is ONE MODIFIED TRACKED FILE and no ?? entry is still allowed -- the referee's correction narrowed the exemption to what git's autostash really handles, it did not delete it"
+else
+    no "c42 control: --autostash over tracked-only dirt is still allowed" \
+       "the TRACKED_REPO fixture is not modified-tracked-only (status: ${TRACKED_STATUS:-<empty>})"
 fi
 
 # ── (d) claim-reconcile ────────────────────────────────────────────────────
@@ -706,6 +1063,82 @@ fire claim-reconcile.py "$TMP/d2.json" HOME="$TMP" CLAUDE_PROJECT_DIR="$PROJ"
 expect_contains "d2 editing one display warns the others may disagree" "disagree"
 fire claim-reconcile.py "$TMP/d3.json" HOME="$TMP" CLAUDE_PROJECT_DIR="$PROJ"
 expect_silent   "d3 clean control: a file no passport mentions is silent"
+
+# ── (e) the battery's own isolation from git's hook environment ────────────
+# This battery runs INSIDE .githooks/pre-commit. Everything above is worthless
+# if the battery's own fixtures escape into the repository the hook was fired
+# from — and for one release they did: `git -C <fixture>` does not isolate
+# against an exported GIT_DIR, so from a linked worktree the fixture's
+# init/add/commit wrote a junk `seed` commit onto the USER'S branch, left a
+# phantom deletion in their tree, and aborted their commit on every retry.
+#
+# The check re-enters this script with git's hook environment exported at a
+# DECOY repository — the same two variables git really exports, absolute, as
+# they arrive from a linked worktree — and then asks the decoy three questions.
+#
+# The three verdicts are computed here and handed to `expect_contains` through
+# `verdict`, rather than calling ok/no directly, because the derived-counts
+# gate counts `expect_` CALL SITES as the case count and the battery prints
+# PASS+FAIL: a case that skips the helpers makes those two numbers disagree,
+# which is the drift that gate exists to stop. Exactly three calls are made on
+# every path, including the one where the decoy repo cannot be built.
+echo ""
+echo "  (e) hook-battery.sh — isolation from the git environment it runs inside"
+
+DECOY="$TMP/decoy"
+mkdir -p "$DECOY"
+git -C "$DECOY" init -q >/dev/null 2>&1
+: > "$DECOY/keep.txt"
+git -C "$DECOY" add keep.txt >/dev/null 2>&1
+git -C "$DECOY" -c commit.gpgsign=false -c tag.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    commit -q -m "decoy baseline" >/dev/null 2>&1
+DECOY_HEAD_BEFORE="$(git -C "$DECOY" rev-parse HEAD 2>/dev/null)"
+
+E1=""; E2=""; E3=""
+if [ -z "$DECOY_HEAD_BEFORE" ]; then
+    E1="DECOY-REPO-UNUSABLE: it would not reach a baseline commit"
+    E2="$E1"; E3="$E1"
+else
+    SELFTEST_OUT="$(GIT_DIR="$DECOY/.git" GIT_INDEX_FILE="$DECOY/.git/index" \
+                    GIT_PREFIX="" bash "$SELF_PATH" --fixture-selftest 2>/dev/null)"
+    SELFTEST_RC=$?
+    DECOY_HEAD_AFTER="$(git -C "$DECOY" rev-parse HEAD 2>/dev/null)"
+    DECOY_STATUS="$(git -C "$DECOY" status --porcelain 2>/dev/null)"
+
+    # e1: the fixture's own commit must be UNREACHABLE from the inherited
+    # repository — not merely "a different sha". Before the fix the child
+    # printed a real sha too; it was just the decoy's, freshly written.
+    if [ "$SELFTEST_RC" -ne 0 ] || [ -z "$SELFTEST_OUT" ]; then
+        E1="FIXTURE-BUILD-FAILED: the self-test exited $SELFTEST_RC saying '${SELFTEST_OUT:-<empty>}' (the user's own commit fails the same way)"
+    elif git -C "$DECOY" cat-file -e "${SELFTEST_OUT}^{commit}" 2>/dev/null; then
+        E1="FIXTURE-COMMIT-LANDED-IN-THE-INHERITED-REPO: $SELFTEST_OUT exists there, so the exported GIT_DIR was honoured"
+    else
+        E1="fixture-commit-absent-from-inherited-repo"
+    fi
+
+    if [ "$DECOY_HEAD_AFTER" = "$DECOY_HEAD_BEFORE" ]; then
+        E2="inherited-HEAD-unmoved"
+    else
+        E2="INHERITED-HEAD-MOVED: $DECOY_HEAD_BEFORE -> $DECOY_HEAD_AFTER"
+    fi
+
+    if [ -z "$DECOY_STATUS" ]; then
+        E3="inherited-tree-untouched"
+    else
+        E3="INHERITED-TREE-DIRTIED: $DECOY_STATUS"
+    fi
+fi
+
+verdict "$E1"
+expect_contains "e1 a fixture built under git's hook environment commits into the FIXTURE, not into the repository the environment names" \
+                "fixture-commit-absent-from-inherited-repo"
+verdict "$E2"
+expect_contains "e2 the inherited repository's HEAD is untouched (no junk 'seed' commit lands on the user's branch)" \
+                "inherited-HEAD-unmoved"
+verdict "$E3"
+expect_contains "e3 the inherited repository's working tree is untouched (no phantom deletion left behind)" \
+                "inherited-tree-untouched"
 
 # ── verdict ────────────────────────────────────────────────────────────────
 TOTAL=$((PASS + FAIL))

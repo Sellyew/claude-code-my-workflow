@@ -51,6 +51,18 @@ count: *by construction* (the DGP draws errors from a distribution with finite v
 moment condition holds) and *by a check* (a large-draw assertion, a condition number, a
 structural read of the generator). "It looks right" is neither.
 
+**And one assumption per line.** Two conditions merged under one label — "finite *and*
+nonsingular second moments" — produce a block that verifies one of them and looks complete;
+split them, and each gets its own check.
+
+**A check counts only if it can go red.** State the threshold or the comparison, not the
+property: `stopifnot(rcond(J) > 1e-8)` fails on a singular Jacobian, `is.finite(kappa(J))` does
+not — measured, `kappa()` of an exactly singular 2×2 returns `1.478e+17`, which is finite, so
+the finiteness form passes on precisely the failure it was written to catch. A verification whose
+predicate is true for the defect it targets is worse than no verification, because the header now
+says the assumption was checked ([`research-agent-laws.md`](../references/research-agent-laws.md)
+law 5). If you cannot name the number the check compares against, you have written an assertion.
+
 ```r
 # --- Assumption regime -------------------------------------------------
 # Estimand   theta0, the unique solution of E[psi(W; theta)] = 0 under the
@@ -58,17 +70,25 @@ structural read of the generator). "It looks right" is neither.
 # Maintained assumptions of the estimator under study:
 #   A1  i.i.d. sampling of W_i
 #   A2  correct specification: the DGP's conditional mean IS the one psi assumes
-#   A3  finite, nonsingular second moments of psi(W; theta0)
-#   A4  theta0 interior to the parameter space; psi differentiable there
-# Regime     IN-ASSUMPTION -- A1-A4 all hold.
+#   A3  finite, positive-definite variance matrix Omega = E[psi psi'] at theta0
+#   A4  nonsingular Jacobian G = E[d psi / d theta'] evaluated at theta0
+#   A5  theta0 interior to the parameter space; psi differentiable there
+# Regime     IN-ASSUMPTION -- A1-A5 all hold.
 # Verified   A1  rows are drawn i.i.d. within a replication -- no group-level
 #                or latent draw in generate_data() enters more than one row
 #            A2  by construction -- the outcome equation and psi share one
 #                functional form and one coefficient vector; asserted on a
 #                1e6-row draw that mean(psi(W, truth)) is within 4 MCSE of 0
-#            A3  by construction (Gaussian errors, sigma = params$sigma);
-#                Jacobian at theta0 formed, condition number asserted finite
-#            A4  params$theta lies strictly inside the search bounds --
+#            A3  Omega estimated on a 1e6-row draw (Gaussian errors,
+#                sigma = params$sigma, so the fourth moments exist);
+#                stopifnot(all(is.finite(Omega)),
+#                          min(eigen(Omega, symmetric = TRUE,
+#                                    only.values = TRUE)$values) > 1e-8)
+#            A4  G formed analytically at theta0;
+#                stopifnot(rcond(G) > 1e-8)   -- reciprocal condition against a
+#                stated floor, NOT is.finite(kappa(G)): kappa() of an exactly
+#                singular matrix is ~1.5e17, finite, so that form cannot fail
+#            A5  params$theta lies strictly inside the search bounds --
 #                stopifnot() at setup
 # -----------------------------------------------------------------------
 ```
@@ -77,7 +97,7 @@ An out-of-assumption run changes exactly two lines of that block:
 
 ```r
 # Regime     OUT-OF-ASSUMPTION -- relaxes A2 only, at severity
-#            delta in {0, 0.1, 0.25, 0.5}; A1, A3, A4 hold exactly as above.
+#            delta in {0, 0.1, 0.25, 0.5}; A1, A3-A5 hold exactly as above.
 # Target     the pseudo-estimand theta*(delta) -- the solution of
 #            E[psi(W; theta)] = 0 under the perturbed DGP, obtained by
 #            root-finding on a 1e7-row draw (no closed form).
@@ -197,7 +217,10 @@ Define against **the truth**, never against another estimate:
 [ ] truth computed from params, stored with results
 [ ] each estimator's estimand stated and aligned with truth
 [ ] regime block in the header: estimand, ALL maintained assumptions, regime, verification
-[ ] each maintained assumption verified by a named property, not asserted
+[ ] one condition per assumption line -- no two merged under one label
+[ ] each maintained assumption verified by a named property, not asserted, and
+    every check states a threshold it can fail against (rcond(J) > 1e-8, not
+    is.finite(kappa(J)))
 [ ] within-assumption claims (consistency, analytic SEs, coverage, a shipped default)
     cite an IN-ASSUMPTION run and nothing else
 [ ] out-of-assumption run relaxes ONE assumption, over a severity grid including the

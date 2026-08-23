@@ -228,7 +228,17 @@ CHECKS = [
     # the noun converts a second phrasing into coverage instead of deleting it.
     # Verified 2026-08-23: `\b<number> checkers?\b` occurs at exactly ONE site in
     # the repo (README.md:17), so the alternative adds coverage, not false hits.
-    ("backtest gates",        r'(?i)\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+) (?:gates|checkers)\b', ["README.md", "docs/index.html", OPT("CLAUDE.md", "names the gate suite, states no count"), "guide/workflow-guide.qmd", OPT(".claude/skills/vaccinate/evals/README.md", "refers to the suite by path, states no count"), ".claude/skills/commit/SKILL.md", ".github/CONTRIBUTING.md"], n_gates()),
+    # r12: `scripts/backtest.sh` ITSELF is a surface. Its header comment states
+    # the suite size ("Ten gates:") 45 lines above the `run "…"` block the count
+    # is derived from, it was hand-edited `Eight gates:` -> `Ten gates:` on this
+    # branch, and it was the LAST live gate-count claim in the repo that no row
+    # covered: a planted-lie sweep seeding "ninety-nine gates:" at line 5 left
+    # every gate at exit 0. The file being both the claim and the source of
+    # truth is fine and was checked, not assumed — the pattern matches at
+    # exactly ONE site in it (the header), because the enumeration below the
+    # header numbers its gates `1.`…`10.` rather than restating a total, and
+    # `n_gates()` counts `^run "` lines, which the pattern cannot match.
+    ("backtest gates",        r'(?i)\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+) (?:gates|checkers)\b', ["README.md", "docs/index.html", OPT("CLAUDE.md", "names the gate suite, states no count"), "guide/workflow-guide.qmd", OPT(".claude/skills/vaccinate/evals/README.md", "refers to the suite by path, states no count"), ".claude/skills/commit/SKILL.md", ".github/CONTRIBUTING.md", "scripts/backtest.sh"], n_gates()),
     # CLAUDE.md's law count was hand-edited 17 -> 21 and nothing recomputed it,
     # so "99 laws" would have left every gate green. Counted from the laws file.
     ("research-agent laws",   r'(\d+) laws\b',                   ["CLAUDE.md"], n_laws()),

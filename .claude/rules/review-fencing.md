@@ -1,7 +1,21 @@
 ---
 paths:
-  - ".claude/agents/**/*.md"
-  - ".claude/skills/**/SKILL.md"
+  # DISPATCH-TIME. Fencing is decided when a reviewer is pointed at an
+  # artifact, not when a skill is written, so the rule is scoped to the
+  # artifacts and answer keys a fenced run touches — the session that runs
+  # `/review-paper --peer` on a manuscript is the one that must read this.
+  - "*.tex"
+  - "*.qmd"
+  - "master_supporting_docs/**"
+  - "quality_reports/qualification/**"
+  - "quality_reports/passports/**"
+  - "quality_reports/audits/**"
+  - "quality_reports/oracle_audits/**"
+  # AUTHORING-TIME, one file: the input contract that already implements the
+  # fence. A skill that grows a real fencing step joins this list AND the
+  # RULE_KEYWORDS registry in scripts/check-skill-integrity.py, so the
+  # rule-vs-implementation gate can see it.
+  - ".claude/agents/claim-verifier.md"
 ---
 
 # Review Fencing — independence is a property of the environment
@@ -20,6 +34,15 @@ independence. It is an honour system with a search tool.
 
 > **The rule:** before dispatching an independence-critical reviewer, ask what its *environment*
 > would reveal if it looked — then remove that, rather than instructing it not to look.
+
+**Where this rule loads.** Fencing is a *dispatch-time* obligation, so the `paths:` above name
+the manuscripts, qualification ledger, passports and audit reports a fenced run is pointed at —
+the session that dispatches referees at `manuscript.tex` is the one that has to make the call.
+It deliberately does **not** claim every `SKILL.md`: a rule that binds 60 skills none of which
+implements it is an unenforced obligation, and `scripts/check-skill-integrity.py` (check 5) now
+fails on exactly that shape. When a skill grows a real fencing step, add it to `paths:` **and**
+to that script's `RULE_KEYWORDS`, so the claim and the implementation are checked against each
+other rather than asserted.
 
 ## The neutral copy
 
@@ -89,9 +112,22 @@ This template commits three answer keys of its own:
 
 Add whatever else your project pins: baseline manifests, tolerance registries, expected-output
 fixtures, golden files. Then either hand the agent a checkout without them or give the
-reproduction its own scratch directory, and record which fence was used in the qualification
-ledger row. **An unfenced positive control is an unqualified check**
+reproduction its own scratch directory. **An unfenced positive control is an unqualified check**
 ([`verification-ladder.md`](../references/verification-ladder.md) rung 0).
+
+**Record the fence in the row's `Artifact` cell.**
+[`LEDGER.md`](../../quality_reports/qualification/LEDGER.md) has no separate fence field, and
+this rule does not invent one: `Artifact` is the column that already says what the run was
+handed — *"a fixture clone outside the repo"*, *"a copied hook directory selected with
+`HOOK_DIR`"*, *"synthetic events, no repo access"*. Write the fence there, in those terms, and
+the row states its own independence. A row whose `Artifact` cell names only the file under test
+has not declared a fence, and a reader cannot tell whether one was used.
+
+**A forked context is not a fence.** [`/vaccinate`](../skills/vaccinate/SKILL.md) runs the
+checker blind in a fresh `Agent` fork and grades a *copy* of the artifact — that empties the
+reviewer's context, not its working directory. When the expected value is committed anywhere in
+the tree, the copy has to sit **outside the checkout** as well, or the fork can still read the
+answer.
 
 ## What is already fenced
 

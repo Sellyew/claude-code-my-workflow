@@ -97,8 +97,36 @@ EOF
 ```bash
 gh pr merge <pr-number> --merge --delete-branch
 git checkout main
+git status --porcelain          # must print nothing before the next line runs
 git pull
 ```
+
+**Expect the tree to be dirty here — that is what Step 3 is for.** Staging specific files means
+everything the session touched but did not stage, plus every untracked artifact, is still in the
+tree when you arrive at this step. The `git-guardrails` hook this template ships **denies**
+`git pull` (and `merge`, and `rebase`) whenever `git status --porcelain` is non-empty, because a
+pull that resolves on top of uncommitted work cannot be reviewed afterwards — you can no longer
+tell which hunk came from the remote. Chaining a stash into the same command line does not help:
+the hook reads the tree, it does not predict what the line will do to it.
+
+Clear the tree deliberately, then pull:
+
+```bash
+git stash push -u -m "post-merge: unstaged leftovers"   # -u, or untracked files stay behind
+git pull
+git stash pop
+```
+
+`git pull --autostash` is the one-command alternative, and the hook exempts it because git — not
+the hook — establishes the precondition. It stashes **tracked** modifications only. Untracked
+files usually ride along harmlessly, but if the incoming commits add a file at a path you are
+holding untracked, git aborts the merge (*"untracked working tree files would be overwritten"*)
+after the autostash has already been taken. When porcelain shows `??` lines you care about,
+prefer the explicit `-u` stash above.
+
+`ALLOW_DIRTY_MERGE=1` is the hatch for a dirty state you have looked at and can justify out loud.
+It is not the routine remedy, and reaching for it because the block is inconvenient is the
+behavior the check exists to prevent.
 
 ### Step 7: Report
 

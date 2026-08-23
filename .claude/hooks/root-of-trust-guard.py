@@ -1,10 +1,44 @@
 #!/usr/bin/env python3
 """
-Root-of-Trust Write Guard (PreToolUse, Bash only)
+Silent-Shell-Write Tripwire for the gate-defining files (PreToolUse, Bash only)
+
+NAMING, STATED UP FRONT. The file is called `root-of-trust-guard.py` and the
+path set below is referred to as the "gate-defining files". It is NOT a root of
+trust and this hook is NOT a guard in the sense that word usually carries. An
+independent referee (2026-08-23) was right about this: a repo-local, mutable,
+fail-open textual scan cannot be the thing everything else stands on. What it
+actually is:
+
+    a best-effort TRIPWIRE against SILENT shell writes into the files that
+    decide whether any other gate runs.
+
+Its whole value is a change of CHANNEL, not a prohibition: a modification to a
+gate arrives as a reviewable Edit/Write diff instead of an invisible one-line
+overwrite. It does not lock the files, and it cannot.
+
+WHAT CAN REPLACE OR DISABLE IT ANYWAY — all four are ordinary, allowed, and
+none of them trips this hook:
+
+    1. an Edit / Write / MultiEdit on these same files (deliberately allowed —
+       see below). That includes an edit removing this hook's registration
+       from `.claude/settings.json`. The diff is visible AFTERWARDS; under
+       `bypassPermissions` nothing authorises it BEFOREHAND.
+    2. an ordinary branch transition — `git switch <branch>` / `git checkout
+       <branch>` with no pathspec — onto a branch whose tree deletes
+       `.claude/hooks/` or carries an older `.claude/settings.json`. There is
+       no protected literal path on that command line to test.
+    3. a clean merge or pull that imports changes to these files, for the same
+       reason.
+    4. an error in THIS file. It fails open (see "Decision protocol"), so an
+       allowed edit that introduces a syntax error here silently converts the
+       tripwire into a no-op.
+
+So read every sentence below as "raises the cost of one silent path", never as
+"cannot be disabled".
 
 The template ships `permissions.defaultMode: "bypassPermissions"` with an
-empty `deny` list, so the hook layer is the ONLY thing standing between an
-agent and the files that decide whether any other gate runs at all:
+empty `deny` list, so the hook layer is the only thing watching the files that
+decide whether any other gate runs at all:
 
     .claude/settings.json        — which hooks fire, and on what
     .claude/settings.local.json  — the same, per machine
@@ -13,10 +47,22 @@ agent and the files that decide whether any other gate runs at all:
     .claude/                     — the directory, because deleting it
                                    deletes the hooks
 
-That set is the repository's **root of trust**. A guard that can rewrite
-its own guard is not a guard, so this hook denies SHELL writes into those
-paths — the silent path, where one redirection disables the whole suite
-and nothing surfaces in review until much later.
+This hook denies SHELL writes into those paths — the silent path, where one
+redirection disables the whole suite and nothing surfaces in review until much
+later.
+
+SCOPE — THIS PROJECT, not every tree on the machine. A path is protected
+only when it matches the pattern above AND resolves inside the project
+directory (CLAUDE_PROJECT_DIR, else the git repository the call runs in,
+else the repository this file ships in). A fixture clone under /tmp, a
+second checkout, and the user's own `~/.claude/settings.json` are other
+trees: denying writes there protected none of the gates this repo runs,
+while it DID block the qualification ledger's own gate-9 reproduction,
+which seeds a mistyped hook path into a fixture clone's settings file. The
+deny message names the project directory it is speaking for, so the claim
+"this repository's gate-defining files" is checkable rather than asserted. If
+no project directory can be resolved at all, the guard falls back to the plain
+text match and says so in the message.
 
 Denied, when the target is a protected path:
 
@@ -31,7 +77,7 @@ Denied, when the target is a protected path:
                              `git restore <path>`, `git clean -f <path>`,
                              `git stash push -- <path>`, `git mv` — git is a
                              writer program too, and these modify or delete the
-                             root of trust exactly as rm/cp/mv do, with the
+                             gate-defining files exactly as rm/cp/mv do, with the
                              protected path as a literal argument. Read-only git
                              (status, log, diff, show, ls-files, rev-parse) is
                              untouched; a protected `-C <dir>` counts only when
@@ -68,6 +114,28 @@ Denied, when the target is a protected path:
                              UNWRAPPED and re-scanned (depth <= 2), not skipped as
                              an opaque value
 
+Denied REGARDLESS of any protected path — the cross-hook rule:
+
+    - destructive git inside an UNWRAPPED PAYLOAD. `bash -c 'git reset --hard'`
+      and `bash -c 'git clean -fdx'` used to fall between the two hooks and be
+      denied by neither: this hook's rules all key off a protected LITERAL path
+      and there is none, while `git-guardrails.py` treats a shell-wrapper
+      payload as one opaque word. Ordinary execution forms, not evasions. So
+      the payload this hook already unwraps for its own path rules (shell `-c`,
+      `env -S`, behind the usual wrappers, depth <= 2) is ALSO handed to
+      `git-guardrails.py`'s own `git_deny_reason()` — the SHARED destructive-git
+      deny list (`reset --hard`, `clean -f`, `push --force`, `add -A`,
+      `checkout -- .`, `restore .`), imported rather than copied, so the two
+      hooks cannot drift into disagreeing about what is destructive. The
+      unwrapped payload is what is re-scanned, so the direct (unwrapped)
+      spellings are untouched here and stay `git-guardrails.py`'s to decide —
+      no double denial, no second opinion.
+      LIMIT, disclosed: only the DENY LIST is shared. The dirty-tree check on
+      merge/rebase/pull is NOT applied to wrapped payloads, so
+      `bash -c 'git merge main'` on a dirty tree is still seen by neither hook.
+      The override for the shared rules stays git-guardrails' own (run it in a
+      terminal yourself), not this hook's ALLOW_ROOT_OF_TRUST_WRITE.
+
 Allowed, deliberately:
 
     - every READ — cat, grep, ls, head, diff, shasum, and running a hook
@@ -80,15 +148,33 @@ When a command is ambiguous the guard ALLOWS it. A false deny that makes
 the repository unusable costs more than the narrow case it would have
 caught, so every rule keys off a command that can only be writing.
 
-WHAT THIS GUARD IS — best-effort defense-in-depth, NOT a proof, and NOT the
-primary control. It is a textual scan, not a sandbox. The controls that
-actually protect the root of trust are elsewhere and do not depend on this
-scan being complete: (1) Edit/Write/MultiEdit changes to these files land as a
-reviewable DIFF a human sees — this guard only closes the SILENT shell path,
-it does not lock the files; (2) `bypassPermissions` is a deliberate posture
-the operator chose, not an accident; (3) any machine-wide guard the operator
-runs (e.g. a pre-merge / pre-write hook in `~/.claude/hooks/`). This guard
-raises the cost of the one silent path; it is a layer, not the wall.
+WHAT THIS TRIPWIRE IS — best-effort defense-in-depth, NOT a proof, and NOT a
+control that can stop a change. It is a textual scan, not a sandbox. Its single
+claim is about CHANNEL: a shell one-liner that would have overwritten a gate
+silently gets denied, so the change has to come back through Edit/Write, where
+it lands as a diff. Whether anyone READS that diff is outside this file.
+
+Be precise about what is not here. In the shipped configuration there may be no
+protective control elsewhere at all:
+  - the reviewable Edit/Write diff is RETROSPECTIVE VISIBILITY, not
+    authorisation. It tells you afterwards; it stops nothing.
+  - `bypassPermissions` being a deliberate operator posture is a fact about how
+    the repo is configured. It is not a control.
+  - a machine-wide guard in `~/.claude/hooks/` is OPTIONAL and lives outside
+    this repository — present on the maintainer's machine, absent in a fresh
+    fork unless the forker installs one.
+A real control would have to sit OUTSIDE the worktree — the ordinary permission
+system with a non-empty `deny` list, or a machine-level hook — and would have
+to cover Edit/Write/MultiEdit and branch transitions too. If you want one, that
+is where to put it; this file cannot be it.
+
+`git-guardrails.py` is a sibling of the same kind and carries the same
+limitation. Neither hook's audit trail RECOVERS anything: the transcript records
+that a loss happened, and `git reflog`/`ORIG_HEAD` recover a moved COMMIT
+POINTER — neither holds the bytes of an uncommitted edit, an untracked file, or
+an ignored one. `git reset --hard` and `git clean -fdx` destroy exactly those.
+Call these an audit trail and a commit-history recovery aid; do not call them a
+backstop.
 
 WHAT IT CATCHES: direct writes and deletes (redirection, tee, cp/mv/rm/ln,
 sed -i, dd, find -delete, tar -x, and GIT'S OWN working-tree writers —
@@ -97,7 +183,10 @@ target appears as a literal argument, and the two known command-payload
 carriers — a shell
 `sh/bash/… -c '<payload>'` and `env -S/--split-string`/`-vS` — reached after
 the known command wrappers (env/sudo/nice/stdbuf/timeout/…). Both carriers are
-unwrapped and re-scanned (depth <= 2).
+unwrapped and re-scanned (depth <= 2). A command formatted across several lines
+with BACKSLASH-NEWLINE continuations is spliced before tokenising (r12), so the
+multi-line spelling of a write is read as the one command bash will run — it
+used to split into two segments and go silent.
 
 WHAT IT DOES NOT CATCH — disclosed residual, in scope for a future audit as
 BOUNDARY, not as a defect:
@@ -111,14 +200,32 @@ BOUNDARY, not as a defect:
   - a git write whose target is NOT a literal path operand — `git apply <patch>`
     (the paths live inside the patch), `git reset --hard`, `git merge`,
     `git checkout <branch>` with no pathspec. These rewrite the tree from
-    recorded state rather than from a path on this command line, so the scan has
-    no literal to test; `git-guardrails.py` is the layer that governs those.
+    recorded state rather than from a path on this command line, so this scan
+    has no literal to test. For the DIRECT spellings `git-guardrails.py` is the
+    layer that governs them; for the spellings hidden in a shell/`env -S`
+    payload — which git-guardrails treats as one opaque word — the cross-hook
+    rule above hands the unwrapped payload to its deny list, and that covers
+    the deny list ONLY. Still governed by NEITHER hook, in any spelling: `git
+    apply`, and a branch-switching `git checkout`/`git switch` with no
+    pathspec — the second is one of the four ways, listed at the top, that the
+    gate files get replaced without this hook seeing anything.
+  - a `cd` EARLIER IN THE SAME COMMAND LINE. Relative tokens resolve against
+    the tool call's cwd, not against a `cd` inside the command, so
+    `cd /tmp/fixture && printf '{}' > .claude/settings.json` is scored against
+    the project — it is DENIED though it writes elsewhere. That is the
+    conservative direction (a false deny, remedied by using the absolute path),
+    and it is the same residual `git-guardrails.py` discloses for `cd`.
+  - a path built from a variable this process cannot expand (`$FIXTURE/.claude/
+    settings.json` with FIXTURE unset in the hook's environment). It stays
+    relative, resolves against the project, and is denied — again failing
+    toward the deny.
   - an UNKNOWN wrapper or execution form not in the WRAPPERS/SHELLS tables, or
     an unlisted wrapper option that takes a SEPARATE value (assumed here to
     attach its value, which skips too LITTLE — a real command word is still
     scanned — rather than too much, so it fails toward catching the write).
-These are not closed; the Edit/Write review backstop and the deliberate-bypass
-posture above are what cover them.
+These are not closed, and nothing here closes them. The honest statement is that
+they are UNCOVERED: the Edit/Write channel makes some of them visible after the
+fact, which is not the same as covering them.
 
 Decision protocol (modern PreToolUse): exit 0 + JSON
   {"hookSpecificOutput": {"hookEventName": "PreToolUse",
@@ -144,7 +251,7 @@ import sys
 
 # --- protected paths -------------------------------------------------------
 
-# Children of `.claude/` that are root of trust. Everything else under
+# Children of `.claude/` that are gate-defining. Everything else under
 # `.claude/` (rules, skills, references, agents) is ordinary content.
 PROTECTED_UNDER_CLAUDE = {"settings.json", "settings.local.json", "hooks"}
 
@@ -162,7 +269,9 @@ def normalize(path: str) -> str:
     return p
 
 
-def is_protected(token: str) -> bool:
+def matches_root_of_trust(token: str) -> bool:
+    """PATTERN half: does this token spell a gate-defining path at all?
+    Says nothing about WHICH tree it is in — see in_project()."""
     p = normalize(token)
     segs = [s for s in p.split("/") if s not in ("", ".")]
     for i, s in enumerate(segs):
@@ -174,6 +283,94 @@ def is_protected(token: str) -> bool:
             if segs[i + 1] in PROTECTED_UNDER_CLAUDE:
                 return True
     return False
+
+
+# --- project scope ---------------------------------------------------------
+#
+# The pattern above is a TEXT match, so on its own it protects `.claude/hooks`
+# in every tree on the machine: a throwaway fixture clone under /tmp, a second
+# checkout, the user's own ~/.claude. That bought this repository nothing (the
+# gates it defends live HERE) and cost real work — it denied the qualification
+# ledger's own gate-9 reproduction, which seeds a mistyped hook path into a
+# fixture clone's `.claude/settings.json`, and it contradicted the deny message,
+# which asserts the path is one of this repository's gate-defining files.
+#
+# So a token is protected only when it RESOLVES INSIDE the project directory.
+# Precedence: CLAUDE_PROJECT_DIR (what Claude Code sets for hooks) → the git
+# repository the call is running in → the repository this hook file ships in.
+# If none of those resolves, the scope is unknown and the guard falls back to
+# the old text match, which loses no coverage it used to have.
+
+_PROJECT: str | None = None   # resolved project root, or None = unknown
+_CWD: str = ""                # the cwd relative tokens resolve against
+
+
+def _real(p: str) -> str:
+    try:
+        return os.path.realpath(p)
+    except OSError:
+        return os.path.abspath(p)
+
+
+def _git_root(start: str) -> str | None:
+    """Nearest ancestor of `start` that contains a `.git` entry."""
+    if not start:
+        return None
+    cur = _real(start)
+    while True:
+        if os.path.exists(os.path.join(cur, ".git")):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return None
+        cur = parent
+
+
+def configure_scope(event_cwd: str = "") -> None:
+    """Resolve the project root and the cwd relative tokens resolve against.
+    Called once per event, before any scan."""
+    global _PROJECT, _CWD
+    # A cwd that does not exist tells us nothing, and trusting it would resolve
+    # every relative token to a directory outside every project — i.e. silently
+    # disarm the guard. Fall back to the hook process's own cwd instead.
+    try:
+        usable = bool(event_cwd) and os.path.isdir(event_cwd)
+        _CWD = _real(event_cwd) if usable else _real(os.getcwd())
+    except OSError:
+        _CWD = ""
+    env = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    if env and os.path.isdir(env):
+        _PROJECT = _real(env)
+        return
+    _PROJECT = (_git_root(_CWD)
+                or _git_root(os.path.dirname(os.path.abspath(__file__))))
+
+
+def in_project(token: str) -> bool:
+    """SCOPE half: does this token resolve inside the project directory?
+
+    Relative tokens resolve against the TOOL CALL's cwd (the event's `cwd`),
+    falling back to the hook process's cwd and then the project root. `~` and
+    `$VAR` are expanded, so `$HOME/.claude/settings.json` is recognised as the
+    user's own config rather than read as a relative path. A token that still
+    cannot be resolved to an absolute path is treated as project-relative,
+    which fails toward DENYING — the safe direction for this guard.
+    """
+    if _PROJECT is None:
+        return True  # scope unknown: keep the pre-scoping behaviour
+    t = os.path.expandvars(os.path.expanduser(token.strip()))
+    if not t:
+        return False
+    if not os.path.isabs(t):
+        t = os.path.join(_CWD or _PROJECT, t)
+    t = _real(t)
+    return t == _PROJECT or t.startswith(_PROJECT + os.sep)
+
+
+def is_protected(token: str) -> bool:
+    """A path this hook defends: the gate-defining PATTERN, inside THIS
+    project. Both halves must hold."""
+    return matches_root_of_trust(token) and in_project(token)
 
 
 # --- command shape ---------------------------------------------------------
@@ -231,7 +428,7 @@ INPLACE = {"sed", "gsed", "perl", "ruby"}               # only with -i
 # above never named it — so `git rm .claude/hooks/x`, `git checkout HEAD~1 --
 # .claude/settings.json`, `git restore .claude/settings.json`, `git clean -fd
 # .claude/hooks`, `git stash push -- .claude/hooks/x` and `git mv` all
-# overwrote or deleted the root of trust through a plain shell one-liner while
+# overwrote or deleted a gate-defining file through a plain shell one-liner while
 # the semantically identical `cp`/`rm` spelling was denied. These are NOT part
 # of the disclosed residual below: the command word is known, the protected path
 # is a LITERAL argument, and the write is direct and unambiguous — exactly the
@@ -239,7 +436,7 @@ INPLACE = {"sed", "gsed", "perl", "ruby"}               # only with -i
 #
 # ONLY these subcommands count as writers. Read-only git — status, log, diff,
 # show, ls-files, rev-parse, cat-file, blame — is deliberately untouched, so a
-# session can still inspect the root of trust freely.
+# session can still inspect the gate-defining files freely.
 GIT_WRITE_SUBS = {"rm", "checkout", "restore", "clean", "stash", "mv"}
 
 # git GLOBAL options that sit between `git` and the subcommand and take a
@@ -274,6 +471,35 @@ def unquote(word: str) -> str:
             out.append(c)
             i += 1
     return "".join(out)
+
+
+# A backslash-newline is a LINE CONTINUATION in POSIX shell: it JOINS the line,
+# it does not end the command. `_TOKEN` lists `\n` in its separator alternation
+# while its word alternation's escape class (`\\.`) cannot match backslash +
+# newline — `.` excludes newline outside DOTALL — so a trailing `\` was consumed
+# as an ordinary word character and the newline behind it ENDED the segment.
+# Executed against the pre-fix guard (r11): `rm -f \` + newline +
+# `    .claude/hooks/git-guardrails.py` emitted no decision, and the same string
+# through `bash -c` really deleted the guard file, while the byte-equivalent
+# one-line spelling DENIED. Protection depended on where the author had put a
+# newline — ordinary multi-line formatting, not an evasion. So the continuation
+# is spliced the way the shell splices it, BEFORE anything is tokenised.
+#
+# The RUN of backslashes is what decides. `\\` is an ESCAPED backslash, so
+# `\\` + newline is a literal backslash followed by a REAL separator, not a
+# continuation. The even-run prefix is consumed first and re-emitted, so only an
+# ODD trailing backslash joins; a naive `\\\n -> " "` substitution would splice
+# the NEXT command onto this one and could false-deny. A newline with no
+# backslash in front of it is untouched and still separates commands, and a
+# backslash NOT followed by a newline (a literal `\` inside a quoted string) is
+# never matched at all.
+_LINE_CONT = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
+
+
+def join_continuations(cmd: str) -> str:
+    """Splice POSIX line continuations, so a command formatted across several
+    lines is tokenised as the ONE command bash will actually run."""
+    return _LINE_CONT.sub(r"\1 ", cmd)
 
 
 _HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
@@ -389,7 +615,7 @@ def shell_c_payload(seg: list[tuple[str, str]]) -> str | None:
     letter c. The earlier `w.startswith("-") and "c" in w` test set the -c flag
     on ANY option containing a c — so `bash --rcfile <file> -c '<payload>'`
     returned <file> as the payload, the real payload was never re-scanned, and a
-    write into the root of trust hidden inside it passed silently. That failed
+    write into a gate-defining file hidden inside it passed silently. That failed
     toward MISSING the write, which is the direction this guard must never fail
     in. A `-c` is now only: the exact token `-c`, or a `c` inside a SINGLE-DASH
     short-flag group (`-lc`, `-ic`, `-ci`) — every letter of such a group is one
@@ -668,7 +894,10 @@ def strip_quoted(cmd: str) -> str:
 
 
 def scan(raw: str, depth: int = 0) -> tuple[str, str] | None:
-    cmd = strip_heredocs(raw)
+    # Heredoc bodies are dropped FIRST (they are line-oriented: joining a body
+    # line that ends in `\` could hide the terminator and swallow the rest of
+    # the command), and only then are line continuations spliced.
+    cmd = join_continuations(strip_heredocs(raw))
     for seg in segments(cmd):
         hit = scan_segment(seg)
         if hit:
@@ -691,6 +920,110 @@ def scan(raw: str, depth: int = 0) -> tuple[str, str] | None:
     for m in _REDIR.finditer(strip_quoted(cmd)):
         if is_protected(m.group(1)):
             return m.group(1), "output redirection"
+    return None
+
+
+# --- cross-hook: destructive git inside an unwrapped payload ---------------
+#
+# THE GAP THIS CLOSES. The two hooks divided the work by what each could see,
+# and the division left a hole neither owned:
+#
+#   * this hook unwraps a shell `-c` / `env -S` payload, but every rule it then
+#     applies keys off a PROTECTED LITERAL PATH. `git reset --hard` names none,
+#     so the unwrapped payload was re-scanned and found nothing;
+#   * `git-guardrails.py` owns the destructive-git deny list, but it does not
+#     unwrap payload carriers — to it, `bash -c '<payload>'` is one word whose
+#     basename is `bash`, so no `git` invocation is found at all.
+#
+# Result: `bash -c 'git reset --hard'` and `bash -c 'git clean -fdx'` were
+# denied by NEITHER, while their bare spellings were denied by git-guardrails.
+# The second deletes untracked and ignored files, which is research data that no
+# reflog holds. These are ordinary execution forms — a wrapper is how a script,
+# a `Makefile`, or a generated command line spells things — not evasion attempts,
+# so "a determined caller was never the threat model" does not excuse it.
+#
+# The fix is the one the referee asked for and the one that cannot drift: the
+# payload-unwrapping layer CALLS the shared rules rather than reimplementing
+# them. `git_deny_reason()` is IMPORTED from the sibling hook, so there is one
+# definition of "destructive git" in the repository. A copy here would be a
+# second consumer of an unwritten table, which is exactly the shape that
+# produced git-guardrails' own r9/r10 defects.
+#
+# SCOPE, deliberately narrow:
+#   * only the DENY LIST is shared, not the dirty-tree check. That check needs
+#     the event dict, a resolved repository, and a live `git status`; wiring it
+#     through a second hook would duplicate repository-identity logic — the
+#     precise thing that keeps going wrong. Disclosed in the docstring instead.
+#   * only UNWRAPPED payloads are tested. A direct `git reset --hard` reaches
+#     this hook too, but git-guardrails already denies it; testing it here as
+#     well would produce two denials for one command and make each hook's
+#     battery depend on the other's behaviour.
+#   * fail-open on anything: if the sibling cannot be imported or raises, this
+#     returns None and the call proceeds exactly as it did before.
+
+_GG_MODULE = None          # the imported sibling, or None
+_GG_TRIED = False          # import attempted (once per process)
+
+
+def _git_guardrails():
+    """Import the sibling `git-guardrails.py` as a module, once per process.
+
+    Loaded BY PATH because the filename is not an identifier (a hyphen), and
+    from THIS file's directory so a hook directory selected for a fixture run
+    pairs with its own sibling rather than the repository's. The module is
+    import-safe: it does all its work under `if __name__ == "__main__"`.
+    Returns None on any failure — this hook fails open on its own errors."""
+    global _GG_MODULE, _GG_TRIED
+    if _GG_TRIED:
+        return _GG_MODULE
+    _GG_TRIED = True
+    try:
+        import importlib.util
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "git-guardrails.py")
+        spec = importlib.util.spec_from_file_location("_git_guardrails_shared",
+                                                      path)
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        if callable(getattr(mod, "git_deny_reason", None)):
+            _GG_MODULE = mod
+    except Exception:
+        _GG_MODULE = None
+    return _GG_MODULE
+
+
+def wrapped_git_deny(raw: str, depth: int = 0) -> str | None:
+    """Run the SHARED destructive-git deny list over every command payload this
+    hook can unwrap. Returns git-guardrails' own deny reason, or None.
+
+    Walks the same segments, uses the same two carriers (`shell_c_payload`,
+    `env_split_payload`) and the same depth <= 2 bound as scan(), so a payload
+    this hook is willing to re-scan for path writes is exactly the set it also
+    tests for destructive git. Nesting recurses: `bash -c "sh -c 'git clean
+    -fd'"` is reached at depth 1.
+
+    The TOP-LEVEL command is deliberately NOT passed to the deny list — only
+    payloads. git-guardrails already decides the unwrapped spelling."""
+    mod = _git_guardrails()
+    if mod is None:
+        return None
+    cmd = join_continuations(strip_heredocs(raw))
+    for seg in segments(cmd):
+        for payload in (shell_c_payload(seg), env_split_payload(seg)):
+            if payload is None:
+                continue
+            try:
+                reason = mod.git_deny_reason(payload)
+            except Exception:
+                reason = None
+            if reason:
+                return reason
+            if depth < 2:
+                deeper = wrapped_git_deny(payload, depth + 1)
+                if deeper:
+                    return deeper
     return None
 
 
@@ -717,16 +1050,44 @@ def main() -> int:
         return 0
 
     cmd = (data.get("tool_input", {}) or {}).get("command", "") or ""
+
+    # Cross-hook rule FIRST, because it is the one case with no protected path
+    # in it — it has to run BEFORE the `.claude`/`.githooks` fast path below,
+    # which exists only for the path rules and would return 0 on
+    # `bash -c 'git reset --hard'` before anything looked at it.
+    wrapped = wrapped_git_deny(cmd)
+    if wrapped:
+        deny(
+            f"Blocked by root-of-trust-guard (destructive git inside a shell "
+            f"payload): {wrapped} This hook unwraps `sh/bash/… -c` and `env -S` "
+            f"payloads, so it applies git-guardrails' own deny list to what is "
+            f"inside them — the wrapped spelling is not a way past the rule. "
+            f"Neither the transcript nor `git reflog` can return uncommitted, "
+            f"untracked, or ignored files, so this one is refused before it runs."
+        )
+        return 0
+
     if ".claude" not in cmd and ".githooks" not in cmd:
         return 0
+
+    configure_scope(str(data.get("cwd", "") or ""))
 
     hit = scan(cmd)
     if not hit:
         return 0
     path, how = hit
+    if _PROJECT:
+        scope = (f"That path is one of this repository's gate-defining files "
+                 f"({_PROJECT}) — the files that ")
+    else:
+        # No project directory could be resolved, so the hook cannot say which
+        # tree this is; it refuses conservatively and says so rather than
+        # asserting the path belongs to this repository.
+        scope = ("This run could not resolve a project directory, so the path is "
+                 "refused on the path PATTERN alone — the files that ")
     deny(
         f"Blocked by root-of-trust-guard: shell write to '{path}' via {how}. "
-        f"That path is part of this repository's root of trust — the files that "
+        f"{scope}"
         f"define every gate (.claude/settings.json, .claude/settings.local.json, "
         f".claude/hooks/, .githooks/). Permissions run in bypass mode here, so a "
         f"shell one-liner can disable the whole gate suite without leaving anything "

@@ -179,7 +179,14 @@ twice in one session. The artifact existed and was correct. The failure was read
 *Practice:* the template mechanises the documentation half —
 [`scripts/check-derived-counts.py`](../../scripts/check-derived-counts.py) recomputes each
 enumerable claim in the docs from its own source of truth — but the law is wider than any
-checker. It binds every number you say out loud, including the ones no gate knows about.
+checker.
+*Scope, because the wide reading is worse than the law:* this binds numbers a **decision or a
+reader rests on** — anything published, anything that gates a choice, anything another person
+will cite. It is **not** a demand that every figure in conversation arrive with a command
+attached; an external referee's fair objection is that a rule read that broadly produces
+ceremonial `wc -l` invocations that prove nothing and train you to ignore them. If the number
+merely orients you and being wrong costs a re-read, say it and move on. If being wrong would
+propagate, derive it.
 
 **19. "Done" is a state of the repository, not a sentence.**
 Done means the standing gate for the touched surface has been **run** and is green, the work is
@@ -216,8 +223,19 @@ decision rather than a default.
 
 **21. Delegated screens run under a written rubric; waves are adjudicated whole.**
 A screening agent gets its rubric **in writing before it runs**: the inclusion and exclusion
-criteria, **EXCLUDE as the default verdict**, and the requirement that every candidate come back
-with its own evidence rather than a bare verdict. The dispatcher then **spot-checks a sample**
+criteria, **a stated default verdict**, and the requirement that every candidate come back
+with its own evidence rather than a bare verdict.
+
+**Which default is a decision, not a constant.** The incident below produced a screen that
+drifted lenient, so *that* screen wanted EXCLUDE-by-default — the cost of a false include was
+a corpus re-screened by hand. Invert the costs and the answer inverts: on a **recall-first**
+screen — a literature sweep, a hunt for prior art, anything where the question is *what might
+we be missing* — excluding by default silently drops relevant evidence, and unlike a bad
+include, **nothing downstream ever surfaces it.** An external referee flagged exactly this as
+the way a rule of thumb becomes a research-quality defect. So: name the default in the rubric,
+and name it by asking which error you could still catch later. Where neither error is
+recoverable, the honest default is a third verdict — NEEDS-HUMAN — not a coin weighted toward
+tidiness. The dispatcher then **spot-checks a sample**
 against that same rubric — a screen nobody re-checked is an opinion poll with citations. And a
 wave of parallel agents is adjudicated **once, whole**: early returns are *status*, not input,
 and verdicts join to candidates **by id**, never by a model-authored string (law 1's silent join

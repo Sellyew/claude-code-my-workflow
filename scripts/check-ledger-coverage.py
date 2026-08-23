@@ -13,9 +13,14 @@ Both directions fail here:
   2. a ledger row naming a checker that is no longer on disk — a qualification for
      a ghost, which reads as coverage the repo does not have.
 
-Plus wiring: a mistyped path in `.claude/settings.json` disables a hook in total
-silence — no error, no warning, and the session behaves as though the hook simply
-had nothing to say. That failure is the reason this checker exists.
+Plus wiring: a mistyped path in `.claude/settings.json` costs you the GUARDING,
+and no other gate in the suite notices — nothing else reads the settings file
+against the disk, so a hook can be wired to nothing while every check stays green.
+That is the failure this checker exists to catch. The symptom is not silence, and
+it is not legible either: `python3 <missing-path>` exits 2, which a PreToolUse hook
+means as BLOCK, so a typo on a guard denies every matching call with an interpreter
+error nobody reads as a config error; a bare path exits 127 (126 if present but not
+executable), a non-blocking error that scrolls past while the guard stops guarding.
 
 Registered checks are derived LIVE from three sources of truth — the `run` lines in
 `scripts/backtest.sh`, the hook commands in `.claude/settings.json`, and the
@@ -232,7 +237,7 @@ def main():
                     errs.append(f"{tok}: named by a ledger {kind} but no such file exists — the "
                                 "qualification is recorded for a checker that is gone")
 
-    print("\n  WIRING — a mistyped path here disables a check in silence")
+    print("\n  WIRING — a mistyped path here leaves a check wired to nothing")
     for source, path, interp, where in checks:
         if source == "backtest gate":
             continue                      # a dead gate path is loud: backtest.sh fails on it
@@ -240,7 +245,9 @@ def main():
         if not os.path.isfile(path):
             print(f"    {where:<14} {r:<42} MISSING — never runs")
             errs.append(f"{r}: registered as {art(source)} ('{where}') but no such file exists — "
-                        "it is wired to nothing and fails silently")
+                        "it is wired to nothing, and the invocation fails in a way nobody reads "
+                        "as a config error (interpreted: exit 2, which PreToolUse means as BLOCK; "
+                        "bare path: exit 127, non-blocking, guard gone)")
             continue
         notes = []
         if interp:
@@ -248,14 +255,16 @@ def main():
                 notes.append(f"readable, run by {interp}")
             else:
                 notes.append(f"NOT READABLE by {interp}")
-                errs.append(f"{r}: invoked via {interp} but is not readable — the invocation errors "
-                            "out where nobody looks")
+                errs.append(f"{r}: invoked via {interp} but is not readable — the invocation exits 2, "
+                            "which PreToolUse means as BLOCK, so every matching call is denied by a "
+                            "permission error that is really a config typo")
         elif os.access(path, os.X_OK):
             notes.append("executable")
         else:
             notes.append("NOT EXECUTABLE")
-            errs.append(f"{r}: invoked directly but is not executable — it is skipped without a "
-                        f"message (fix: chmod +x {r})")
+            errs.append(f"{r}: invoked directly but is not executable — the invocation exits 126 with "
+                        f"a shell error, which does not block anything, so the hook stops guarding "
+                        f"while the session looks normal (fix: chmod +x {r})")
         if r in tracked:
             notes.append("tracked")
         else:

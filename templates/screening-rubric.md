@@ -2,11 +2,18 @@
 
 **Date:** [YYYY-MM-DD]
 **Screened by:** [N parallel agents / by hand]
-**Default verdict:** EXCLUDE
+**Screen type:** [precision-first — a shortlist you will act on | recall-first — a sweep asking what you might be missing]
+**Default verdict:** [EXCLUDE for precision-first · INCLUDE-or-NEEDS-HUMAN for recall-first — see below]
 
 > Write this **before** the screen runs. A rubric invented per candidate is not a rubric — it is
 > the screener's taste, applied N times
 > ([`research-agent-laws.md`](../.claude/references/research-agent-laws.md) law 21).
+>
+> **Set the default by asking which error you could still catch later.** A wrong INCLUDE
+> survives to the next stage, where someone sees it. A wrong EXCLUDE leaves no trace anywhere —
+> on a recall-first screen it is how relevant evidence disappears silently. Precision-first
+> screens default to EXCLUDE; recall-first screens must not, and anything genuinely undecidable
+> belongs in **NEEDS-HUMAN** rather than resolved toward whichever side is tidier.
 
 ---
 
@@ -19,7 +26,8 @@ see", the screen is premature — the criteria below cannot be written without i
 
 ## Criteria
 
-INCLUDE requires **every** criterion to hold, each with cited evidence. Anything else is EXCLUDE.
+INCLUDE requires **every** criterion to hold, each with cited evidence. Anything else takes the
+default verdict declared above — which on a recall-first screen is *not* EXCLUDE.
 
 | # | Criterion (must hold) | How it is checked | Verdict if it fails |
 |---|-----------------------|-------------------|---------------------|
