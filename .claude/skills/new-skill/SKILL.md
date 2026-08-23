@@ -62,7 +62,7 @@ Run `python3 scripts/check-skill-integrity.py --verbose` and fix any P0/P1 befor
 
 ### Phase 4 — Remind: register the surface (table-row gate)
 
-The skill is NOT discoverable to a reader until it is listed. `check-surface-sync.sh` runs a **table-row gate**: the `<!-- surface-sync-table: skills -->` tables in `README.md` and `CLAUDE.md` must have exactly one data row per skill on disk. Adding a skill without a row fails the gate.
+The skill is NOT discoverable to a reader until it is listed. `check-surface-sync.sh` runs a **table-row gate**: the `<!-- surface-sync-table: skills -->` table in `README.md` must have exactly one data row per skill on disk. Adding a skill without a row fails the gate.
 
 REMIND the user to:
 

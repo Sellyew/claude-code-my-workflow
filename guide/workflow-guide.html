@@ -4692,7 +4692,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </tr>
 <tr class="odd">
 <td>Context monitor</td>
-<td><code>PostToolUse[Bash|Task]</code></td>
+<td><code>PostToolUse[Bash|Agent|Task]</code></td>
 <td>Progressive warnings at 40%/55%/65%/80%/90% context</td>
 </tr>
 <tr class="even">
@@ -4702,7 +4702,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </tr>
 <tr class="odd">
 <td>Claim reconcile</td>
-<td><code>PostToolUse[Edit|Write]</code></td>
+<td><code>PostToolUse[Write|Edit|MultiEdit]</code></td>
 <td>Flags stale numeric claims when analysis scripts change</td>
 </tr>
 </tbody>
@@ -6646,7 +6646,7 @@ research-spec.md  ─────────────→  preregistration-dr
 </section>
 <section id="sec-community" class="level2" data-number="6.10">
 <h2 data-number="6.10" class="anchored" data-anchor-id="sec-community"><span class="header-section-number">6.10</span> Community Adoption</h2>
-<p>As of March 2026, <strong>15+ research groups</strong> across multiple disciplines have forked and adapted this workflow for their own projects:</p>
+<p>Research groups across multiple disciplines have forked and adapted this workflow for their own projects — <strong>15+ at the March 2026 survey</strong>, with the fork network growing steadily since:</p>
 <ul>
 <li><strong>Economics</strong> — China innovation policy, mental health and layoffs, AIGC and stock prices, capital/labor shares in healthcare</li>
 <li><strong>Energy</strong> — Nepal and global energy economics, PV module reliability</li>
@@ -7747,7 +7747,7 @@ research-spec.md  ─────────────→  preregistration-dr
 </tr>
 <tr class="odd">
 <td>Context monitor</td>
-<td>PostToolUse[Bash|Task] (command)</td>
+<td>PostToolUse[Bash|Agent|Task] (command)</td>
 <td><code>.claude/hooks/context-monitor.py</code></td>
 </tr>
 <tr class="even">

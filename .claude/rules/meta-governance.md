@@ -66,8 +66,9 @@ When creating or modifying content, ask:
 > demand. Two consequences: (1) the size limit protects readability, not a context budget;
 > (2) `[LEARN]` entries reach a session only when the file is actually read. If we want the
 > documented behaviour, add `@MEMORY.md` to `CLAUDE.md` — but note the file is already
-> ~30KB, over the 25KB threshold at which trailing content is dropped, so it must be
-> trimmed first. Tracked as an open decision in the v2.5 plan.
+> over the 25KB threshold at which trailing content is dropped, it would need
+> trimming first. **Resolved at v2.5.0 (2026-08-23):** `MEMORY.md` stays linked-not-imported,
+> and the cap is enforced by trimming — the file was compressed under 25KB during the release.
 
 ---
 
@@ -274,4 +275,4 @@ As this repository evolves, meta-governance may need updates.
 - Document with examples from multiple domains (not just our use case)
 - Review quarterly: promote generic patterns, refine specific ones
 
-**When in doubt:** Ask "Would a biology PhD student forking this repo for lab protocols benefit from this knowledge?" If yes → MEMORY.md. If no → personal-memory.md.
+**When in doubt:** Ask "Would a biology PhD student forking this repo for lab protocols benefit from this knowledge?" If yes → MEMORY.md. If no → native auto memory.
