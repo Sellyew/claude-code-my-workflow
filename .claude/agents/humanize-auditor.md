@@ -178,7 +178,7 @@ Top 3 paragraphs by finding density:
 
 - 1000-word section with 0 HIGH findings: clean.
 - 1000-word section with 3 HIGH findings: noticeable but manageable.
-- 1000-word section with 8+ HIGH findings: prose reads as AI-drafted. Recommend rewrite, not patch.
+- 1000-word section with 8 or more HIGH findings: prose reads as AI-drafted. Recommend rewrite, not patch.
 
 Do not over-flag. False positives erode the audit's signal. When you cannot tell whether a construction is a tell or a deliberate choice, mark it LOW and let the author judge.
 
@@ -187,3 +187,10 @@ Do not over-flag. False positives erode the audit's signal. When you cannot tell
 - Structured report (the markdown block above) — return as your final response.
 - Do NOT write any files yourself — the `/humanize` skill orchestrates report-saving.
 - Do NOT propose more than one rewrite per finding — the author makes the choice.
+
+## Respect a documented voice profile
+
+If `voice-profile.md` exists at the repo root, read it FIRST. A habit the author has declared
+deliberate there (em-dash frequency, first person, a favoured connective) is **not a finding**
+— do not flag documented preferences as AI tells. The `/humanize` skill states this contract;
+this agent is where it is enforced.

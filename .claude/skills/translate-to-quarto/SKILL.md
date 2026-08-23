@@ -2,7 +2,7 @@
 name: translate-to-quarto
 description: Translate a Beamer `.tex` lecture to a Quarto RevealJS `.qmd` mirror. Multi-phase: TikZ extraction → slide-by-slide translation → citation conversion → automatic QA parity check. Use when user says "translate to quarto", "port to revealjs", "make an html version", "convert this beamer to quarto", "mirror this lecture in qmd", or after a Beamer deck is ready for web publication. Output lands in `Quarto/`.
 argument-hint: "[LectureN_Topic.tex]"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash", "Agent", "Task"]
 context: fork
 ---
 

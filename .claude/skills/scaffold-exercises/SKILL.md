@@ -10,7 +10,7 @@ effort: medium
 
 Generate a graded problem set as two files: a clean **student set** (problems only) and a **solution key** (worked solutions + a one-line explainer per problem). Pattern imported from `mattpocock/skills`, adapted for economics teaching — the primary lens is graded coursework that mixes derivation, estimation, and code.
 
-**Input:** `$ARGUMENTS` — a topic (e.g., "instrumental variables", "consumer theory", "staggered DiD") and optional flags. See [Flags](#flags).
+**Input:** `$ARGUMENTS` — a topic (e.g., "instrumental variables", "consumer theory", "quantile regression") and optional flags. See [Flags](#flags).
 
 ---
 

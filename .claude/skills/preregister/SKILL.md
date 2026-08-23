@@ -1,11 +1,12 @@
 ---
 name: preregister
 description: Draft a structured preregistration document (OSF, AsPredicted, or AEA RCT Registry style) from a research spec or free-form study description. Output is a Markdown file with hypotheses, design, sampling plan, analysis plan, exclusions, and inference criteria — annotated with MUST / SHOULD / MAY clarity flags. Use when user says "preregister", "draft a preregistration", "OSF preregistration", "AsPredicted", "AEA RCT registry", "PAP", "preanalysis plan", or before launching an experiment / data collection / analysis on data the analyst has not yet seen. NOT a registry submission tool — produces a document the user uploads to OSF / AsPredicted / AEA themselves.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[--style osf|aspredicted|aea-rct] [--input <spec-or-description>] [--no-verify]"
 disable-model-invocation: true
-allowed-tools: ["Read", "Write", "Task"]
+allowed-tools: ["Read", "Write", "Agent", "Task"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # /preregister — Preregistration Document Generator
@@ -98,7 +99,7 @@ For each failure, the document gets a `[CLARIFY: …]` placeholder; the document
 
 ### PHASE 5 — Post-flight verification
 
-If the document cites prior literature in the rationale section (e.g., "Building on Hainmueller et al. 2014, we expect …"), invoke `/verify-claims` via `Task` to fact-check those citations. Pass the draft path and a list of explicit citations. The `claim-verifier` agent (forked context, never sees the draft) returns PASS / PARTIAL / FAIL per citation. Surface any FAIL/PARTIAL in the output summary.
+If the document cites prior literature in the rationale section (e.g., "Building on Hainmueller et al. 2014, we expect …"), invoke `/verify-claims` via the `Agent` tool to fact-check those citations. Pass the draft path and a list of explicit citations. The `claim-verifier` agent (forked context, never sees the draft) returns PASS / PARTIAL / FAIL per citation. Surface any FAIL/PARTIAL in the output summary.
 
 Skip post-flight if:
 

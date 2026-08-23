@@ -1,0 +1,6 @@
+{"case":"fresh-context-independence","rep":1,"mode":"with","hits":0,"asserts":1}
+{"case":"fresh-context-independence","rep":1,"mode":"without","hits":0,"asserts":1}
+{"case":"fresh-context-independence","rep":2,"mode":"with","hits":1,"asserts":1}
+{"case":"fresh-context-independence","rep":2,"mode":"without","hits":0,"asserts":1}
+{"case":"fresh-context-independence","rep":3,"mode":"with","hits":0,"asserts":1}
+{"case":"fresh-context-independence","rep":3,"mode":"without","hits":0,"asserts":1}

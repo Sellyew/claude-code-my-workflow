@@ -12,7 +12,7 @@ alwaysApply: false
 
 Symmetric partner to **Pre-Flight Reports** (`.claude/rules/content-invariants.md` + skill-level `## Phase 0`). Where Pre-Flight proves inputs were read *before* work, Post-Flight proves the output's factual claims hold *after* drafting — before the skill returns to the user.
 
-**Adapted from:** Dhuliawala et al. 2023, "Chain-of-Verification Reduces Hallucination in Large Language Models" ([arXiv:2309.11495](https://arxiv.org/abs/2309.11495)). The **independence trick** — answer verification questions in a context that does not contain the original draft — is architecturally enforced here by running `claim-verifier` via `Task` with `context: fork`. The forked agent literally cannot self-confirm; it has never seen the draft.
+**Adapted from:** Dhuliawala et al. 2023, "Chain-of-Verification Reduces Hallucination in Large Language Models" ([arXiv:2309.11495](https://arxiv.org/abs/2309.11495)). The **independence trick** — answer verification questions in a context that does not contain the original draft — is architecturally enforced here by running `claim-verifier` via the `Agent` tool with `context: fork`. The forked agent literally cannot self-confirm; it has never seen the draft.
 
 ## When this rule applies
 
@@ -60,7 +60,7 @@ For each extracted claim, write one specific, answerable question whose answer c
 
 ### Step 4 — Answer in fresh context, then reconcile
 
-Spawn `claim-verifier` via `Task` with `subagent_type=claim-verifier` and `context=fork`. Hand it: claims, verification questions, source material pointers. **Do not include the draft** — forking removes the draft from the verifier's context automatically, but don't explicitly pass it either.
+Spawn `claim-verifier` via the `Agent` tool with `subagent_type=claim-verifier` and `context=fork`. Hand it: claims, verification questions, source material pointers. **Do not include the draft** — forking removes the draft from the verifier's context automatically, but don't explicitly pass it either.
 
 Receive back a verification report. Three outcomes:
 

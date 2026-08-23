@@ -1,11 +1,12 @@
 ---
 name: compress-session
 description: Distill the current conversation into a structured note (decisions made, open questions, file pointers with line numbers, next 1–3 actions) and save to `quality_reports/session_logs/` before auto-compression. Differs from `/checkpoint` (explicit stop-point snapshot) and from auto-compaction (which truncates rather than distills). Use when context is approaching auto-compact threshold, when a long pipeline has accumulated many decisions, or when the user says "compress", "distil this session", "before we hit auto-compact", "structured handoff before context resets".
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[optional-topic-slug]"
 disable-model-invocation: true
 allowed-tools: ["Read", "Write", "Glob", "Grep", "Bash"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # `/compress-session` — distil, don't truncate

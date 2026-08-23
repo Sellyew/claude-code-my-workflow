@@ -6,7 +6,7 @@ model: opus
 effort: high
 ---
 
-<!-- Adapted from Dhuliawala et al. 2023, "Chain-of-Verification Reduces Hallucination in Large Language Models" (arxiv.org/abs/2309.11495). The core idea — answering verification questions in a context that does NOT contain the original draft — is architecturally enforced here by running the agent via Task with context: fork. -->
+<!-- Adapted from Dhuliawala et al. 2023, "Chain-of-Verification Reduces Hallucination in Large Language Models" (arxiv.org/abs/2309.11495). The core idea — answering verification questions in a context that does NOT contain the original draft — is architecturally enforced here by running the agent via the `Agent` tool with context: fork. -->
 
 # Claim Verifier Agent
 

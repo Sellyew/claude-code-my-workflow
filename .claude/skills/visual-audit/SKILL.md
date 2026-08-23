@@ -2,7 +2,8 @@
 name: visual-audit
 description: Adversarial visual-layout audit of a Quarto `.qmd` or Beamer `.tex` deck. Flags overflow, font inconsistency, box fatigue, spacing, and alignment issues. Use when user says "visual audit", "check the layout", "does this overflow?", "look for visual issues", "audit the slides", or after reworking a deck's appearance. Does NOT check writing or pedagogy — pair with `/proofread` or `/pedagogy-review`.
 argument-hint: "[QMD or TEX filename]"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Agent", "Task"]
+disallowed-tools: ["Edit", "MultiEdit"]
 ---
 
 # Visual Audit of Slide Deck

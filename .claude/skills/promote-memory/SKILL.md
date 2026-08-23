@@ -1,17 +1,18 @@
 ---
 name: promote-memory
-description: Review candidate `[LEARN]` entries in `.claude/state/personal-memory.md` (gitignored) and run them through a five-critic council in parallel: generality, staleness, redundancy, evidence, format. Majority vote (3+ of 5) promotes the entry to MEMORY.md. Use when user says "promote memory", "review my learnings", "what should graduate to MEMORY.md", "five-critic council", or as monthly memory maintenance.
-author: Claude Code Academic Workflow
-version: 1.0.0
+description: Review candidate learnings in Claude Code's native auto memory (`~/.claude/projects/<project>/memory/`, machine-local) and run them through a five-critic council in parallel: generality, staleness, redundancy, evidence, format. Majority vote (3+ of 5) promotes the entry to MEMORY.md. Use when user says "promote memory", "review my learnings", "what should graduate to MEMORY.md", "five-critic council", or as monthly memory maintenance.
 argument-hint: "[entry-substring or 'all']"
 disable-model-invocation: true
-allowed-tools: ["Read", "Write", "Glob", "Grep", "Task", "Bash"]
+allowed-tools: ["Read", "Write", "Glob", "Grep", "Agent", "Task", "Bash"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 <!-- Pattern adapted with attribution from Chris Blattman's claudeblattman v2.1
      "Five-critic council" (claudeblattman.com, Apr 2026 continuous-improvement
      loop). Blattman uses it to decide what enters his MEMORY layer; we adapt
-     it to the personal-memory → MEMORY.md promotion question codified in
+     it to the auto-memory → MEMORY.md promotion question codified in
      .claude/rules/meta-governance.md. -->
 
 # `/promote-memory` — five-critic council for memory promotion
@@ -19,7 +20,7 @@ allowed-tools: ["Read", "Write", "Glob", "Grep", "Task", "Bash"]
 The template's [`meta-governance.md`](../../rules/meta-governance.md) rule splits memory into two tiers:
 
 - **`MEMORY.md`** (committed, ≤ 200 lines) — generic learnings that help all forkers.
-- **`.claude/state/personal-memory.md`** (gitignored, no size cap) — machine-specific and user-specific learnings.
+- **native auto memory** (`~/.claude/projects/<project>/memory/` — machine-local, typed `user`/`feedback`/`project`/`reference`, no size cap on topic files) — machine-specific and user-specific learnings.
 
 The rule says generic patterns should sync via git; personal patterns stay local. **What it doesn't say** is *who decides which is which*. `/promote-memory` operationalizes the call: spawn five critics in parallel, each reviewing the candidate `[LEARN]` entries on a single dimension, and promote on majority vote (3+ of 5).
 
@@ -32,13 +33,13 @@ The rule says generic patterns should sync via git; personal patterns stay local
 
 ## When NOT to use
 
-- **For a single fresh `[LEARN]` after a single correction.** Just add it to personal-memory.md; let it sit until the next council runs.
+- **For a single fresh `[LEARN]` after a single correction.** Just let auto memory record it; let it sit until the next council runs.
 - **For deleting stale entries.** Use `/learn --revoke` or manual edit. `/promote-memory` only promotes; it doesn't demote.
 - **For project-specific context.** That belongs in CLAUDE.md or session logs, not in either memory tier.
 
 ## The five critics
 
-Each critic runs in a forked context (`Task` with `context=fork`) — they don't see each other's verdicts or the user's draft. Each casts one **YES/NO** vote per candidate entry with a one-sentence rationale.
+Each critic runs in a forked context (`Agent` with `context=fork`) — they don't see each other's verdicts or the user's draft. Each casts one **YES/NO** vote per candidate entry with a one-sentence rationale.
 
 ### 1. Generality critic
 
@@ -58,7 +59,7 @@ Each critic runs in a forked context (`Task` with `context=fork`) — they don't
 
 ### 5. Format critic
 
-> "Does the entry follow the schema in [`.claude/rules/meta-governance.md`](.claude/rules/meta-governance.md): `[LEARN:category] wrong → right` for corrections, structured `**Why:**` + `**How to apply:**` for feedback/project entries? If it's just a free-form note, vote NO — fix the format first, then re-submit."
+> "Does the entry follow the schema in [`.claude/rules/meta-governance.md`](../../rules/meta-governance.md): `[LEARN:category] wrong → right` for corrections, structured `**Why:**` + `**How to apply:**` for feedback/project entries? If it's just a free-form note, vote NO — fix the format first, then re-submit."
 
 ### Council verdict
 
@@ -67,13 +68,13 @@ Each critic returns YES/NO + rationale. The promotion threshold is **majority (3
 - **5 YES** — promote without modification.
 - **4 YES** — promote with a one-line note about the dissenting concern.
 - **3 YES** — promote but address the dissenting critics' concerns first (typically: trim, add evidence, fix format).
-- **2 or fewer YES** — do not promote. Either fix the entry per the dissenting critics' feedback and re-submit, or leave in personal-memory.md.
+- **2 or fewer YES** — do not promote. Either fix the entry per the dissenting critics' feedback and re-submit, or leave it in auto memory.
 
 ## Steps
 
 ### Step 1: Read candidate entries
 
-If `$ARGUMENTS` is `all`, read every `[LEARN:*]` entry in `.claude/state/personal-memory.md`. Otherwise treat `$ARGUMENTS` as a substring filter (e.g., `r-code` matches all `[LEARN:r-code]` entries).
+If `$ARGUMENTS` is `all`, read every `[LEARN:*]` entry in `~/.claude/projects/<project>/memory/`. Otherwise treat `$ARGUMENTS` as a substring filter (e.g., `r-code` matches all `[LEARN:r-code]` entries).
 
 ### Step 2: Spawn the council
 
@@ -83,7 +84,7 @@ Five `Task` invocations in parallel, one per critic, each with `context: fork`:
 - **Staleness critic** — context: the candidate entry + the ability to `Read` / `Grep` the codebase. Should explicitly check any file paths / function names / settings the entry references.
 - **Redundancy critic** — context: the candidate entry + the current `MEMORY.md` + `CLAUDE.md` + relevant rule files.
 - **Evidence critic** — context: the candidate entry only. Vote based on whether the entry self-describes its motivation.
-- **Format critic** — context: the candidate entry + [`.claude/rules/meta-governance.md`](.claude/rules/meta-governance.md) for the schema reference.
+- **Format critic** — context: the candidate entry + [`.claude/rules/meta-governance.md`](../../rules/meta-governance.md) for the schema reference.
 
 Use the **Haiku tier** for all five critics (per [`.claude/rules/model-routing.md`](../../rules/model-routing.md): mechanical-ish review work). The user can override via the agent's `model:` field if they want Sonnet for the harder calls.
 
@@ -118,26 +119,59 @@ For each entry:
 
 ### Step 5: User approves the promotions
 
-The user reviews the report and explicitly approves which entries to promote. The skill writes approved entries to MEMORY.md, removes the same entries from personal-memory.md (or marks them with `# promoted YYYY-MM-DD` for audit), and surfaces a summary.
+The user reviews the report and explicitly approves which entries to promote. The skill writes approved entries to MEMORY.md, marks the same entries in their auto-memory topic files with `# promoted YYYY-MM-DD` for audit, and surfaces a summary.
 
 Do **not** auto-promote — even on 5-of-5 YES votes. The user's approval is the final gate.
 
 ## Output
 
 - Per-entry council report (verdicts, rationales, recommendations) — to the conversation.
-- On approval: MEMORY.md updated (append at appropriate `[LEARN:category]` section), personal-memory.md updated (entry marked promoted).
+- On approval: MEMORY.md updated (append at appropriate `[LEARN:category]` section), the auto-memory topic file updated (entry marked promoted).
 - A `quality_reports/memory_promotion_<date>.md` audit file recording the full council session for forensics.
 
 ## Anti-patterns
 
 - **Auto-promoting on 5-of-5 YES.** Even unanimous critic agreement can be wrong; the user's domain judgment is the final gate.
-- **Re-running the council on the same entry repeatedly** hoping for a different result. If 4 critics consistently say NO, the entry doesn't belong in MEMORY.md — file it in personal-memory.md and stop.
+- **Re-running the council on the same entry repeatedly** hoping for a different result. If 4 critics consistently say NO, the entry doesn't belong in MEMORY.md — leave it in auto memory and stop.
 - **Skipping the Evidence critic** because the entry "looks obvious." Evidence is what makes the entry portable across forkers; obvious-to-you ≠ obvious-to-them.
 - **Demoting via this skill.** It only promotes. Demotion is a manual edit + commit.
 
 ## Cross-references
 
 - [`.claude/rules/meta-governance.md`](../../rules/meta-governance.md) — the two-tier memory contract this skill operationalizes.
-- [`.claude/agents/promote-memory-council.md`](../../agents/promote-memory-council.md) — the five-critic implementation (one agent file with five role specs, dispatched in parallel via `Task`).
+- [`.claude/agents/promote-memory-council.md`](../../agents/promote-memory-council.md) — the five-critic implementation (one agent file with five role specs, dispatched in parallel via the `Agent` tool).
 - [`.claude/rules/model-routing.md`](../../rules/model-routing.md) — why critics default to Haiku tier.
 - `/learn` (existing skill) — captures new `[LEARN]` entries; pairs with `/promote-memory` (which decides what graduates).
+
+## Source of candidates (v2.5)
+
+Candidates come from **native auto memory** — `~/.claude/projects/<project>/memory/`. Claude
+writes these itself as it works, typed `user` / `feedback` / `project` / `reference`, and the
+`MEMORY.md` there is an index, not the content.
+
+The promotion question is unchanged and is the whole point: *would a researcher in a different
+field, forking this template, be better off knowing this?* If yes it belongs in the committed
+`MEMORY.md`; if it is about this machine, this dataset, or this person's preferences, it stays
+local.
+
+**Retired:** `.claude/state/personal-memory.md`. The two-tier idea was right; Claude Code now
+ships the local tier natively, so the hand-rolled file is redundant. An existing one still
+reads as a plain file, but nothing writes to it.
+
+## The capture gate — before anything is remembered
+
+Promotion decides what becomes *shared* knowledge. This gate decides what is worth recording
+**at all**. Five questions; a candidate must pass all five:
+
+1. **Durable** — will this still be true in six months, or is it about today's branch?
+2. **Non-obvious** — would a competent person rediscover it in five minutes anyway?
+3. **Stable** — does it describe a rule, or a symptom that a fix will erase?
+4. **Specific** — is it actionable, or is it a mood? *"Be careful with merges"* is a mood.
+5. **Not already captured** — does an existing entry cover it? Extend that one instead.
+
+> **Just-in-case memories are banned.** They pollute the index and make the useful entries
+> unfindable. A memory store nobody trusts is a memory store nobody reads.
+
+Promotion from local observation to committed knowledge is a **reviewed act, not an autosave** —
+which is why the five-critic council exists and why the user is the final gate even on a
+unanimous vote.

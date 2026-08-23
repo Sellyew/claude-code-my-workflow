@@ -2,13 +2,13 @@
 name: seven-pass-review
 description: Mechanize Pattern 15 — the seven-pass adversarial review protocol for academic manuscripts. Spawns 7 forked subagents in parallel (abstract, intro, methods, results, robustness, prose, citations), then synthesizes a prioritized revision checklist. Use for submission-ready or R&R-stage papers where single-pass review isn't enough.
 argument-hint: "[manuscript path]"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Bash", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Bash", "Agent", "Task"]
 effort: high
 ---
 
 # Seven-Pass Adversarial Review
 
-Runs seven independent reviewers, each focused on a single lens, then synthesizes their findings into one prioritized revision plan. Pattern 15 from the workflow guide, mechanized.
+Runs seven independent reviewers, each focused on a single lens, then synthesizes their findings into one prioritized revision plan — the fan-out → reduce → judge runtime from `orchestrator-protocol.md`, applied with seven lenses.
 
 **Why seven passes?** A single-agent review blends lenses and softens each one. Seven forked agents each approach the paper with full context budget for their own lens, then a synthesizer resolves conflicts and de-duplicates.
 
@@ -42,14 +42,14 @@ Each lens runs as a **forked subagent** (context: fork) so the main conversation
 
 ### Phase 1: Spawn 7 reviewers in parallel
 
-In a single message, spawn 7 Task tool calls (one per lens). Each subagent gets:
+In a single message, spawn 7 `Agent` tool calls (one per lens). Each subagent gets:
 
 - The manuscript path (to re-read with its own context).
 - The lens-specific prompt (below).
 - Instructions to write to `quality_reports/seven_pass_[stem]/lens_[N]_[lens-name].md`.
-- A closing `findings:` + `scorecard:` block in the shared schema ([`orchestration-schemas.md`](../../references/orchestration-schemas.md)): `severity: CRITICAL | MAJOR | MINOR`, with `evidence` and `change_my_mind` on every CRITICAL/MAJOR. Phase 2 reduces over these typed findings — it does not re-read the prose.
+- A **JSON findings array** conforming to [`finding-schema.json`](../../references/finding-schema.json), written to `quality_reports/seven_pass_[stem]/lens_[N]_[lens-name].json` beside the prose report. Severities: `blocker | major | minor | nit`. Every finding computes its `id` with `python3 scripts/validate-findings.py --id FILE LINE LOCUS` and carries `rule`, `evidence`, and a `failing_case`. Phase 2 **validates each array first** (`python3 scripts/validate-findings.py <file>` — exit 0 required; a lens whose report does not validate has not reviewed), then reduces over the typed findings — it does not re-read the prose. Because ids are lens-independent, the same defect found by two lenses dedups to one finding automatically.
 
-This is the **fan-out** primitive from [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md); `Task` subagents are the portable mechanism (the agents that fill lenses 3/6 are in [`agent-fleet.md`](../../references/agent-fleet.md)).
+This is the **fan-out** primitive from [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md); `Agent` subagents are the portable mechanism (the agents that fill lenses 3/6 are in [`agent-fleet.md`](../../references/agent-fleet.md)).
 
 Lens prompt rubrics are embedded inline below — one summary paragraph per lens. Each forked subagent receives its lens's rubric plus the manuscript path.
 
@@ -138,6 +138,43 @@ For cheaper alternatives:
 - Early drafts (use `/review-paper` single-pass first).
 - Short notes, comments, or replies (overkill).
 - When you've already run this in the last 7 days and nothing substantive changed.
+
+
+## Findings are validated, not just written (v2.5)
+
+This skill's reviewers emit findings under the machine-checked contract in
+[`finding-schema.json`](../../references/finding-schema.json). Reports are JSON **arrays**.
+
+**Smoke-test the harness before spending review effort** — a run that fans out reviewers and
+then cannot write a valid report has wasted the whole pass:
+
+```bash
+echo '[]' | python3 scripts/validate-findings.py
+```
+
+Then, before presenting any summary:
+
+```bash
+python3 scripts/validate-findings.py <report>.json   # exit 0 required
+```
+
+What the contract forces, and why:
+
+- **`rule`** — the documented rule or standard violated. A finding citing no rule is an
+  opinion, and opinions do not gate a commit.
+- **`failing_case`** — a concrete configuration under which the claim breaks, or the exact
+  missing hypothesis. *"This could be clearer"* does not validate.
+- **`id = sha1("<file>:<line>:<locus>")`** — deterministic, so dedup across rounds is
+  exact and the two-strikes rule is checkable rather than eyeballed.
+- **`mechanical`** — `true` only for fixes that cannot change a result (typo, cross-reference,
+  formatting, label). **Never** for an estimand, assumption, specification, inference
+  procedure, sample definition, or reporting language: those return to the researcher.
+
+Apply the **per-lens evidence burdens** and the **"does NOT count" filters** in
+[`orchestration-schemas.md` §7](../../references/orchestration-schemas.md) *before*
+verification, so known false alarms never reach the judge. The verifier pass is
+**refute-biased**: only `verdict: "confirmed"` findings ship; anything it cannot ground is
+dropped, not downgraded to a warning.
 
 ## Cross-references
 

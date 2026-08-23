@@ -2,7 +2,8 @@
 name: review-r
 description: Read-only R code review protocol for `.R` scripts. Checks code quality, reproducibility, domain correctness, tidyverse idioms, and professional standards; produces a report without editing. Use when user says "review this R script", "check the R code", "audit the analysis code", "code review on the R", or when an R file is touched as part of a paper submission. NOT for running the code — pair with `/audit-reproducibility` for numeric verification.
 argument-hint: "[filename or 'all' or 'LectureN']"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Agent", "Task"]
+disallowed-tools: ["Edit", "MultiEdit"]
 ---
 
 # Review R Scripts

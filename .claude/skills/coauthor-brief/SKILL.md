@@ -1,17 +1,18 @@
 ---
 name: coauthor-brief
 description: Generate a co-author / collaborator handoff brief for a multi-author, multi-machine project — summarizing what changed since the last brief (git delta), the current state of each artifact (manuscript, analysis, slides), open questions, how to reproduce locally, and any restricted-data access steps. Use when user says "coauthor brief", "handoff brief", "bring my coauthor up to speed", "what changed since last week", "onboard a collaborator", "write a handoff for [name]", or before sending a co-author the repo. NOT a commit or a checkpoint — it is the cross-machine, cross-person summary `meta-governance.md` only partially covers.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[--since <tag|date|Ndays>] [--for <collaborator-name>] [--no-data-section]"
 disable-model-invocation: true
 allowed-tools: ["Read", "Write", "Glob", "Grep", "Bash"]
 effort: medium
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # /coauthor-brief — Collaborator Handoff Brief
 
-Produce a single Markdown brief a co-author (or your future self on another machine) can read in a few minutes to know **what changed, where each artifact stands, what's blocked, and how to run the pipeline locally** — including restricted-data access steps a new collaborator needs. [`meta-governance.md`](../../rules/meta-governance.md) covers the *memory* side of cross-machine work (what syncs via git, what stays in gitignored `personal-memory.md`); this skill covers the *human* side: the per-person, per-session handoff.
+Produce a single Markdown brief a co-author (or your future self on another machine) can read in a few minutes to know **what changed, where each artifact stands, what's blocked, and how to run the pipeline locally** — including restricted-data access steps a new collaborator needs. [`meta-governance.md`](../../rules/meta-governance.md) covers the *memory* side of cross-machine work (what syncs via git, what stays in gitignored native auto memory); this skill covers the *human* side: the per-person, per-session handoff.
 
 **Core principle:** `/checkpoint` is for *you* resuming; `/coauthor-brief` is for *someone else* starting. The first answers "where am I?"; the second answers "what do I need to know to take over a piece of this?"
 
@@ -92,7 +93,7 @@ branch: [current branch]
 ## Recommended git topology for this project
 - One **feature branch per author** (`feat/<author>-<topic>`); rebase on `main`, open a PR, merge via `/commit`.
 - `MEMORY.md` is **committed** — generic learnings sync to everyone.
-- `personal-memory.md` and `.claude/state/` stay **local** (gitignored) — never expect a co-author to have yours (see meta-governance.md).
+- Native auto memory (`~/.claude/projects/<project>/memory/`) and `.claude/state/` stay **local** — never expect a co-author to have yours (see meta-governance.md).
 - Pull before you brief; brief before you hand off.
 ```
 

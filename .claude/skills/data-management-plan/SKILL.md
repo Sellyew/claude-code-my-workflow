@@ -3,7 +3,7 @@ name: data-management-plan
 description: Draft a funder-compliant Data Management Plan (NSF DMP, NIH DMS Policy 2023, ERC, Horizon Europe) by composing the confidential-data and environment-capture primitives. Sections cover data description, formats/metadata, storage/backup, access/sharing, preservation/archiving, and roles. Use when user says "data management plan", "DMP", "DMSP", "NIH data sharing plan", "write the data plan for my grant", or when a grant proposal needs a data-management section. NOT a submission tool — produces a draft the user pastes into the funder portal (DMPTool, NIH ASSIST, Horizon Europe portal).
 argument-hint: "[--funder nsf|nih|erc|horizon] [--input <spec-or-proposal>] [--no-verify]"
 disable-model-invocation: true
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Agent", "Task"]
 effort: medium
 ---
 
@@ -83,7 +83,7 @@ The DMP should commit to *reproducibility*, not just data deposit:
 
 ### Phase 4 — Post-flight (skip with `--no-verify`)
 
-If the draft cites a funder policy or standard by name/number (e.g., "per NIH NOT-OD-21-013", "DCAS v1"), invoke `/verify-claims` via `Task` to confirm the policy citation resolves. Forked `claim-verifier` never sees the draft. Surface any FAIL/PARTIAL.
+If the draft cites a funder policy or standard by name/number (e.g., "per NIH NOT-OD-21-013", "DCAS v1"), invoke `/verify-claims` via the `Agent` tool to confirm the policy citation resolves. Forked `claim-verifier` never sees the draft. Surface any FAIL/PARTIAL.
 
 ### Phase 5 — Output
 

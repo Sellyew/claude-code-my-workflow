@@ -2,7 +2,7 @@
 name: review-paper
 description: Comprehensive manuscript review with three modes: single-pass (default), --adversarial critic-fixer loop, and --peer [journal] simulated peer-review pipeline (editor + 2 dispositioned referees + editorial decision, calibrated to a target journal). R&R continuation via --peer --r2/--r3; hostile-editor stress test via --peer --stress; reviewer-disposition variance reporting via --peer --variance N. Auto-invokes /review-r + /audit-reproducibility on referenced scripts unless --no-cross-artifact.
 argument-hint: "[paper path] [--adversarial | --peer <journal> [--r2 | --r3 | --stress | --variance N] [--no-novelty-check]] [--no-cross-artifact]"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash", "Agent", "Task"]
 ---
 
 # Manuscript Review
@@ -71,7 +71,7 @@ Variance mode runs N independent referees (default N=3, max N=5 for token-cost d
 
 1. Editor performs desk review once (shared across the N referees).
 2. The editor samples N dispositions from the 6-way taxonomy **with replacement**. Stratification rule: if N ≥ 3, at least one SKEPTIC is always sampled (avoids drawing N friendly referees by chance).
-3. Each of the N referees runs in an isolated context (`Task` with `context: fork`) — same manuscript, same paper-type rubric, different disposition. Referees are blind to each other.
+3. Each of the N referees runs in an isolated context (`Agent` with `context: fork`) — same manuscript, same paper-type rubric, different disposition. Referees are blind to each other.
 4. Editor receives N independent reports and produces:
    - A **decision-distribution table** (e.g., `2/3 R&R, 1/3 Reject` with the modal verdict highlighted).
    - A **concern-frequency table** showing which concerns appeared across multiple referees (high frequency = robust criticism; low frequency = disposition-dependent).
@@ -281,7 +281,7 @@ Phase 2: Fixer
   │
 Phase 3: Re-audit
   │
-  └─ Spawn a FRESH-CONTEXT subagent (via Task, `subagent_type` set to
+  └─ Spawn a FRESH-CONTEXT subagent (via the `Agent` tool, `subagent_type` set to
      general-purpose) to re-read the paper and produce a round-(N+1)
      report. Fresh context prevents anchoring bias — the new reviewer
      sees the edited paper, not the diff.
@@ -290,7 +290,7 @@ Phase 3: Re-audit
 
 ### Iteration limits — loop-until-dry
 
-Same **loop-until-dry** primitive as `/qa-quarto` ([`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md)): the critic returns `FINDING`s in the shared schema ([`orchestration-schemas.md`](../../references/orchestration-schemas.md)) and the loop **converges when a round adds 0 new CRITICAL/MAJOR concerns** (deduped on `location`+`finding`), not at a fixed count.
+Same **loop-until-dry** primitive as `/qa-quarto` ([`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md)): the critic returns `FINDING`s in the shared schema ([`orchestration-schemas.md`](../../references/orchestration-schemas.md)) and the loop **converges when a round adds 0 new CRITICAL/MAJOR concerns** (deduped on `id = sha1(file:line:locus)`), not at a fixed count.
 
 - **Convergence:** APPROVED when a round produces zero Major Concerns and zero fatal Referee Objections.
 - **Fallback cap:** 5 rounds bounds a non-converging loop; after round 5, halt and list remaining concerns.
@@ -354,7 +354,7 @@ Reports: `quality_reports/cross_artifact_[paper]/reproducibility.md`.
 **Novelty-probe Post-Flight (new in v1.7.0).** The editor's novelty probe uses `WebSearch` to check whether the paper's contribution has been made before. WebSearch results can be hallucinated — fabricated prior work, misattributed findings, wrong years. Before the editor's desk review incorporates novelty-probe claims into its decision, those claims must pass Post-Flight Verification per [`.claude/rules/post-flight-verification.md`](../../rules/post-flight-verification.md):
 
 1. The editor collects novelty-probe claims (e.g., "Smith 2022 already showed this exact result").
-2. Spawn `claim-verifier` via `Task` with `subagent_type=claim-verifier` and `context=fork`, passing the claims + verification questions + candidate source URLs. Forked fresh context is the CoVe independence trick.
+2. Spawn `claim-verifier` via the `Agent` tool with `subagent_type=claim-verifier` and `context=fork`, passing the claims + verification questions + candidate source URLs. Forked fresh context is the CoVe independence trick.
 3. Only verified claims are allowed into the desk-review narrative. Unverified claims are surfaced separately as "editor could not verify — manual check recommended" rather than presented as established prior work.
 
 Opt-out: `--no-novelty-check` already skips the probe entirely. If the probe runs, Post-Flight is mandatory.
@@ -432,9 +432,46 @@ quality_reports/
 
 ## Field adaptation
 
-The shipped `journal-profiles.md` covers 5 econ journals (AER, QJE, JPE, ECMA, ReStud). For other fields (finance, political science, biology, CS, etc.), copy `templates/journal-profile-template.md` into a new section of `journal-profiles.md` and fill in the schema. See the "Field adaptation" section at the end of `journal-profiles.md` for detailed guidance. The pipeline itself is field-agnostic; only the calibration data changes.
+The shipped `journal-profiles.md` covers 5 econ journals (AER, QJE, JPE, ECMA, ReStud) plus 3 political-science journals (APSR, AJPS, JOP). For other fields (finance, biology, CS, etc.), copy `templates/journal-profile-template.md` into a new section of `journal-profiles.md` and fill in the schema. See the "Field adaptation" section at the end of `journal-profiles.md` for detailed guidance. The pipeline itself is field-agnostic; only the calibration data changes.
 
 For non-econ paper types in `methods-referee.md`, extend the paper-type list (e.g., biology: `observational / experimental / computational / review`).
+
+
+## Findings are validated, not just written (v2.5)
+
+This skill's reviewers emit findings under the machine-checked contract in
+[`finding-schema.json`](../../references/finding-schema.json). Reports are JSON **arrays**.
+
+**Smoke-test the harness before spending review effort** — a run that fans out reviewers and
+then cannot write a valid report has wasted the whole pass:
+
+```bash
+echo '[]' | python3 scripts/validate-findings.py
+```
+
+Then, before presenting any summary:
+
+```bash
+python3 scripts/validate-findings.py <report>.json   # exit 0 required
+```
+
+What the contract forces, and why:
+
+- **`rule`** — the documented rule or standard violated. A finding citing no rule is an
+  opinion, and opinions do not gate a commit.
+- **`failing_case`** — a concrete configuration under which the claim breaks, or the exact
+  missing hypothesis. *"This could be clearer"* does not validate.
+- **`id = sha1("<file>:<line>:<locus>")`** — deterministic, so dedup across rounds is
+  exact and the two-strikes rule is checkable rather than eyeballed.
+- **`mechanical`** — `true` only for fixes that cannot change a result (typo, cross-reference,
+  formatting, label). **Never** for an estimand, assumption, specification, inference
+  procedure, sample definition, or reporting language: those return to the researcher.
+
+Apply the **per-lens evidence burdens** and the **"does NOT count" filters** in
+[`orchestration-schemas.md` §7](../../references/orchestration-schemas.md) *before*
+verification, so known false alarms never reach the judge. The verifier pass is
+**refute-biased**: only `verdict: "confirmed"` findings ship; anything it cannot ground is
+dropped, not downgraded to a warning.
 
 ## Cross-references
 

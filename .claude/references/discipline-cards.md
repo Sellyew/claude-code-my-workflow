@@ -2,7 +2,7 @@
 
 Short reference cards naming each discipline's dominant paper-type frequencies, top journals, preregistration norms, and method conventions. Read by `/research-ideation`, `/interview-me`, `/preregister`, and the `editor` agent (in `/review-paper --peer`) when the user gives a `paper_type` or domain hint without specifying a target journal.
 
-**Scope.** v1.8.0 ships two cards: **economics** and **political science**. Other social sciences (psychology, sociology, public health) are deferred to a later release. To add your own discipline, copy a card section, fill the four fields (paper-type frequencies, journals, preregistration norms, method conventions), and reference the new short-name from `journal-profiles.md` and `methods-referee.md`.
+**Scope.** v1.8.0 ships two cards: **economics** and **political science**. Other social sciences (psychology, sociology, public health) are deferred indefinitely (owner-set scope, 2026-06-10: econ + closely related fields — do not build without an explicit owner ask). To add your own discipline, copy a card section, fill the four fields (paper-type frequencies, journals, preregistration norms, method conventions), and reference the new short-name from `journal-profiles.md` and `methods-referee.md`.
 
 **Maintenance.** When you add a journal profile to `journal-profiles.md`, cross-reference it here. When you add a paper type to `methods-referee.md`, cross-reference it here.
 
@@ -26,10 +26,10 @@ Short reference cards naming each discipline's dominant paper-type frequencies, 
 - **Field experiments / RCTs:** mandatory in the **AEA RCT Registry** since 2018 for AEA-journal submission. Use `/preregister --style aea-rct`.
 - **Lab experiments:** OSF / AsPredicted increasingly common; not yet uniformly required.
 - **Observational / archival:** preregistration uncommon; pre-analysis plans appearing in some applied-micro corners.
-- **Replication packages:** AEA Data and Code Availability Policy enforced; replication archive at JEL data archive.
+- **Replication packages:** AEA Data and Code Availability Policy enforced; complete deposit at openICPSR.
 
 **Method conventions.**
-- Significance stars: AEA journals do **NOT** use stars in tables (since 2018 AEA Code style guide). Other journals (e.g., ReStud, JPubE) still allow them.
+- Significance stars: AEA journals do **NOT** use stars in tables (AEA style guidance). Other journals (e.g., ReStud, JPubE) still allow them.
 - Standard-error reporting: clustered SEs at treatment-assignment level expected; Conley / spatial SEs required for spatial data.
 - Code: R, Stata, Python, Julia all accepted; replication packages must be self-contained and deterministic (`set.seed`).
 

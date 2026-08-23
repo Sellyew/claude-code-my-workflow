@@ -47,7 +47,7 @@ The 6 dispositions used across the `--peer` pipeline:
 | Disposition | Prior |
 |---|---|
 | STRUCTURAL | "Where's the mechanism? Where's the model?" |
-| CREDIBILITY | "Show me pre-trends. What's the experiment?" |
+| CREDIBILITY | "Show me the research design. What's the experiment?" |
 | MEASUREMENT | "How is this measured? What about attrition / construct validity?" |
 | POLICY | "Does this apply outside your sample? So what?" |
 | THEORY | "What does the theory predict?" |
@@ -63,11 +63,13 @@ The `methods-referee` agent branches on paper type. The default types (econ-cent
 - `structural` — structural estimation, DSGE, GE calibration, etc.
 - `theory+empirics` — theoretical model with empirical test of its predictions.
 - `descriptive` — measurement, data construction, pattern documentation.
+- `formal-theory` — game-theoretic / axiomatic model, no empirics (v1.8.0).
+- `survey-experiment` — survey or framed experiment with randomized manipulation (v1.8.0).
 
 For non-econ fields, add your own types to `.claude/agents/methods-referee.md` by duplicating the rubric block and editing the dimension weights. Examples:
 
 - **Biology:** `observational / experimental / computational / review`.
-- **Political science:** `case-study / comparative / formal-model / survey`.
+- **Political science:** `case-study / comparative` (note: `formal-theory` and `survey-experiment` already ship, v1.8.0).
 - **Psychology:** `experimental / correlational / meta-analysis / pre-registered-replication`.
 
 ## Cross-references

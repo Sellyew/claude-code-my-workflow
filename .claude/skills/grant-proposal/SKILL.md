@@ -3,7 +3,7 @@ name: grant-proposal
 description: Scaffold a research grant proposal (NSF, NIH, ERC, or foundation) by composing existing primitives — pulls identification strategy from an `/interview-me` spec, delegates the data-management plan to `/data-management-plan` and the facilities statement to `/capture-environment`, and emits a funder-requirements checklist. Use when user says "draft a grant", "write a proposal", "NSF proposal", "NIH aims", "ERC application", "foundation grant", "specific aims", or "scaffold a grant proposal". NOT a submission tool — produces a draft the user uploads to the sponsor's portal themselves.
 argument-hint: "[--funder nsf|nih|erc|foundation] [--input <spec>] [--out <dir>] [--no-verify]"
 disable-model-invocation: true
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Agent", "Task"]
 effort: high
 ---
 
@@ -54,7 +54,7 @@ Generate the funder's section set. Map spec content into slots:
 
 - **Specific Aims / Project Summary** — RQ + 2–3 numbered, directional aims drawn from the spec's hypotheses.
 - **Background & Significance** — motivation + prior work; pull citations from the `/lit-review` synthesis if present (do not re-search unless asked).
-- **Research Design & Methods** — lift the identification strategy verbatim from the spec (estimand, treatment/control, identifying assumption, robustness: pre-trends, placebo, clustering). Name the estimator concretely (e.g. `fixest::feols`, `did::att_gt`, Stata `csdid`).
+- **Research Design & Methods** — lift the identification strategy verbatim from the spec (estimand, treatment/control, identifying assumption, robustness and placebo strategy, clustering). Name the estimator concretely (e.g. `fixest::feols`, `AER::ivreg`, Stata `reghdfe`).
 - **Preliminary Results** — summarize any existing `/data-analysis` / passport outputs; otherwise mark `[PRELIMINARY RESULTS: none yet — describe planned pilot]`.
 - **Timeline & Milestones** — quarter/year table aligned to the aims (every aim gets a milestone).
 - **Broader Impacts / Significance** — sponsor-appropriate framing (NSF Broader Impacts vs NIH Significance vs foundation mission-fit).
@@ -64,8 +64,8 @@ For every MUST slot the spec did not supply, write `[CLARIFY: <specific question
 
 ### Phase 2 — Compose the DMP and computational statements (delegate)
 
-1. **Data Management (& Sharing) Plan** — invoke [`/data-management-plan`](../data-management-plan/SKILL.md) via `Task` with the funder + data sources from the spec. It returns the DMP section (repository choice — openICPSR / Dataverse / Zenodo, access/retention, FAIR/DCAS alignment). If any data source is sensitive (restricted-use admin data, PII, IRB-restricted), have it honor [`.claude/rules/confidential-data.md`](../../rules/confidential-data.md) and describe access via a secure enclave / FSRDC rather than open release. **Do not draft a sharing plan that promises to release confidential data.**
-2. **Facilities / Computational-Environment statement** — invoke [`/capture-environment`](../capture-environment/SKILL.md) via `Task` to produce the compute/software/dependency statement (cluster, R/Stata/Python toolchain, `renv.lock` / `DESCRIPTION` / `requirements.txt` provenance) for the Facilities section.
+1. **Data Management (& Sharing) Plan** — invoke [`/data-management-plan`](../data-management-plan/SKILL.md) via the `Agent` tool with the funder + data sources from the spec. It returns the DMP section (repository choice — openICPSR / Dataverse / Zenodo, access/retention, FAIR/DCAS alignment). If any data source is sensitive (restricted-use admin data, PII, IRB-restricted), have it honor [`.claude/rules/confidential-data.md`](../../rules/confidential-data.md) and describe access via a secure enclave / FSRDC rather than open release. **Do not draft a sharing plan that promises to release confidential data.**
+2. **Facilities / Computational-Environment statement** — invoke [`/capture-environment`](../capture-environment/SKILL.md) via the `Agent` tool to produce the compute/software/dependency statement (cluster, R/Stata/Python toolchain, `renv.lock` / `DESCRIPTION` / `requirements.txt` provenance) for the Facilities section.
 
 If a delegate skill is unavailable, leave a `[DELEGATE: /data-management-plan]` placeholder rather than half-writing its output.
 
@@ -81,7 +81,7 @@ The differentiating step. Cross-check the assembled draft and report mismatches:
 
 ### Phase 4 — Post-flight verification + output
 
-- **Post-flight (CoVe):** if Background/Significance cites prior literature, run the Post-Flight protocol from [`.claude/rules/post-flight-verification.md`](../../rules/post-flight-verification.md) — spawn `claim-verifier` via `Task` (`context: fork`) on the citations. Surface PASS / PARTIAL / FAIL. Skip on `--no-verify` or zero citations.
+- **Post-flight (CoVe):** if Background/Significance cites prior literature, run the Post-Flight protocol from [`.claude/rules/post-flight-verification.md`](../../rules/post-flight-verification.md) — spawn `claim-verifier` via the `Agent` tool (`context: fork`) on the citations. Surface PASS / PARTIAL / FAIL. Skip on `--no-verify` or zero citations.
 - **Write** sections to `--out` (default `quality_reports/grants/YYYY-MM-DD_<slug>/`), one Markdown file per section plus `checklist.md`.
 
 ## Output / Report format

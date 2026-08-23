@@ -10,7 +10,7 @@
 
 ## 1. Frontmatter ↔ body tool parity (`Task` missing from `allowed-tools`)
 
-**Example:** PR #92. `/lit-review`, `/research-ideation`, `/respond-to-referees`, `/interview-me` each documented "spawn `claim-verifier` via `Task` with `context=fork`" in their body, but none of them had `Task` in `allowed-tools`. Codex + Copilot both caught; deep-audit missed.
+**Example:** PR #92. `/lit-review`, `/research-ideation`, `/respond-to-referees`, `/interview-me` each documented "spawn `claim-verifier` via the `Agent` tool with `context=fork`" in their body, but none of them had `Task` in `allowed-tools`. Codex + Copilot both caught; deep-audit missed.
 
 **How to catch.** Automated by `scripts/check-skill-integrity.py` (check 1, Task-only pattern). For other tools (Edit, Write, MultiEdit, NotebookEdit), the script has narrower patterns. WebSearch / WebFetch / Read / Grep / Glob / Bash are intentionally excluded — too many prose false positives.
 
@@ -223,7 +223,7 @@
 - `CLAUDE.md` "Skills Quick Reference" table (rows = N).
 - `README.md` skills/agents tables.
 - `docs/index.html` inline bullet lists that enumerate skills.
-A future mechanical check could count `.claude/{skills,agents,rules}/*` and grep table rows in these surfaces; until then, deep-audit Agent 1 + Agent 4 should explicitly check appendix table row counts.
+Shipped in v2.0.0: `check-surface-sync.py` TABLE-ROW assertions verify tables carrying a `<!-- surface-sync-table: ... -->` marker. Tables WITHOUT the marker (e.g. the guide appendix) remain invisible to it — deep-audit agents must still check those row counts explicitly (v2.5 shipped 58 of 60 appendix rows until a semantic sweep caught it).
 
 **Why deep-audit missed it (until v1.8.0).** Agent 1's prompt asked about counts, not row counts. Agent 4's prompt asked about feature counts agreeing across documents, not about whether enumerative tables tabulate the same set as the count claims. Both agents looked at the lede counts (which were correct) and stopped.
 
@@ -237,7 +237,7 @@ A future mechanical check could count `.claude/{skills,agents,rules}/*` and grep
 
 **How to catch.** Generalize the parity check: for EVERY tool name mentioned in a skill body (`Task`, `Bash`, `Edit`, `Write`, `Read`, `Grep`, `Glob`, `WebFetch`, `WebSearch`, `Monitor`, `NotebookEdit`, `TodoWrite`, etc.), verify it appears in `allowed-tools`. The script should maintain a list of known tool names rather than hard-coding `Task` only. New Anthropic tools (Monitor in Apr 2026 Week 15) ship faster than the audit script.
 
-**Why deep-audit missed it (until v1.8.0).** `check-skill-integrity.py` Phase 0 check 1 is hard-coded to look for `Task`. Body language like "use the Monitor tool" reads as English; the script doesn't pattern-match it. Audit Agent 3's prompt now explicitly checks for non-`Task` tool references too — but the right fix is to extend the mechanical script with a known-tool list.
+**Why deep-audit missed it (until v1.8.0).** `check-skill-integrity.py` Phase 0 check 1 is hard-coded to look for `Task`. Body language like "use the Monitor tool" reads as English; the script doesn't pattern-match it. Audit Agent 3's prompt now explicitly checks for non-`Agent` tool references too — but the right fix is to extend the mechanical script with a known-tool list.
 
 **When to apply.** When adding a body reference to any Anthropic-shipped tool, add the tool to the skill's `allowed-tools` array as you write the body. When extending `check-skill-integrity.py`, add new tool names to the parity check whenever Anthropic ships a new tool primitive.
 

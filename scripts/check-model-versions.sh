@@ -41,7 +41,14 @@ SURFACES=(
 )
 
 # A line is allowed to name an older version if it carries one of these markers.
-ALLOW='prior generation|prior gen|prior Opus|retire|migrat|historical|deprecat|was:|was |or later|incl\. 4\.|rolling out|GA 2026-0|beta|4\.[0-9]+.s |model-allow'
+# NOTE (2026-08-21): 'GA 2026-0' was removed — it allowed ANY line carrying a GA date
+# to present ANY superseded model as current, which is how two stale guide lines passed.
+# Use an explicit <!-- model-allow --> comment for intentional historical mentions.
+#
+# KNOWN LIMITATION: ALLOW markers are LINE-scoped. One long paragraph containing a
+# legitimate 'prior generation' mention will whitelist stale current-state claims on
+# the same line. Prefer short lines in model-related prose, or point at the SSoT.
+ALLOW='prior generation|prior gen|prior Opus|retire|migrat|historical|deprecat|was:|was |or later|incl\. 4\.|rolling out|beta|4\.[0-9]+.s |model-allow'
 
 # Version token: "4.8", "5", "5.1" — Fable has no minor version at launch, so
 # the regex must accept a bare major (the old `4\.[0-9]+` silently skipped it).

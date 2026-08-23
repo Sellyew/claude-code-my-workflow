@@ -4,9 +4,11 @@ description: |
   Show current context status and session health.
   Use to check how much context has been used, whether auto-compact is
   approaching, and what state will be preserved.
-author: Claude Code Academic Workflow
-version: 1.0.0
 allowed-tools: ["Read", "Bash", "Glob"]
+disallowed-tools: ["Edit", "MultiEdit"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # /context-status — Check Session Health

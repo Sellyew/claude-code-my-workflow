@@ -58,13 +58,39 @@ When creating or modifying content, ask:
 
 **Review cadence:** After every significant session (plan approval, feature implementation)
 
-**Size limit:** Keep under 200 lines (stays in Claude's system prompt)
+**Size limit:** Keep under 200 lines **and** under 25KB.
+
+> **Corrected 2026-08-21.** This previously read "stays in Claude's system prompt."
+> That is **not** how this file loads: `CLAUDE.md` only markdown-links `MEMORY.md`, it does
+> not `@`-import it, so nothing puts it in the system prompt automatically — it is read on
+> demand. Two consequences: (1) the size limit protects readability, not a context budget;
+> (2) `[LEARN]` entries reach a session only when the file is actually read. If we want the
+> documented behaviour, add `@MEMORY.md` to `CLAUDE.md` — but note the file is already
+> ~30KB, over the 25KB threshold at which trailing content is dropped, so it must be
+> trimmed first. Tracked as an open decision in the v2.5 plan.
 
 ---
 
-### .claude/state/personal-memory.md (gitignored, local only)
+### The local tier: native auto memory (v2.5 — replaces `personal-memory.md`)
 
-**Purpose:** Machine-specific and user-specific learnings
+**Purpose:** Machine-specific and user-specific learnings.
+
+**Where it lives now:** Claude Code ships this natively. It is **on by default** and writes to
+`~/.claude/projects/<project>/memory/` — a `MEMORY.md` index plus one topic file per memory,
+each typed `user` / `feedback` / `project` / `reference`. Machine-local, never committed,
+excluded from transcript cleanup, and it records a `modified` timestamp so you can see how
+current a fact is.
+
+**Owner ruling (2026-08-21): keep auto memory on.** The two-tier idea was right; the
+hand-rolled plumbing is obsolete. `.claude/state/personal-memory.md` is **retired** — if you
+have one from an earlier version it still works as a plain file, but nothing writes to it and
+`/promote-memory` no longer reads it.
+
+**The one caveat worth knowing:** auto memory is an *un-logged context input*. It can influence
+a session invisibly to a replicator. For sessions that produce a **reported number**, note in
+the analysis log that auto memory was active, or disable it for that session
+(`CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`). This is a judgement call about auditability, not a
+correctness bug — see [`replication-protocol.md`](replication-protocol.md).
 
 **What goes here:**
 - Machine setup: `[LEARN:latex] XeLaTeX on macOS requires TEXINPUTS=../Preambles`
@@ -86,12 +112,12 @@ When creating or modifying content, ask:
 - Clone repo → gets MEMORY.md with generic learnings ✓
 - Gets all infrastructure (skills, agents, rules, templates) ✓
 - Gets up-to-date guide and documentation ✓
-- Builds `.claude/state/personal-memory.md` specific to desktop setup
+- Accumulates its own native auto memory for the desktop setup
 
 **Machine B (laptop):**
 - Clone same repo → gets same MEMORY.md ✓
 - Gets same infrastructure ✓
-- Builds DIFFERENT `.claude/state/personal-memory.md` for laptop setup
+- Accumulates DIFFERENT native auto memory for the laptop setup (it is machine-local by design)
 
 **Key insight:** Generic patterns sync via git, personal patterns stay local (or manually copied if truly needed).
 
@@ -221,14 +247,14 @@ As this repository evolves, meta-governance may need updates.
 | Content Type | Commit to Repo? | Where It Goes | Syncs Across Machines? |
 |--------------|----------------|---------------|----------------------|
 | Workflow patterns (generic) | ✅ Yes | MEMORY.md | ✅ Yes (via git) |
-| Machine-specific setup | ❌ No | .claude/state/personal-memory.md | ❌ No (gitignored) |
+| Machine-specific setup | ❌ No | native auto memory (`~/.claude/projects/<project>/memory/`) | ❌ No (machine-local) |
 | Templates (generic) | ✅ Yes | templates/ | ✅ Yes |
 | Skills (generic) | ✅ Yes | .claude/skills/ | ✅ Yes |
 | Rules (path-scoped, generic) | ✅ Yes | .claude/rules/ | ✅ Yes |
 | Agents (generic) | ✅ Yes | .claude/agents/ | ✅ Yes |
 | Hooks (generic behavior) | ✅ Yes | .claude/hooks/ | ✅ Yes |
-| Session logs | ✅ Yes | quality_reports/session_logs/ | ✅ Yes |
-| Plans | ✅ Yes | quality_reports/plans/ | ✅ Yes |
+| Session logs | ❌ No (gitignored since v2.0 — owner work, not template content; force-add a specific log if it documents template history) | quality_reports/session_logs/ | ❌ No |
+| Plans | ❌ No (gitignored since v2.0, same reason) | quality_reports/plans/ | ❌ No |
 | Local settings | ❌ No | .claude/settings.local.json | ❌ No (gitignored) |
 | Session state | ❌ No | .claude/state/ | ❌ No (gitignored) |
 | Build artifacts | ❌ No | .aux, .log, .synctex.gz | ❌ No (gitignored) |
@@ -243,7 +269,7 @@ As this repository evolves, meta-governance may need updates.
 
 **The solution:**
 - Commit generic patterns that help all users (MEMORY.md, templates, infrastructure)
-- Keep specific learnings local (.claude/state/personal-memory.md, gitignored)
+- Keep specific learnings local (native auto memory — machine-local, never committed)
 - Dogfood our own workflow (plan-first, spec-then-plan, quality gates)
 - Document with examples from multiple domains (not just our use case)
 - Review quarterly: promote generic patterns, refine specific ones

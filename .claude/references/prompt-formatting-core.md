@@ -61,7 +61,7 @@ The bookend is what catches the cases where the prompt was almost-but-not-quite 
 
 ## Depth calibration
 
-`/prompt` accepts a `depth:` override (`light` / `standard` / `deep`). The depth heuristic picks a default when the user doesn't specify.
+The shaping habit supports three depths (`light` / `standard` / `deep`); the heuristic below picks a default when the user doesn't specify.
 
 ### Light (default)
 
@@ -165,16 +165,16 @@ Notice the assumptions block. If any of those four assumptions are wrong, the us
 Blattman's original `/prompt` includes:
 
 - A **tool-routing table** that suggests dispatching to ChatGPT / Perplexity Deep Research / Gemini when those tools serve the task better. This bakes in a multi-vendor workflow not every academic forker maintains. If a user wants tool routing, they add their own table to this file.
-- A **`council` token** that dispatches the formatted prompt to Blattman's `/council` skill (his five-critic multi-model deliberation). This template doesn't ship `/council` — we have `/seven-pass-review` and `/devils-advocate` instead, which serve adjacent purposes but with different shapes. If you want the council pattern, see Pass 3 item H (`/promote-memory` five-critic council) — that's a closer fit for the template.
+- A **`council` token** that dispatches the formatted prompt to Blattman's `/council` skill (his five-critic multi-model deliberation). This template doesn't ship `/council` — we have `/seven-pass-review` and `/devils-advocate` instead, which serve adjacent purposes but with different shapes. If you want the council pattern, see `/promote-memory`'s five-critic council — that's a closer fit for the template.
 
-If you fork this template and add your own multi-vendor or multi-model fan-out, extend this file with your routing rules. Keep them in this reference, not in the SKILL.md, so `/prompt` and `/prompt-only` stay aligned.
+If you fork this template and add your own multi-vendor or multi-model fan-out, extend this file with your routing rules. Keep them in this reference so every consumer of the shaping habit stays aligned.
 
 ---
 
 ## Boundary with `/interview-me`
 
-`/prompt` is **single-shot input shaping** — one informal request becomes one formatted prompt. The output is the prompt (`/prompt-only`) or the prompt + its first execution (`/prompt`). There is no multi-turn elaboration.
+Prompt-shaping (the ambient habit in [`prompt-shaping.md`](../rules/prompt-shaping.md)) is **single-shot input shaping** — one informal request resolved into a clear one before acting. There is no multi-turn elaboration.
 
 `/interview-me` is **multi-turn project specification** — a fuzzy research idea becomes a structured research spec (RQ, hypotheses, identification strategy, data needs, empirical strategy) via Socratic Q&A. The output is a spec file used by `/preregister`, `/research-ideation`, `/data-analysis`, etc.
 
-They don't compete. Use `/prompt` when you want a well-formed ask. Use `/interview-me` when you want a well-formed research project. The former takes 30 seconds; the latter takes 10–20 minutes.
+They don't compete. The shaping habit gives you a well-formed ask in seconds; `/interview-me` gives you a well-formed research project in 10–20 minutes.

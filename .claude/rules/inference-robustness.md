@@ -27,7 +27,6 @@ A single specification is a point on a garden of forking paths. Make the robustn
 - **Show the specification is not cherry-picked** — a specification/multiverse curve (sweep the defensible covariate sets, sample restrictions, functional forms; report the distribution of estimates, not one).
 - **Leave-one-out / influential observations** — confirm the result isn't driven by a few units or one cluster.
 - **Inference robustness** — alternative clustering levels, wild-cluster bootstrap with few clusters (`fwildclusterboot`/`boottest`), randomization inference where the design supports it.
-- For **DiD specifically**, the robustness battery is the diagnostic + sensitivity suite in [`did-conventions.md`](did-conventions.md) (HonestDiD / `didFF`), not a TWFE pre-test.
 
 ## Reporting
 
@@ -35,4 +34,4 @@ A single specification is a point on a garden of forking paths. Make the robustn
 - A robustness check that only ever confirms the headline is theatre — report the spec where the result *weakens*, and interpret it.
 
 ## Cross-references
-- [`.claude/skills/review-paper/SKILL.md`](../skills/review-paper/SKILL.md) · [`.claude/skills/preregister/SKILL.md`](../skills/preregister/SKILL.md) · [`.claude/skills/power-analysis/SKILL.md`](../skills/power-analysis/SKILL.md) · [`.claude/rules/did-conventions.md`](did-conventions.md).
+- [`.claude/skills/review-paper/SKILL.md`](../skills/review-paper/SKILL.md) · [`.claude/skills/preregister/SKILL.md`](../skills/preregister/SKILL.md) · [`.claude/skills/power-analysis/SKILL.md`](../skills/power-analysis/SKILL.md).

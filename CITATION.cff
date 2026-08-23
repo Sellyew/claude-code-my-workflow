@@ -9,15 +9,14 @@ authors:
 repository-code: "https://github.com/pedrohcgs/claude-code-my-workflow"
 url: "https://psantanna.com/claude-code-my-workflow/"
 license: MIT
-version: 2.1.0
-date-released: 2026-06-10
+version: 2.5.0
+date-released: 2026-08-23
 keywords:
   - claude-code
   - economics
   - econometrics
   - reproducible-research
   - causal-inference
-  - difference-in-differences
   - academic-writing
   - research-workflow
 abstract: >-
@@ -25,5 +24,5 @@ abstract: >-
   data analysis, and Monte Carlo simulation studies. Verification-gated by
   design: fan-out review fleets with hallucination gates, numeric-claim
   reproducibility audits against code, an enforcing pre-commit quality gate,
-  and a validated difference-in-differences / event-study workflow built on
-  the Callaway–Sant'Anna ecosystem.
+  and a qualification ledger that records what every check has been proven
+  to detect.

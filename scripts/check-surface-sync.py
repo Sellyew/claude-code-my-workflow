@@ -107,6 +107,14 @@ SINGULAR_PHRASINGS: list[tuple[str, str]] = [
     # number right after "guide includes"). This prose form matched none of
     # the count regexes at v2.0 and shipped a stale "50" to live users.
     (r"guide includes\s+(\d+)\b",                   "skills"),
+    # "the template has/ships/includes/provides N skills" — a bare "N skills" is
+    # deliberately NOT matched (it would fire on legitimate prose like "start with
+    # 2-3 skills"), but a count carrying a template-specific verb+noun is
+    # unambiguous. Added 2026-08-21 after qualifying backtest.sh: a seeded
+    # "This template has 99 skills." left every gate green.
+    (r"(?:this\s+)?template\s+(?:has|ships|includes|provides|offers)\s+(\d+)\s+skills?\b", "skills"),
+    (r"(?:this\s+)?template\s+(?:has|ships|includes|provides|offers)\s+(\d+)\s+agents?\b", "agents"),
+    (r"(?:this\s+)?template\s+(?:has|ships|includes|provides|offers)\s+(\d+)\s+rules?\b",  "rules"),
 ]
 
 # Enumerative-table markers. A surface opts a markdown table into the

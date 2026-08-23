@@ -28,7 +28,7 @@ Copy the structure below to `.claude/skills/[your-skill-name]/SKILL.md`:
 name: your-skill-name
 description: [What it does] + [When to use it] + [Key capabilities]. Use when user asks for "[trigger phrase 1]", "[trigger phrase 2]", or "[context]".
 argument-hint: "[brief hint for user]"
-allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task"]
+allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Agent"]
 ---
 
 # [Skill Name]
@@ -112,7 +112,7 @@ disallowed-tools: ["Edit", "Write", "Bash"]    # actually remove the write path
 - `$ARGUMENTS` — full argument string (e.g., `/skill-name Lecture01` → `Lecture01`)
 - `$0`, `$1` — positional arguments (0-based)
 - `${CLAUDE_SKILL_DIR}` — path to the skill's directory (for bundled supporting files)
-- `` `!git log --oneline -5` `` — dynamic command output injected when skill loads
+- `` !`git log --oneline -5` `` — dynamic command output injected when skill loads
 
 See the [guide's Skill Frontmatter Reference](https://psantanna.com/claude-code-my-workflow/workflow-guide.html#skill-frontmatter) for details and examples.
 
@@ -148,7 +148,7 @@ See @README.md for project overview and @package.json for available commands.
 @docs/git-instructions.md
 ```
 
-**This template's `CLAUDE.md` deliberately does NOT use `@import`** — at 146 lines it's already lean, and importing fragments fractures the onboarding context (forkers expect "one file to load at session start"). Mention this here for forkers whose customization grows large enough to warrant splitting; for short CLAUDE.md files, splitting tends to hurt more than help.
+**This template's `CLAUDE.md` deliberately does NOT use `@import`** — it is deliberately lean, and importing fragments fractures the onboarding context (forkers expect "one file to load at session start"). Mention this here for forkers whose customization grows large enough to warrant splitting; for short CLAUDE.md files, splitting tends to hurt more than help.
 
 ---
 
@@ -440,7 +440,7 @@ When adapting this template to your domain:
 | `Grep` | Searching file contents (citations, function names) |
 | `Glob` | Finding files by pattern (*.R, *.tex, *.csv) |
 | `Bash` | Running commands (R scripts, LaTeX compilation, git) |
-| `Task` | Launching subagents (for complex multi-step workflows) |
+| `Agent` | Launching subagents (for complex multi-step workflows) |
 
 **Security note:** `allowed-tools` only pre-approves — it does **not** restrict (see [the semantics note](#allowed-vs-disallowed)). For a genuinely read-only validation skill, add `disallowed-tools: ["Edit", "Write", "Bash"]`; for autonomous/background skills, also disallow `AskUserQuestion` so the loop can't stall on a prompt. Listing only what you use in `allowed-tools` is still good hygiene (it documents intent and minimizes silent pre-approvals), but it is not a sandbox.
 
@@ -452,4 +452,4 @@ When adapting this template to your domain:
 - **Purpose:** Starter for domain-specific skills
 - **Usage:** Copy to `.claude/skills/[name]/SKILL.md`, customize for your field
 
-For existing skills examples, see `.claude/skills/` directory (52 skills for LaTeX, R, Quarto, and research workflows).
+For existing skills examples, see `.claude/skills/` directory (60 skills for LaTeX, R, Quarto, and research workflows).

@@ -1,6 +1,6 @@
 # Orchestrator Protocol: the review runtime
 
-**The review-fix loop is a real runtime contract, expressed with the primitive every Claude Code session has: the `Task` subagent.** Skills fan out to forked reviewers, reduce their *structured* findings ([`orchestration-schemas.md`](../references/orchestration-schemas.md)) through a deterministic gate, judge with a hallucination guard, and loop until dry. What is *not* automatic is the **trigger**: nothing launches this loop on its own — the user (or a skill invocation) starts it. That boundary is deliberate (see "What is NOT automatic").
+**The review-fix loop is a real runtime contract, expressed with the primitive every Claude Code session has: the `Agent` subagents.** Skills fan out to forked reviewers, reduce their *structured* findings ([`orchestration-schemas.md`](../references/orchestration-schemas.md)) through a deterministic gate, judge with a hallucination guard, and loop until dry. What is *not* automatic is the **trigger**: nothing launches this loop on its own — the user (or a skill invocation) starts it. That boundary is deliberate (see "What is NOT automatic").
 
 ## The loop (the contract)
 
@@ -16,7 +16,9 @@ Skill invoked (with a RUN_CONFIG)
   Step 4: REDUCE + JUDGE — stack scorecards; gate predicate → verdict;
   │        run the post-judge hallucination gate on judge-introduced CRITICALs
   │
-  Step 5: FIX — apply critical → major → minor (with approval)
+  Step 5: FIX — apply `mechanical: true` findings; everything touching an
+  │        estimand / assumption / specification / inference / reporting
+  │        language returns to the researcher (critical → major → minor)
   │
   Step 6: SCORE — quality_score.py / hard-gate roll-up
   │
@@ -32,7 +34,7 @@ These four primitives are the runtime. Every fan-out skill is a composition of t
 
 ### 1. Fan-out
 
-Spawn the reviewers **in parallel in a single message** — N `Task` calls, each `context: fork` so the main thread stays clean and each reviewer gets full budget for its lens. `Task` subagents are the **portable primitive**: they exist in every Claude Code install, so the template depends on them, not on the session-gated Workflow tool. *(Where the Workflow tool is available — e.g. an `ultracode`/dynamic-workflow session — a skill may use it for the same fan-out→reduce→judge shape; treat that as an optional accelerator, never a requirement.)*
+Spawn the reviewers **in parallel in a single message** — N `Agent` calls, each `context: fork` so the main thread stays clean and each reviewer gets full budget for its lens. `Agent` subagents are the **portable primitive**: they exist in every Claude Code install, so the template depends on them, not on the session-gated Workflow tool. *(Where the Workflow tool is available — e.g. an `ultracode`/dynamic-workflow session — a skill may use it for the same fan-out→reduce→judge shape; treat that as an optional accelerator, never a requirement.)*
 
 Which agent fills which lens, at which model tier, is in [`agent-fleet.md`](../references/agent-fleet.md).
 
@@ -46,12 +48,36 @@ A synthesizer/editor may freely *downgrade* or *de-duplicate* lens findings, but
 
 ### 4. Loop-until-dry
 
-Replace bespoke "max 5 rounds" stopping logic with **convergence**: stop after **2 consecutive dry rounds** (a round that adds 0 new CRITICAL/MAJOR findings, deduped on `location`+`finding`). Guards:
+Replace bespoke "max 5 rounds" stopping logic with **convergence**: stop after **2 consecutive dry rounds** (a round that adds 0 new CRITICAL/MAJOR findings). **Dedup is exact, not fuzzy (v2.5):** every finding carries `id = sha1("<file>:<line>:<locus>")`, so the same defect gets the same id in every round, **including when a different lens rediscovers it**. A round is dry when it produces no *new* id. Guards:
 
 - **Fallback cap** — `RUN_CONFIG.max_rounds` (default 5) bounds a non-converging loop.
-- **Two-strikes** — the *same* finding surviving rounds N and N+2 is escalated to the user, not patched a third time ([`summary-parity.md`](summary-parity.md)).
+- **Two-strikes** — the *same* finding (**same `id`** — now mechanically checkable rather than eyeballed) surviving rounds N and N+2 is escalated to the user, not patched a third time ([`summary-parity.md`](summary-parity.md)).
 - **Spend cap** — `RUN_CONFIG.spend_cap_tokens` (default ~500k) warns-and-asks; it is a spend ceiling, not a context limit (each re-audit is fresh).
 - **Runaway backstop** — never exceed the harness's hard subagent cap; cost-pilot any ≥7× fan-out on one section before a full sweep.
+
+### 5. Validate the findings (v2.5)
+
+The `FINDING` contract is **machine-checked**, not prose. Every fan-out review ends by writing
+its confirmed findings as a JSON **array** and validating it:
+
+```bash
+echo '[]' | python3 scripts/validate-findings.py          # smoke-test the harness FIRST
+python3 scripts/validate-findings.py <report>.json        # exit 0 = valid
+```
+
+**Smoke-test before spending review effort.** A run that fans out ten reviewers and then cannot
+write a valid report has wasted the whole pass.
+
+The validator enforces what a reviewer must produce: a `rule` it violates (a finding citing no
+documented rule is an opinion), a `failing_case` (not "this could be clearer"), an `id` derived
+from its own coordinates, and a `mechanical` flag that is **never** true for an estimand,
+assumption, specification, inference procedure, sample definition, or reporting-language change.
+
+**The verifier pass is refute-biased.** The reviewer proposes; a separate pass tries to *break*
+each finding. Only `verdict: "confirmed"` ships. A finding the verifier cannot ground is
+**dropped**, not downgraded to a warning. Apply the per-lens evidence burdens and the
+"does NOT count" filters in [`orchestration-schemas.md` §7](../references/orchestration-schemas.md)
+*before* verification, so known false alarms never reach the judge.
 
 ### RUN_CONFIG: collect interactivity *before* launch
 
@@ -74,7 +100,7 @@ A forked subagent cannot stop to ask the user a question. So every interactive c
 
 - **No post-plan-approval trigger / no daemon.** Exiting plan mode does not launch a fix loop, and there is no background service that points the runtime at an artifact unattended. A multi-agent fix loop with no human in it, run against a submission, shared data, or a co-author's draft, is exactly the failure mode we refuse — the loop is always user/skill-initiated. **This is a documented non-goal, not a missing feature.**
 - **No repo-wide orchestrator chaining.** Skills compose the primitives within their own scope; they do not invoke each other without an explicit call.
-- **Quality gate enforcement.** `quality_score.py` runs inside `/commit`, **and** — once `./scripts/install-hooks.sh` is run — the `.githooks/pre-commit` hook runs the surface-sync + quality gates on every commit, so a direct `git commit` no longer bypasses the review (bypass is explicit: `SKIP_QUALITY_GATE=1` / `--no-verify`).
+- **Quality gate enforcement.** `quality_score.py` runs inside `/commit`, **and** — once `./scripts/install-hooks.sh` is run — the `.githooks/pre-commit` hook runs the full backtest gate suite plus the quality gate on every commit, so a direct `git commit` no longer bypasses the review (bypass is explicit: `SKIP_QUALITY_GATE=1` / `--no-verify`).
 
 ## "Just Do It" mode
 

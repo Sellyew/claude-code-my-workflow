@@ -18,7 +18,7 @@ See https://code.claude.com/docs/en/hooks.
 
 Context %% is a COARSE PROXY. When the hook receives a `transcript_path`, we
 estimate tokens from the transcript size against CLAUDE_CONTEXT_WINDOW_TOKENS
-(default 1,000,000 — the current Opus 4.8 / Sonnet 4.6 default). Otherwise we
+(default 1,000,000 — the 1M-context default on recent Opus/Sonnet tiers; see model-versions.md). Otherwise we
 fall back to a tool-call counter (CLAUDE_CONTEXT_MAX_TOOL_CALLS, default 400).
 Neither is exact; treat the percentage as a rough early-warning signal, not a
 precise gauge.
@@ -41,7 +41,7 @@ THRESHOLD_CRITICAL = 90
 THROTTLE_INTERVAL = 60
 
 # Calibration defaults (both overridable via env)
-DEFAULT_CONTEXT_WINDOW_TOKENS = 1_000_000   # Opus 4.8 / Sonnet 4.6 default window
+DEFAULT_CONTEXT_WINDOW_TOKENS = 1_000_000   # 1M default window on recent Opus/Sonnet tiers
 DEFAULT_MAX_TOOL_CALLS = 400                 # fallback proxy when transcript size is unavailable
 APPROX_BYTES_PER_TOKEN = 4.0
 

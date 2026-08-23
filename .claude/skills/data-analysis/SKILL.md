@@ -2,7 +2,7 @@
 name: data-analysis
 description: End-to-end R data analysis pipeline — exploration → cleaning → regression → publication-ready tables and figures. Use when user says "analyze this dataset", "run a regression on X", "explore this CSV", "full analysis workflow", "get me summary stats and a regression", or points at a `.csv`/`.rds`/`.dta` and asks for empirical results. Produces numbered R scripts in `scripts/R/` and outputs to `scripts/R/_outputs/`.
 argument-hint: "[dataset path or description of analysis goal]"
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash", "Task", "Monitor"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash", "Agent", "Task", "Monitor"]
 ---
 
 # Data Analysis Workflow
@@ -17,7 +17,7 @@ Run an end-to-end data analysis in R: load, explore, analyze, and produce public
 
 - **Follow R code conventions** in `.claude/rules/r-code-conventions.md`
 - **Save all scripts** to `scripts/R/` with descriptive names
-- **Save all outputs** (figures, tables, RDS) to `output/`
+- **Save all outputs** (figures, tables, RDS) to `scripts/R/_outputs/`
 - **Use `saveRDS()`** for every computed object — Quarto slides may need them
 - **Use project theme** for all figures (check for custom theme in `.claude/rules/`)
 - **Run r-reviewer** on the generated script before presenting results
@@ -68,7 +68,7 @@ Generate diagnostic outputs:
 - **Time patterns:** If panel data, plot trends over time
 - **Group comparisons:** If treatment/control, compare pre-treatment means
 
-Save all diagnostic figures to `output/diagnostics/`.
+Save all diagnostic figures to `scripts/R/_outputs/diagnostics/`.
 
 ### Phase 3: Main Analysis
 
@@ -95,7 +95,7 @@ Based on the research question:
 ### Phase 5: Save and Review
 
 1. `saveRDS()` for all key objects (regression results, summary tables, processed data)
-2. Create `output/` subdirectories as needed with `dir.create(..., recursive = TRUE)`
+2. Create `scripts/R/_outputs/` subdirectories as needed with `dir.create(..., recursive = TRUE)`
 3. Run the r-reviewer agent on the generated script:
 
 ```
@@ -127,7 +127,7 @@ library(modelsummary)
 
 set.seed(20260415)  # YYYYMMDD per r-code-conventions.md (INV-9)
 
-dir.create("output/analysis", recursive = TRUE, showWarnings = FALSE)
+dir.create("scripts/R/_outputs/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # 1. Data Loading ----
 # [Load and clean data]

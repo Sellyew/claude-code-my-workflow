@@ -2,7 +2,7 @@
 name: new-skill
 description: Scaffold a new skill that follows this repo's conventions — interviews for purpose, trigger phrases, and tool needs, then writes `.claude/skills/<name>/SKILL.md` from the skill template with frontmatter and body that pass the integrity gates on first try. Use when user says "write a skill", "scaffold a skill", "create a new skill", "I keep doing X, make it a skill", "new slash command", or "turn this workflow into a skill". NOT for capturing a one-off session discovery — that is `/learn`.
 argument-hint: "[skill-name (kebab-case)] [--from-learn] [--dry-run]"
-allowed-tools: ["Read", "Write", "Glob", "Grep", "Bash"]
+allowed-tools: ["Read", "Write", "Glob", "Grep", "Bash", "Agent"]
 disable-model-invocation: true
 effort: medium
 ---
@@ -36,7 +36,7 @@ A skill cannot stop to ask mid-write, so gather all interactivity up front (the 
 1. **Purpose** — one sentence: what does it accomplish and why does it exist?
 2. **Trigger phrases** — the 4-7 quoted phrases a user would actually say. These become the `description`'s "Use when…" clause and are what makes the skill auto-discoverable.
 3. **Inputs / arguments** — positional args and any **flags** (each must become a documented `--token`).
-4. **Tools** — does the body Read? Write? Grep/Glob? run `Bash`? fan out to a subagent (the `Task` tool)? hit the web via `WebSearch`/`WebFetch`? Only declare what it actually uses.
+4. **Tools** — does the body Read? Write? Grep/Glob? run `Bash`? fan out to a subagent (the `Agent` tool)? hit the web via `WebSearch`/`WebFetch`? Only declare what it actually uses.
 5. **Output** — a written file (where?), a chat report, or an in-place edit? Should it be read-only?
 6. **Scope boundary** — the one or two things it explicitly does NOT do (and which sibling owns those).
 
@@ -55,7 +55,7 @@ Write `.claude/skills/<name>/SKILL.md` from the template, with these gold-standa
 `check-skill-integrity.py` enforces two parities this phase must satisfy (`.claude/scripts/` hosts the gate runners; `scripts/check-skill-integrity.py` is the checker):
 
 - **Flag parity (both directions).** Every flag in `argument-hint` MUST appear in the body as a bare-backticked token, and every flag documented in the body MUST appear in `argument-hint`. So `--from-learn` and `--dry-run` are listed in the hint *and* described under `## Flags`. A stale hint flag fails the gate as surely as a missing one.
-- **allowed-tools parity.** The body may only invoke tools listed in `allowed-tools`. If a phase fans out to a subagent (the `Task` tool), that tool must be in the list; if it never does, do not list it. This skill lists exactly `Read, Write, Glob, Grep, Bash` — the tools its phases use, and no subagent fan-out.
+- **allowed-tools parity.** The body may only invoke tools listed in `allowed-tools`. If a phase fans out to a subagent (the `Agent` tool), that tool must be in the list; if it never does, do not list it. This skill lists exactly `Read, Write, Glob, Grep, Bash` — the tools its phases use, and no subagent fan-out.
 - **Anchor resolution.** Internal `[text](path#anchor)` links must resolve — only link to headings that exist.
 
 Run `python3 scripts/check-skill-integrity.py --verbose` and fix any P0/P1 before declaring done.

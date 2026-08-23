@@ -7,7 +7,7 @@ Calibration data for the `/review-paper --peer [journal]` simulated peer-review 
 
 **How this file is used.** The `editor` agent reads this file before each `--peer` run, picks the requested `[journal]`, and uses its Referee-pool weights + Typical concerns to select two referees with different dispositions and to seed their pet-peeve priors.
 
-**Customizing for your field.** This file ships with **five top-5 econ journals** as a concrete example. To use `--peer` for a different field (finance, political science, biology, CS, etc.), copy `templates/journal-profile-template.md` into a new section below, fill in the schema, and reference it by the short name you define. See the [Field adaptation](#field-adaptation) section at the bottom.
+**Customizing for your field.** This file ships **eight profiles**: five econ (AER, QJE, JPE, ECMA, ReStud) and three political science (APSR, AJPS, JOP). To use `--peer` for another field (finance, biology, CS, etc.), copy `templates/journal-profile-template.md` into a new section below, fill in the schema, and reference it by the short name you define. See the [Field adaptation](#field-adaptation) section at the bottom.
 
 ---
 
@@ -62,7 +62,7 @@ Every profile has these fields:
 - THEORY: 0.05
 - SKEPTIC: 0.10
 
-**Table format override.** No significance stars (AEA policy since 2023). Use SE in parentheses only; indicate p-values in notes if needed.
+**Table format override.** No significance stars (AEA style guidance). Use SE in parentheses only; indicate p-values in notes if needed.
 
 ---
 
@@ -314,7 +314,7 @@ Three flagship general-interest political-science journals. The `paper_type` tax
 
 ## Field adaptation
 
-The five profiles above are econ-specific. The **pipeline is field-agnostic** — nothing in `editor.md`, `domain-referee.md`, or `methods-referee.md` hard-codes economics. What varies by field is the journal profile.
+Five of the eight profiles above are econ; three are political science. The **pipeline is field-agnostic** — nothing in `editor.md`, `domain-referee.md`, or `methods-referee.md` hard-codes economics. What varies by field is the journal profile.
 
 **To adapt for a different field:**
 
@@ -328,7 +328,7 @@ The five profiles above are econ-specific. The **pipeline is field-agnostic** �
    - **Referee-pool weights** — the 6 dispositions are general enough to apply to any field. Re-weight based on what that journal's referees actually ask about. Weights must sum to 1.0.
    - **Table format** — any field-specific conventions (e.g., APA tables for psychology, Chicago-style footnotes for history, Vancouver citations for medicine).
 
-**For non-econ paper types.** The `methods-referee.md` paper-type branching uses `reduced-form / structural / theory+empirics / descriptive`. If your field uses different categories (e.g., biology: `observational / experimental / computational / review`; political science: `case-study / comparative / formal-model / survey`), edit `methods-referee.md` to add your field's paper types and their dimension weights. Keep the `reduced-form` / etc. branches for econ users.
+**For non-econ paper types.** The `methods-referee.md` paper-type branching ships six types: `reduced-form / structural / theory+empirics / descriptive / formal-theory / survey-experiment` (the last two added in v1.8.0 for political science). If your field needs more (e.g., biology: `observational / experimental / computational / review`; political science: `case-study / comparative`), edit `methods-referee.md` to add them with their dimension weights. Keep the shipped branches intact.
 
 **Examples for fields we don't yet ship** (to be filled in by adopters — we ship econ + political-science as concrete profiles; psych / sociology / public health are template-only):
 

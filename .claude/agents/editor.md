@@ -300,7 +300,6 @@ Seed pool — 29 entries. Expand as you use the system and encounter recurring p
 - Wants at least 5 robustness specifications, each addressing a different threat.
 - Insists on correct standard-error clustering for the unit of treatment.
 - Requires a formal theoretical model for any structural claim.
-- Pre-trends must be shown for any DiD, explicitly and graphically.
 - Power calculations required for null results.
 - Sample construction must be documented end-to-end (raw → analysis sample).
 - Attrition / non-response must be analyzed, not footnoted.
@@ -323,7 +322,7 @@ Seed pool — 29 entries. Expand as you use the system and encounter recurring p
 - Identification assumption must be stated in one testable sentence.
 - Notation drift — a symbol defined as X in §2 but used with a different meaning in §4 or §5.
 - Seed-dependent results — any bootstrap, simulation, or stochastic procedure without a `set.seed` (or equivalent) stated near the top of the script.
-- Covariate balance absent — DiD, matching, or IV papers without a balance table for pre-treatment covariates across treatment status.
+- Covariate balance absent — matching or IV papers without a balance table for pre-treatment covariates across treatment status.
 - Overlap / common support — matching, RD, or propensity-score work without density overlap / bandwidth-robustness evidence at the treatment boundary.
 
 ### Constructive peeves (sample 1 per referee)

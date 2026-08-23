@@ -68,7 +68,7 @@ Before writing any R code:
 
 **The mismatch does not presume the code is correct.** The on-disk output is a *challenger*, not an oracle — a refactor may have broken a previously-correct table, so the *manuscript* number may be the right one and the code the stale/buggy side. Frame it as "one of {paper, code} must change — isolate which," never "revert the code to match the paper."
 
-**A defensible alternative is not a failure.** If the gap is explained by a *concrete, named alternative specification* (e.g. never-treated vs not-yet-treated comparison group, conditional vs unconditional parallel trends, `reghdfe` vs `feols` clustering df, MC seed/reps, display rounding), record that named alternative and mark the claim **EXPLAINED** rather than FAIL — see the `status` semantics below. A blank or vague note ("unclear") never downgrades a FAIL.
+**A defensible alternative is not a failure.** If the gap is explained by a *concrete, named alternative specification* (e.g. `reghdfe` vs `feols` clustering df, a different bandwidth-selection rule, MC seed/reps, display rounding), record that named alternative and mark the claim **EXPLAINED** rather than FAIL — see the `status` semantics below. A blank or vague note ("unclear") never downgrades a FAIL.
 
 ### Replication Report
 
@@ -142,11 +142,15 @@ claims:
     location: "manuscript.tex:Table 2, Col 3"     # where it appears in the paper
     source_file: scripts/R/03_analyze.R           # script that produced the value
     source_line: 147                              # nearest line in the script
-    output_file: scripts/R/_outputs/main_did.rds  # where the value lives on disk
+    output_file: scripts/R/_outputs/main_model.rds # where the value lives on disk
     output_field: att_overall                      # field within the output (e.g., list element, column)
     tolerance:
-      point_estimate: 0.01                         # absolute tolerance per Phase 3 above
+      point_estimate: 0.01                         # absolute floor (atol); see typed rule below
       standard_error: 0.05
+      rtol: 0.001                                  # optional relative component: pass if
+                                                   #   |x - y| <= atol + rtol * |reported|
+      units: "log points"                          # units + display rounding make the
+      display_rounding: 3                          #   comparison meaningful across scales
       n: exact
     last_verified_on: <ISO-8601>
     last_verified_by: "/audit-reproducibility"
@@ -155,8 +159,9 @@ claims:
       Optional notes — e.g., "matches paper to 3 decimals; SE differs in 4th
       decimal due to clustering df adjustment, within tolerance."
       To downgrade a FAIL to EXPLAINED, this field MUST name a concrete
-      alternative spec, e.g. "never-treated vs not-yet-treated comparison
-      group; under not-yet-treated the published −1.19 matches the script."
+      alternative spec, e.g. "reghdfe vs feols clustering-df adjustment;
+      under the reghdfe small-sample correction the published −1.19 matches
+      the script."
 ```
 
 ### `status` semantics
@@ -182,3 +187,25 @@ The pattern is borrowed from [Imbad0202/academic-research-skills](https://github
 - **Do not auto-populate** the passport at `/audit-reproducibility` time without showing the user the inferred mapping. Source-line inference is best-effort; the author confirms.
 - **Do not promote UNVERIFIED claims to PASS** without running the actual numeric audit. The passport is a verified-state artifact; bypassing the verification defeats the purpose.
 - **Do not use the passport as a substitute for `/verify-claims`.** The passport handles numeric claims with code provenance; `/verify-claims` handles citation and named-entity claims with literature provenance. Both run.
+
+## Auto memory is an un-logged context input
+
+Claude Code's **native auto memory** is on by default and is machine-local
+(`~/.claude/projects/<project>/memory/`). It can shape a session invisibly to anyone
+replicating your work: a preference or correction recorded weeks ago is context a replicator
+does not have and cannot see.
+
+This is not a correctness bug — it is an **auditability** one, and the fix is disclosure, not
+abstinence:
+
+- For a session that produces a **reported number**, note in the analysis log that auto memory
+  was active. One line.
+- If a run must be *exactly* reconstructible from the repo alone — a final replication-package
+  build, a numbers-freeze before submission — disable it for that run:
+  `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`.
+- Anything that genuinely belongs to the project, rather than to your machine, should be
+  promoted into the committed `MEMORY.md` via [`/promote-memory`](../skills/promote-memory/SKILL.md)
+  — where a replicator can actually read it.
+
+The principle is the same one behind pinned commits and lockfiles: **if it influenced the
+result, it should be visible to whoever checks the result.**

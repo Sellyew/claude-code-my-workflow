@@ -2,7 +2,7 @@
 name: diagnose
 description: Root-cause a failing or wrong empirical result with a disciplined reproduce → minimise → hypothesise → instrument → fix loop, instead of guessing-and-poking. Use when the user says "why is my regression wrong", "this number changed", "my script errors out", "the result won't reproduce", "debug this", "this estimate looks wrong", or "it worked yesterday". Tuned for research code (R/Stata/Python): type coercion, NA/merge blow-ups, factor levels, clustering/SE choices, weighting, collinearity/convergence, seeds, package-version drift. Use `--no-fix` to localize the root cause without editing shared or load-bearing files.
 argument-hint: "[file, script, or short description of the symptom] [--no-fix]"
-allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task"]
+allowed-tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Agent", "Task"]
 effort: high
 ---
 
@@ -68,7 +68,7 @@ List candidate causes *before* testing any — a written list beats poking becau
 - **Sample** — a filter that runs before vs. after a transform; an outlier rule applied inconsistently.
 - **Environment** — a package/Stata version bump that changed a default; a seed that moved; locale/encoding.
 
-For a genuinely ambiguous bug, fan out the top competing hypotheses to parallel `Task` subagents (one per hypothesis, `context: fork`), each instructed to *try to confirm its own cause on the MWE* and report back — the loop-first analogue of asking three colleagues at once (see [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md)).
+For a genuinely ambiguous bug, fan out the top competing hypotheses to parallel `Agent` subagents (one per hypothesis, `context: fork`), each instructed to *try to confirm its own cause on the MWE* and report back — the loop-first analogue of asking three colleagues at once (see [`orchestrator-protocol.md`](../../rules/orchestrator-protocol.md)).
 
 ### Phase 3b — Reduce the hypotheses (so you don't launder a guess)
 
@@ -175,6 +175,40 @@ The usual-suspects model is illustrated in R but the bug *classes* are language-
 ## Flags
 
 - `--no-fix` — Diagnose only: run through naming the root cause (Phases 0–4) and write the report, but make **no** edit to source. Use when you want to apply the fix yourself, or when the file is shared/load-bearing and an automated edit is inappropriate.
+
+## Step 0 — State the contract before touching anything
+
+Before proposing or writing **any** fix, state in 3–5 bullets and **stop for confirmation**:
+
+1. What the function's or pipeline's **documented contract** is.
+2. What the reporter claims is broken.
+3. Whether the reported scenario is even **in contract** — a caller violating the contract is
+   not a bug in the callee.
+4. What the **correct behaviour** would be.
+5. What evidence would settle it.
+
+This costs thirty seconds and prevents the most expensive class of wasted work: a confident fix
+to a misunderstood contract. In one logged case the same semantic point had to be corrected
+**twice** before a fix was scoped right, because the agent asserted a stance on the contract
+rather than restating it and asking.
+
+> **Severity follows the contract.** A scenario outside the documented contract is at most a
+> documentation or validation issue, never a high-severity correctness bug. Inflating it
+> because it *looks* wrong is how a fix ends up changing behaviour users depend on.
+
+## Separate the audit pass from the repair pass
+
+The strongest outcomes in the logged sessions began as **investigations**, not fix requests.
+The messier ones mixed auditing with editing.
+
+**Audit pass — read-only.** Produce a findings table: `severity | file:line | claim | evidence I
+actually ran | proposed fix`. Mark anything not verified by execution as **UNVERIFIED**. Edit
+nothing.
+
+**Repair pass — on approved rows only.** The user picks which findings get fixed. This is
+what makes declining a finding cheap, and declining findings is how scope stays bounded.
+
+`--no-fix` runs the audit pass alone.
 
 ## Cross-references
 

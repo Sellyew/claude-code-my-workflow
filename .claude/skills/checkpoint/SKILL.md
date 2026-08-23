@@ -1,11 +1,12 @@
 ---
 name: checkpoint
 description: Save a structured state snapshot before stopping or handing off. Captures the active plan, recent decisions, file pointers (with line numbers), open questions, and the next 1–3 actions into a checkpoint file under `quality_reports/checkpoints/`. Optionally proposes `[LEARN]` entries to add to MEMORY.md. Use when user says "checkpoint", "save state", "snapshot before I stop", "where am I", "wrap up the session for handoff", or before a long break / model switch / collaborator handoff. Companion to (NOT replacement for) the narrative session-log workflow.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[short-topic-slug] [--no-memory]"
 disable-model-invocation: true
 allowed-tools: ["Read", "Write", "Bash"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 <!-- Pattern adapted from Hugo Sant'Anna's clo-author v4.2.0 (github.com/hugosantanna/clo-author),

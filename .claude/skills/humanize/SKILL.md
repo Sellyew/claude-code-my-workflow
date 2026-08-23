@@ -1,11 +1,13 @@
 ---
 name: humanize
 description: Read-only audit of `.tex`, `.qmd`, or `.md` text for AI-voice tells — boilerplate transitions ("Moreover", "Furthermore", "It is important to note that"), AI-cliché lexicon ("delve", "navigate the complexities", "tapestry", "robust framework"), em-dash overuse, symmetric paragraph shapes, tricolon abuse, hedging stacking, "not only X but also Y" frames, and formulaic openers. Produces a report; does NOT rewrite. Use when user says "humanize", "does this sound like AI?", "check for AI tells", "de-AI this draft", "remove AI voice", "audit my prose for sycophancy", or before journal submission / posting a working paper.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[filename or 'all'] [--severity low|med|high]"
 disable-model-invocation: true
-allowed-tools: ["Read", "Grep", "Glob", "Write", "Task"]
+allowed-tools: ["Read", "Grep", "Glob", "Write", "Agent", "Task"]
+disallowed-tools: ["Edit", "MultiEdit"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # `/humanize` — AI-voice audit (detect-and-flag)
@@ -171,7 +173,7 @@ Long chains of compound modifiers as a paragraph signature:
    line N | category | severity | current text | suggested rewrite or "remove"
    ```
 
-5. **Write report** to `quality_reports/humanize_<filename>_report.md`. Include:
+5. **Write report** to `quality_reports/audits/humanize_<filename>_report.md`. Include:
    - Per-category counts (HIGH / MED / LOW)
    - Per-finding table
    - Summary recommendation (rough thresholds):
@@ -186,6 +188,8 @@ Long chains of compound modifiers as a paragraph signature:
 
 ## Pairings
 
+| Situation | Do |
+|---|---|
 | When you've drafted prose with AI assistance | Run `/humanize` before submission. Pair with `/proofread` (grammar) and `/verify-claims` (citations). |
 | When you wrote in your own voice | Run `/humanize` anyway — your own prose drifts toward LLM patterns after long sessions of AI-assisted work. |
 | Submission-ready review | `/review-paper --peer [journal] --variance 3` for substance, `/humanize` for voice, `/verify-claims` for facts. |
@@ -198,6 +202,32 @@ If you find yourself reaching for an auto-rewriter, that's the signal to rewrite
 
 ## Output
 
-- Report at `quality_reports/humanize_<filename>_report.md` (gitignored).
+- Report at `quality_reports/audits/humanize_<filename>_report.md` (that subdirectory is gitignored).
 - Summary to the conversation: counts per category, top concentrated paragraphs, action recommendation.
 - **No file edits.** The user reads the report and applies changes manually.
+
+## Respect a documented voice profile
+
+If `voice-profile.md` exists at the repo root, **read it first**. A habit the author has
+declared deliberate — frequent em-dashes, first person, a particular connective — is **not a
+finding**. Flagging a documented preference as an AI tell is a false positive, and false
+positives erode the report's authority faster than misses do.
+
+Build one with [`/voice-profile`](../voice-profile/SKILL.md). This skill says what to remove;
+that one says what to write toward.
+
+## What this skill cannot do (v2.5)
+
+`/humanize` finds **surface tells** — boilerplate transitions, the AI-cliché lexicon, hedging
+stacks, symmetric paragraph shapes. Fixing them improves readability, which is worth doing
+whoever wrote the text.
+
+**It does not make prose stop reading as machine-generated to a detector.** An article polished
+through several rounds of surface de-AI-ing was submitted to Pangram, a neural AI-text
+detector, and came back **100% AI-written**. Those detectors classify on the token-level
+statistics of LLM generation, which survive any transformation the model applies — because
+every transformation is still LLM-generated text.
+
+So: **a clean report here means the prose reads well. It does not mean it reads human.** If
+provenance matters, the author writes the load-bearing sentences and measures with a real
+detector. See [`writing-with-ai.md`](../../rules/writing-with-ai.md).

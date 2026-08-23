@@ -1,11 +1,12 @@
 ---
 name: stata-replication
 description: End-to-end Stata replication pipeline — scaffolds numbered `.do` files in `scripts/stata/`, executes them via the `stata-mcp` MCP server, captures logs and outputs to `scripts/stata/_outputs/`, and produces publication-ready tables (esttab) and figures (graph export). Mirrors `/data-analysis` for R-first projects. Use when user says "stata replication", "set up Stata pipeline", "scaffold the .do files", "run Stata analysis", "AEA replication package in Stata", or when a project's analysis language is Stata not R.
-author: Claude Code Academic Workflow
-version: 1.0.0
 argument-hint: "[paper-or-data-pointer] [--from-r] [--no-execute]"
 disable-model-invocation: true
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Task"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent", "Task"]
+metadata:
+  author: Claude Code Academic Workflow
+  version: 1.0.0
 ---
 
 # `/stata-replication` — Stata pipeline scaffold + execution

@@ -6,6 +6,198 @@ If you have forked this template, see the **Upgrading** section at the bottom fo
 
 ---
 
+## v2.5.0 — 2026-08-23
+
+### Removed — `/did-event-study` (owner veto, 2026-08-22)
+
+The staggered-DiD pipeline skill is **removed**. The owner — whose own methods it drove — has
+not vetted its current content, and **methodological prescriptions in the owner's field do not
+ship without the owner's current sign-off**. A recorded sign-off from an earlier version does
+not transfer to later content. Estimation is driven through the canonical packages directly
+(`did`/`DRDID`/`HonestDiD` in R, `csdid`/`drdid`/`honestdid` in Stata). The veto applies to
+ALL unvetted DiD-prescriptive content, removed in the same release:
+the `did-conventions.md` rule, the staggered-DiD sections of `/challenge`'s fork catalogue,
+the honest-DiD entry in its sensitivity-statistics catalogue, the two DiD eval cases, the
+tracked validation report `quality_reports/did_validation.md`, the pre-trends prescriptions
+baked into the editor / referee personas and worked examples, the citation-metadata claim of
+a "validated DiD/event-study workflow", and
+every one-line echo of those prescriptions in the references, guide, and landing page. What
+remains says only: use the canonical packages and the owner's published work. Eval
+measurements are preserved in the qualification ledger as records, annotated.
+
+
+A **verification and currency release.** The substrate moved underneath the template over ten
+weeks — a tool was renamed, two model generations shipped, and a fixed upstream bug left a
+stale blocker in the backlog — while every gate stayed green. v2.5 fixes the facts, and then
+fixes the reason the gates did not notice.
+
+### Fixed — the tool that no longer exists
+
+- **`Task` → `Agent`.** The subagent-spawning tool is `Agent`; `TaskCreate`/`TaskGet`/… are the
+  unrelated agent-teams task-list tools. Migrated across **33 skill frontmatters** and 20 files
+  of body prose, using **dual listing** (`Agent` *and* `Task`) so forks on older Claude Code
+  keep working. The `PostToolUse` matcher `Bash|Task` — which had silently stopped firing on
+  subagents — is now `Bash|Agent|Task`.
+- **`check-skill-integrity.py` generalized** beyond its hard-coded `Task` check. It immediately
+  found a real defect the `Task`-only version could not see: `/new-skill` invoked `Agent`
+  without declaring it.
+
+### Fixed — model currency, and the gate that missed it
+
+- **SSoT → Opus 5 / Sonnet 5** (Fable 5 remains the top tier), with the **provider-dependent
+  alias table** (Bedrock and Google Cloud resolve `sonnet` to Sonnet 4.5; Microsoft Foundry
+  resolves `opus` to Opus 4.6) and a **60-day expiry**.
+- **Consuming surfaces made tier-abstract** (“the Opus tier”, not a point version) so they
+  cannot drift again. The guide's model paragraph now points at the SSoT instead of restating it.
+- **`check-model-versions.sh` tightened.** Its `GA 2026-0` allow-marker was whitelisting *any*
+  line that carried a GA date, which is how two stale guide lines passed. Removed, and the
+  **line-scoped nature of allow markers** is now documented in the gate as a known limitation.
+
+### Fixed — stale recommendations
+
+- `meta-governance.md` claimed MEMORY.md **“stays in Claude's system prompt.”** It does not —
+  there is no `@MEMORY.md` import. Corrected, with the consequence stated.
+- Plugin packaging was deferred on `anthropics/claude-code#11278`, **closed 2025-11-09**.
+- Two `[LEARN:framing]` entries that v2.0 superseded and nobody retired (orchestrator “pattern,
+  not a runtime”; “quality gates advisory only”) marked **SUPERSEDED**, with what still holds.
+- **Auto mode** is no longer plan-gated: since 2026-08-14 it is the default starting mode for
+  new Pro/Max/Team sessions.
+- The **Fable routing rule** is flagged **stale, needs re-measurement** — it rests on a
+  launch-week observation from June that predates Opus 5.
+
+### Added — the verification layer
+
+- **`/vaccinate`** — grade the grader. Seeds known defects plus a **clean control**, runs the
+  check or review agent blind, and reports **recall** and **false-positive rate** into
+  `quality_reports/qualification/LEDGER.md`. Ships a **defect library** of realistic seeds by
+  artifact type. The rule it enforces: *an unqualified check is not weak evidence — it is none.*
+- **`verification-ladder.md`** — seven rungs from *qualify the checker* to the external oracle;
+  the four-layer artifact ladder (existence → **substantiveness** → wiring → coherence); the
+  three independence mechanisms; the specification-search ledger; and how the loop converges
+  (**batch the fixes, then one confirmation round** — not one-finding-per-round).
+- **`external-oracle-process.md`** — the full Claude Code → **GPT-5.6 Sol Pro** process: setup,
+  invocation, artifacts, the **evidence-forcing prompt contract** (location + quote + *failing
+  case*), the **coverage manifest**, the **HELD list**, **CONFIRMED / REFUTED / DOWNGRADED**
+  adjudication, and the hard-won mechanics. With the limit stated as loudly as the appeal:
+  *agreement is not confirmation; models correlate on the same wrong answer.*
+- **`provenance-and-ground-truth.md`** — naming oracles with roles and **pinned commit SHAs**,
+  declaring **precedence before measuring**, the **divergence-kinds taxonomy** (not every
+  difference is a bug), the tolerance registry and the `all.equal` scale trap, the
+  **never re-bless in the commit that moves it** rule, and the clean-room boundary.
+- **The five credibility questions** — reproducibility ≠ implementation fidelity ≠ statistical
+  performance ≠ measurement validity ≠ identification. Evidence for one never clears another.
+
+### Added — enforcement
+
+- **`scripts/check-links.py`** — every relative markdown link and heading anchor must resolve.
+  Wired into the gate suite, so pre-commit and CI both run it. It found **8 broken references**
+  on first run, including that *every* relative link from the guide to a repo file 404s on the
+  published website. Guide links to repo files are now GitHub blob URLs.
+- **`disallowed-tools` on 9 read-only skills.** `/proofread`, `/review-r`, `/visual-audit` and
+  friends keep `Write` (for their report) but can no longer `Edit` the artifact they were told
+  to only report on. Previously nothing stopped them.
+- **Frontmatter conformance.** Audited continuously by the `check-spec-conformance` gate — all 60 skills at release — against the
+  [Agent Skills spec](https://agentskills.io/specification): names, description length, and
+  the 500-line body guidance all pass (median body: 121 lines). `author`/`version` — read by
+  neither the spec nor Claude Code — moved under `metadata:`.
+
+### Added — scheduling guidance that changes a recommendation
+
+`scheduled-routines.md` gains the **three-mechanism decision table**. The consequence for
+research: a cloud routine runs against a **fresh clone with no local file access**, so a
+nightly reproducibility check on local — or restricted — data belongs in **Desktop scheduled
+tasks**, not cloud routines.
+
+### Verification of this release
+
+Every one of the **eight** gates was qualified with seeded defects and a clean control, and
+each carries a row in `quality_reports/qualification/LEDGER.md`. The composite stress test —
+10 seeded defects spanning six gates in one pass, 10/10 caught, 0 false alarms — is recorded
+there too, alongside the per-gate seedings for the remaining two (spec-conformance:
+empty-description seed; derived-counts: wrong journal/phase/snippet/gate-count seeds).
+
+Three gates caught this release's own work before it shipped, and two external Codex review
+rounds (4 + 4 findings) were adjudicated with every finding reproduced before being acted on —
+7 confirmed and fixed, 1 refuted with line evidence. A 14-component adversarial workflow audit
+(85 agents, refute-biased verification) then confirmed 63 further defects, all fixed in this
+release; its full findings are preserved in the qualification ledger's audit note.
+
+And one finding worth more than the fixes: **rebuilding the landing page silently removed it
+from gate coverage.** Every gate stayed green because the page was no longer being *matched*.
+A gate that matches nothing reports nothing. Caught by seeding a defect into that specific
+surface; coverage restored and re-proved. A falling assertion count is now documented as the
+signal to investigate.
+
+
+### Added — the laws from the working machine
+
+`research-agent-laws.md` — 17 laws for running agents on research infrastructure, each paid
+for by a real incident, cross-referencing rather than restating what is already mechanised.
+Three wired into mechanisms: **parallelism must be provably run-shape-independent** (seed by
+task, not worker; prove it with a two-core vs four-core bit-identity check — worker-based
+seeding silently binds results to the execution shape), the **five-question memory capture
+gate** with a ban on just-in-case memories, and **push-on-failure / silence-on-success** for
+routines, where *did not run* is a failure rather than silence.
+
+### Added — writing
+
+- **`writing-with-ai.md`** separates two problems that get conflated: **readability** (editing
+  fixes it, worth doing whoever wrote the text) and **provenance** (only human rewriting fixes
+  it). An article polished through several rounds of surface de-AI-ing came back from a neural
+  detector at **100 % AI-written** — those classifiers read the token-level statistics of LLM
+  generation, which survive any transformation the model applies, *because every transformation
+  is still LLM-generated text*. **A model cannot make its own output stop reading as model
+  output.** Plus the internal-vs-external-facing decision and the human-readable standard.
+- **`/humanize` scope narrowed** accordingly: a clean report means the prose reads *well*, not
+  that it reads *human*.
+- **`/voice-profile`** — the positive counterpart, deferred since v1.9. Extracts a voice profile
+  from your own prior papers using one subagent per document, and audits drafts against it.
+  `/humanize` now reads it and stops flagging documented quirks as AI tells.
+
+### Added — from a usage-insights review of 14 sessions / 367 hours
+
+- **`agent-authored-code.md`.** The top friction was buggy code, and most of it was written by
+  the agent during the session rather than found in the codebase: bulk transformations run
+  without a dry run, paths resolved after a `cd`, `pgrep` monitors matching themselves so a
+  chain waits on itself, long runs with no heartbeat. *A bulk edit is not done when the script
+  exits 0; it is done when you have read a sample of the result.*
+- **Scope Discipline** at the top of `CLAUDE.md` — do exactly what was asked; list adjacent
+  ideas as suggestions instead of implementing them.
+- **`/diagnose` gains contract-first triage and an audit/repair split.** State the documented
+  contract and whether the reported scenario is even *in* contract before writing anything;
+  Phase 1 is read-only with `UNVERIFIED` marked, Phase 2 repairs only approved rows.
+- **`pdf-processing.md` extended for corpora.** The rule was right for one paper and does not
+  scale by multiplication; more than two or three documents means one subagent per document.
+
+**Inventory at release: 60 skills, 18 agents, 36 rules, 7 hooks, 15 references, 8 gates**
+(was 52 / 18 / 32 / 7 / 9 / 3 at v2.1.0).
+
+### Changed — external Oracle referee review adopted (2026-08-22)
+
+An independent GPT-5.6 Sol referee run over the full guide (34 min, complete coverage
+ledger) returned 28 findings and 15 suggestions. Adjudication: 26 findings confirmed and
+fixed (including a safety-relevant false claim that bypass mode still prompts on protected
+paths — current docs say it does not), 2 refuted against the official docs (auto mode IS
+the Pro/Max/Team default; /checkpoint does not collide with a built-in). High-value
+suggestions adopted: adoption ladder, enforcement-contract matrix, pattern pathways,
+red-then-green demo, git survival kit, data-license decision steps, claims legend, typed
+replication tolerances, and two new staleness checks (guide-version parity, reversed
+injection syntax). Remaining suggestions dispositioned in `v2.0-backlog.md` under the
+owner's two rulings: no further session-time enforcement hooks, and no prescriptive
+empirical-practice content without explicit sign-off.
+
+### Upgrading from v2.1
+
+1. Pull, then run `./scripts/install-hooks.sh` if you have not already — the gate suite now
+   includes the link checker.
+2. If you customized skill frontmatter, note that `allowed-tools` now lists **both** `Agent`
+   and `Task`. Keeping a stale `Task`-only entry is harmless (it is a pre-approval list, not a
+   restriction) but you lose pre-approval on subagent calls.
+3. If you customized `guide/workflow-guide.qmd`, expect conflicts — repo-file links moved to
+   GitHub blob URLs.
+
+---
+
 ## v2.1.0 — 2026-06-10
 
 A **currency + citability release**, driven by a 48-agent web-verified audit ("is this actually up to date and the best for economists, today?"). The architecture audit came back clean — the fixes are facts, not structure.
@@ -245,7 +437,7 @@ Promotes the v1.8.0 `/preregister` and `/checkpoint` skills from appendix entrie
 
 ### Pass 2C — `/review-paper --variance N` reviewer-disposition variance mode (2026-05-20)
 
-Adds a fourth `--peer` mode to `/review-paper`: **`--variance` (with integer N, default 3)** runs N referees with independently sampled dispositions from the 6-way taxonomy, then the editor synthesizes the results into a **decision distribution** (not a point estimate). Motivated by AgentReview (ACL 2024, [arXiv:2406.12708](https://arxiv.org/abs/2406.12708)), which found ~37% of paper decisions vary purely from reviewer-disposition sampling.
+Adds a fourth `--peer` mode to `/review-paper`: **`--variance` (with integer N, default 3)** runs N referees with independently sampled dispositions from the 6-way taxonomy, then the editor synthesizes the results into a **decision distribution** (not a point estimate). Motivated by AgentReview (EMNLP 2024, [arXiv:2406.12708](https://arxiv.org/abs/2406.12708)), which found ~37% of paper decisions vary purely from reviewer-disposition sampling.
 
 #### Changed — `/review-paper` SKILL.md
 

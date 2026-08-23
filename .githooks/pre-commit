@@ -3,8 +3,8 @@
 # Pre-commit quality gate for the academic-workflow template.
 #
 # This closes the "a direct `git commit` bypasses every gate" hole: the
-# gates that `/commit` runs (surface-sync + quality score) now run on EVERY
-# commit, not only when you go through the skill.
+# full backtest suite + the quality score now run on EVERY commit, not
+# only when you go through the skill.
 #
 # Install once per clone:   ./scripts/install-hooks.sh
 # (sets core.hooksPath=.githooks so git finds this version-controlled hook.)
@@ -51,8 +51,8 @@ fi
 
 FAIL=0
 
-echo "── pre-commit: surface-sync gates ──"
-./scripts/check-surface-sync.sh
+echo "── pre-commit: backtest (full gate suite — see scripts/backtest.sh) ──"
+./scripts/backtest.sh
 [ $? -ne 0 ] && FAIL=1
 
 if [ "${SKIP_QUALITY_GATE:-0}" = "1" ]; then

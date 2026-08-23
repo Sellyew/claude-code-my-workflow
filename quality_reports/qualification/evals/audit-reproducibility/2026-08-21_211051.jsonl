@@ -1,0 +1,12 @@
+{"case":"manuscript-not-oracle","rep":1,"mode":"with","hits":1,"asserts":1}
+{"case":"manuscript-not-oracle","rep":1,"mode":"without","hits":0,"asserts":1}
+{"case":"manuscript-not-oracle","rep":2,"mode":"with","hits":1,"asserts":1}
+{"case":"manuscript-not-oracle","rep":2,"mode":"without","hits":0,"asserts":1}
+{"case":"manuscript-not-oracle","rep":3,"mode":"with","hits":0,"asserts":1}
+{"case":"manuscript-not-oracle","rep":3,"mode":"without","hits":0,"asserts":1}
+{"case":"tolerance-before-comparison","rep":1,"mode":"with","hits":2,"asserts":2}
+{"case":"tolerance-before-comparison","rep":1,"mode":"without","hits":2,"asserts":2}
+{"case":"tolerance-before-comparison","rep":2,"mode":"with","hits":2,"asserts":2}
+{"case":"tolerance-before-comparison","rep":2,"mode":"without","hits":2,"asserts":2}
+{"case":"tolerance-before-comparison","rep":3,"mode":"with","hits":2,"asserts":2}
+{"case":"tolerance-before-comparison","rep":3,"mode":"without","hits":2,"asserts":2}

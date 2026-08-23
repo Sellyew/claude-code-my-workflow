@@ -4,7 +4,7 @@ The 18 specialist subagents, what each is for, the model tier it runs at ([`mode
 
 > **Keep this in sync** with `.claude/agents/*.md` frontmatter (`model:` / `effort:`) and with `model-routing.md`. The surface-sync gate counts agents; it does not yet diff this table row-for-row, so update it when you add or retier an agent. (It is a `references/` file, so it is not itself counted as an agent.)
 
-## High-judgment tier — Opus 4.8, effort: high
+## High-judgment tier — Opus tier, effort: high
 
 A wrong "looks fine" from one of these is expensive (a desk-reject, a hallucinated citation, a biased estimator shipped). Never demote to save cost ([`model-routing.md`](../rules/model-routing.md) anti-pattern).
 
@@ -20,7 +20,7 @@ A wrong "looks fine" from one of these is expensive (a desk-reject, a hallucinat
 | `sim-reviewer` | Monte Carlo review (DGP/estimand, MCSE, coverage-vs-truth) | read-only | no | `/simulation-study` |
 | `verifier` | End-to-end compile/render/deploy verification gate | read-only | no | `/commit` |
 
-## Review / critique tier — Sonnet 4.6, effort: high
+## Review / critique tier — Sonnet tier, effort: high
 
 | Agent | Role | Read/Write | Dispatched by |
 |---|---|---|---|
@@ -31,7 +31,7 @@ A wrong "looks fine" from one of these is expensive (a desk-reject, a hallucinat
 | `pedagogy-reviewer` | Narrative arc, prerequisites, worked examples, notation, pacing | read-only | `/pedagogy-review`, `/slide-excellence` |
 | `humanize-auditor` | AI-voice tell detection (10 categories) | read-only | `/humanize` |
 
-## Apply / translate tier — Sonnet 4.6, effort: medium
+## Apply / translate tier — Sonnet tier, effort: medium
 
 | Agent | Role | Read/Write | Dispatched by |
 |---|---|---|---|

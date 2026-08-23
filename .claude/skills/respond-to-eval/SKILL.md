@@ -2,7 +2,7 @@
 name: respond-to-eval
 description: Turn student course evaluations (free-text + numeric) into an actionable teaching-improvement plan — the teaching analogue of /respond-to-referees. Clusters comments into themes, separates signal from noise, classifies each theme Keep / Change / Investigate / Out-of-scope, and drafts concrete changes mapped to the syllabus and slide decks. Use when user says "respond to my evals", "what do these course evaluations tell me", "turn my teaching feedback into a plan", or after a semester's evals arrive.
 argument-hint: "[eval-file(s)] [prior-plan-path] [--min-mentions N] [--no-verify]"
-allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]
+allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent", "Task"]
 effort: high
 ---
 
