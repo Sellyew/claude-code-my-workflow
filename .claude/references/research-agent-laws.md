@@ -188,34 +188,54 @@ ceremonial `wc -l` invocations that prove nothing and train you to ignore them. 
 merely orients you and being wrong costs a re-read, say it and move on. If being wrong would
 propagate, derive it.
 
-**19. "Done" is a state of the repository, not a sentence.**
-Done means the standing gate for the touched surface has been **run** and is green, the work is
-**committed**, and the commit is **pushed** — and only then is it reported. "Implemented, the
-gate should pass" is a hypothesis with a completion notice attached. Hooks catch exceptions;
-they are not the workflow, and a gate left for the pre-commit hook to discover is a gate you did
-not run. Committing is itself a gated act: where it needs explicit sign-off
-([`/commit`](../skills/commit/SKILL.md)), done-for-a-delegated-task means gate-green **and
-handed back with evidence** — the commit is then its own authorized step, not something an
-executor performs to satisfy this law.
-*Incident:* a deliverable reached the turn boundary with its render verification never run;
-only the Stop hook blocked the report, at the cost of an unplanned round-trip. The hook
-worked — and that it *had* to work is the defect this law removes.
-→ [`.claude/rules/progress-reports.md`](../rules/progress-reports.md); this is law 10's practice
-applied to a single task rather than a campaign.
+**19. Name the state you actually reached; never a later one.**
+"Done" collapses five different states into one word, and the word is usually wrong. Report the
+one that exists:
 
-**20. Merges, rebases, and pulls start from a clean tree.**
+| State | What is true |
+|---|---|
+| **modified** | the requested changes exist in the working tree |
+| **verified** | the named gates have been **run** and passed |
+| **committed** | a commit hash exists |
+| **pushed** | a named remote ref contains that commit |
+| **integrated** | the intended target — a branch, a release, a deployed page — contains it |
+
+Claiming a later state than the one reached is the whole defect: *"implemented, the gate should
+pass"* is a hypothesis with a completion notice attached, and a gate left for the pre-commit hook
+to discover is a gate you did not run. Hooks catch exceptions; they are not the workflow.
+*Incident:* a deliverable reached the turn boundary with its render verification never run; only
+the Stop hook blocked the report, at the cost of an unplanned round-trip. The hook worked — and
+that it *had* to work is the defect this law removes.
+*Where the task ends is the task's business, not this law's.* An earlier draft required every task
+to end **pushed**; an external referee pointed out that this breaks a collaborator who asked for
+a working-tree diff to review, a contributor without push rights, and anyone offline — the
+completion state belongs to the contract, and only the honesty of the report belongs here. Where
+committing needs explicit sign-off ([`/commit`](../skills/commit/SKILL.md)), a delegated task ends
+**verified** and handed back with evidence; the commit is its own authorized step.
+→ [`.claude/rules/progress-reports.md`](../rules/progress-reports.md).
+
+**20. History operations normally start from a porcelain-clean repository; an exception is an
+explicit override, reported as an exception.**
 `git status --porcelain` **first**. If it prints anything, commit it or stash it under a label
-that says what it is, then merge. Never force the operation past a dirty tree, and never repair
-the result by force-pushing over it. The asymmetry is the whole argument: the check costs one
-command, and the failure it prevents is uncommitted work destroyed by a merge that mostly
-succeeded.
+that says what it is, then merge. The argument is not that git reliably destroys dirty work — it
+often refuses to touch conflicting local changes — it is that integrating over uncommitted work
+**destroys attribution and reviewability**, and makes accidental co-staging during conflict
+resolution far more likely. Afterwards nothing distinguishes what you chose from what was
+already sitting there.
 *Incident:* a fast-forward merge attempted over a dirty **shared** worktree failed
 mid-operation and forced an improvised stash-and-restore with manual branch preservation —
 recovery that a five-second porcelain check would have made unnecessary. On a shared tree the
 dirt may not even be yours.
+*Three things this law must not let you believe*, all of which cost a review round to establish:
+plain `git stash push -m …` does **not** stash untracked files (use `-u` when `??` entries are
+what you meant to park); `--autostash` is **not** a general clean-tree operation for the same
+reason; and a pre-execution check can only ever establish that the tree was clean **when the
+command was authorized**, unless compound forms are refused outright.
 *Mechanised:* [`.claude/hooks/git-guardrails.py`](../hooks/git-guardrails.py) refuses the
-operation while the tree is dirty; the hatch is `ALLOW_DIRTY_MERGE=1`, deliberately an explicit
-decision rather than a default.
+operation while the tree is dirty, and accepts a history op only as a standalone command — so a
+chain that dirties the tree before the op cannot slip through the gap between decision and
+execution. The hatch is `ALLOW_DIRTY_MERGE=1`: deliberately an explicit act, and one worth saying
+out loud when you use it.
 
 ---
 
@@ -235,11 +255,23 @@ include, **nothing downstream ever surfaces it.** An external referee flagged ex
 the way a rule of thumb becomes a research-quality defect. So: name the default in the rubric,
 and name it by asking which error you could still catch later. Where neither error is
 recoverable, the honest default is a third verdict — NEEDS-HUMAN — not a coin weighted toward
-tidiness. The dispatcher then **spot-checks a sample**
-against that same rubric — a screen nobody re-checked is an opinion poll with citations. And a
-wave of parallel agents is adjudicated **once, whole**: early returns are *status*, not input,
+tidiness.
+
+The dispatcher then **re-checks a sample** against that same rubric — a screen nobody re-checked
+is an opinion poll with citations. "Spot-check" is not enough of an instruction to be falsifiable:
+confirming three obvious includes proves nothing while a fifth of the exclusions are wrong, and
+that is the shape a lenient screen actually takes. So state the protocol before the screen runs —
+**how the sample is drawn (random or stratified, never hand-picked), that exclusions and
+borderlines are deliberately oversampled, the sample size, the disagreement rate you will accept,
+and what happens when it is exceeded.** Without those five, the re-check cannot fail, and a check
+that cannot fail is worse than none (law 5).
+
+A wave of parallel agents is adjudicated **once, whole**: early returns are *status*, not input,
 and verdicts join to candidates **by id**, never by a model-authored string (law 1's silent join
-is this same defect one layer down).
+is this same defect one layer down). One exception, and it is not anchoring: early evidence may
+trigger a **protocol-level stop** — if the first returns reveal that the rubric was ambiguous, the
+inputs were corrupted, or every worker misread the same criterion, halt the wave. Refusing to
+look at early *verdicts* is the rule; refusing to notice the run is broken is just waste.
 *Incident:* a delegated screen with no written rubric came back too lenient, and the whole
 corpus had to be re-screened by hand under stricter criteria — the missing rubric cost the
 entire screen, twice. The same telemetry is blunt about waves: the sessions with a whole-wave

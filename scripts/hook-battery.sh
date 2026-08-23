@@ -423,6 +423,98 @@ expect_silent "a29 r12 control: a GENUINE newline still separates commands — a
 fire root-of-trust-guard.py "$TMP/a30.json"
 expect_silent "a30 r12 control: an ESCAPED backslash before a real newline is a literal backslash, not a continuation — the newline still separates (a naive backslash-newline join would false-deny here)"
 
+# a31-a42 (r14): THE CROSS-HOOK PATH — this is why a git op appears in the
+# ROOT-OF-TRUST section, which otherwise has nothing to say about git history.
+# Two guards split the work between them, and each was correct about its own
+# half: root-of-trust-guard.py UNWRAPS command payloads (`bash -c '...'`,
+# `env -S '...'`) and judges PATH writes; git-guardrails.py judges DESTRUCTIVE
+# GIT but treats a `-c` payload as opaque and does not unwrap it. A payload
+# carrying a destructive git verb and NO protected path therefore fell BETWEEN
+# them: this hook unwrapped it, found no protected path, and returned 0; the
+# sibling never saw the verb at all. `bash -c 'git reset --hard'` and
+# `bash -c 'git clean -fdx'` RAN — the second removing untracked and ignored
+# files, which is research data no reflog holds. A shell wrapper is how a
+# script, a Makefile, or a generated command line ordinarily spells things, so
+# "a determined caller was never the threat model" did not excuse it.
+# (Found by the EXTERNAL REFEREE — GPT-5.6 Sol Pro, 2026-08-23 oracle pass,
+# finding 5; a31 and a32 are the referee's own two named cases.)
+#
+# The fix ROUTES: every payload this hook is willing to unwrap is now passed to
+# git-guardrails' `git_deny_reason()`, IMPORTED rather than copied, so there is
+# one definition of "destructive git" and the two hooks cannot drift apart.
+# These cases therefore pin the ROUTING, not the deny list — the reason text
+# they emit is the sibling's own. a33 uses a THIRD deny-list rule for exactly
+# that reason: it proves the whole shared list is reachable, not two special
+# cases welded in.
+cat > "$TMP/a31.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'git reset --hard'"}}
+EOF
+cat > "$TMP/a32.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'git clean -fdx'"}}
+EOF
+cat > "$TMP/a33.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"sh -c 'git push --force'"}}
+EOF
+cat > "$TMP/a34.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"env -S 'git clean -fdx'"}}
+EOF
+cat > "$TMP/a35.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"nice bash -c 'git reset --hard'"}}
+EOF
+cat > "$TMP/a36.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"timeout 5 bash -c 'git clean -fdx'"}}
+EOF
+cat > "$TMP/a37.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"bash --rcfile /dev/null -c 'git reset --hard'"}}
+EOF
+cat > "$TMP/a38.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"bash -c \"sh -c 'git clean -fdx'\""}}
+EOF
+fire root-of-trust-guard.py "$TMP/a31.json"
+expect_deny   "a31 r14 CROSS-HOOK (the referee's first named case): bash -c '<git reset --hard>' is denied — the unwrapped payload is judged by the SHARED destructive-git rules, not by this hook's path rules"
+fire root-of-trust-guard.py "$TMP/a32.json"
+expect_deny   "a32 r14 CROSS-HOOK (the referee's second named case): bash -c '<git clean -fdx>' is denied — it deletes untracked and ignored research data that no reflog holds"
+fire root-of-trust-guard.py "$TMP/a33.json"
+expect_deny   "a33 r14 CROSS-HOOK: sh -c '<git push --force>' is denied — a THIRD deny-list rule through the same carrier, so the WHOLE shared list is reachable, not two hardcoded cases"
+fire root-of-trust-guard.py "$TMP/a34.json"
+expect_deny   "a34 r14 CROSS-HOOK: env -S '<git clean -fdx>' is denied — the other payload carrier this hook unwraps routes to the deny list too"
+fire root-of-trust-guard.py "$TMP/a35.json"
+expect_deny   "a35 r14 CROSS-HOOK: nice bash -c '<git reset --hard>' is denied — reached through the shared skip_wrappers, so a command wrapper does not hide the payload"
+fire root-of-trust-guard.py "$TMP/a36.json"
+expect_deny   "a36 r14 CROSS-HOOK: timeout 5 bash -c '<git clean -fdx>' is denied — a wrapper carrying its own positional argument still reaches the payload"
+fire root-of-trust-guard.py "$TMP/a37.json"
+expect_deny   "a37 r14 CROSS-HOOK: bash --rcfile <f> -c '<git reset --hard>' is denied — the r6 shell-option parse must not lose the payload on this path either"
+fire root-of-trust-guard.py "$TMP/a38.json"
+expect_deny   "a38 r14 CROSS-HOOK: a NESTED payload, bash -c \"sh -c '<git clean -fdx>'\", is denied — the routing recurses to the same depth <= 2 bound as the path scan"
+
+# a39-a42: the CONTROLS, and they are the point. A blunt "deny any unwrapped
+# payload that mentions git" would pass every deny case above and fail all four
+# of these — so without them the new recall would be indistinguishable from a
+# false-deny rule. a42 additionally pins the SCOPE: only UNWRAPPED payloads are
+# routed here. The direct spelling is git-guardrails' own to judge; denying it
+# here as well would emit two denials for one command and make each hook's
+# battery depend on the other's behaviour.
+cat > "$TMP/a39.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'git status --porcelain'"}}
+EOF
+cat > "$TMP/a40.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'git clean -n'"}}
+EOF
+cat > "$TMP/a41.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'echo hello world'"}}
+EOF
+cat > "$TMP/a42.json" <<'EOF'
+{"tool_name":"Bash","tool_input":{"command":"git reset --hard"}}
+EOF
+fire root-of-trust-guard.py "$TMP/a39.json"
+expect_silent "a39 r14 control: a READ inside the same carrier — bash -c '<git status --porcelain>' — stays allowed, so the routing did not buy its recall by denying git in a payload"
+fire root-of-trust-guard.py "$TMP/a40.json"
+expect_silent "a40 r14 control: bash -c '<git clean -n>' — the DRY RUN the deny message itself recommends — stays allowed"
+fire root-of-trust-guard.py "$TMP/a41.json"
+expect_silent "a41 r14 control: a payload with no git in it at all — bash -c '<echo hello world>' — stays allowed (the ordinary unwrap path is undisturbed)"
+fire root-of-trust-guard.py "$TMP/a42.json"
+expect_silent "a42 r14 control + SCOPE: the UNWRAPPED spelling of the same op is silent HERE — only payloads are routed, so one command never draws two denials (git-guardrails denies this one; case b1)"
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"

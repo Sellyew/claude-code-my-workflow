@@ -68,6 +68,32 @@ The distinction is not important-versus-unimportant review. It is whether a comp
 **Two reviewers that both read the first one's report are one reviewer**, and averaging them
 reports agreement that was manufactured rather than found.
 
+## What the fence does not buy
+
+**Fencing makes the evidence independent. It does not make the errors independent.** Two fenced
+reviewers running the same model on the same artifact share a prior — the same blind spots, the
+same misreadings, the same confident wrong answer — and separate sessions do not separate that.
+So their agreement is weaker evidence than two independent readers agreeing, and the fence is
+precisely what makes it *look* stronger.
+
+Three consequences worth holding onto:
+
+- **Vary what actually varies the error.** A different model, a different lens or role, or a
+  human reader buys independence; a second session of the identical configuration mostly buys a
+  second sample of the same distribution. N identical fenced runs measure the reviewer's
+  variance, not the artifact's correctness.
+- **Read concordance as stability, disagreement as signal.** Same-model agreement says the
+  reading is reproducible. It does not say it is right, and the disagreement is the informative
+  half.
+- **Never report a same-model concurrence as corroboration.**
+  [`../references/external-oracle-process.md`](../references/external-oracle-process.md) states
+  this for the oracle — *agreement is not confirmation; two models correlate on the same wrong
+  answer* — and the caution does not weaken inside the fence. A mechanical check outranks any
+  number of concurring reviewers.
+
+None of this is a reason to skip fencing. An unfenced reviewer's errors are correlated *and* it
+has read the answer key; the fence removes one of the two.
+
 ## Prior verdicts stay out
 
 Earlier referee reports, judge verdicts, adjudication tables, and prior-round quality reports do

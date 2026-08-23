@@ -304,11 +304,15 @@ None of the forms above is closed, and these checks are DEFENCE IN DEPTH over a
 deliberate bypass posture, not a sandbox: permissions ship in bypass mode here,
 so a determined caller was never the threat model. What actually backstops it
 is the same layering root-of-trust-guard relies on — the operation stays
-visible in the transcript, `git reflog`/`ORIG_HEAD` keep a bad merge
-recoverable, changes arrive through reviewable Edit/Write diffs rather than
-invisibly, and the deliberate hatch (ALLOW_DIRTY_MERGE=1 in the session
-environment) exists so the honest way past this check is to SAY SO rather than
-to route around it. What this hook buys is that the ordinary accident — an
+visible in the transcript, changes arrive through reviewable Edit/Write diffs
+rather than invisibly, and the deliberate hatch (ALLOW_DIRTY_MERGE=1 in the
+session environment) exists so the honest way past this check is to SAY SO
+rather than to route around it.
+DO NOT list reflog or ORIG_HEAD among those backstops, however tempting: they
+recover COMMITS. The work this check exists to protect is precisely the work
+that is NOT committed — uncommitted edits and untracked files — and no reflog
+entry brings those back. An external referee caught that claim standing in the
+docs; it was removed there and must not creep back here. What this hook buys is that the ordinary accident — an
 agent one-liner that merges over uncommitted work — costs a denial instead of
 an unreviewable commit.
 

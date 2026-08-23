@@ -25,7 +25,7 @@ claims were true, v2.6 asks whether the things that check them still work.
   typo can no longer disable a hook silently while every gate stays green. The registered set
   is derived live from the gate runner, the session settings, and the commit entry point;
   grepping the ledger cannot know what actually runs.
-- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (95 cases, seconds to run)
+- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (107 cases, seconds to run)
   that re-fires every active guard hook's target failure on **every backtest run**: the deny
   cases, the clean controls that must stay silent, fail-open on a malformed event, and the
   documented escape hatches. Gate 9 proves a hook is *wired*; gate 10 proves it still *acts*.

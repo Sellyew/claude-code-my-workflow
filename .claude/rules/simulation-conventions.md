@@ -23,7 +23,7 @@ Every Monte Carlo script must make five things explicit and inspectable:
 2. **The truth** — the true value of the target parameter, computed from `params` (not from any estimate), stored alongside the results.
 3. **The estimand** — which quantity each estimator targets (e.g., ATT, ATE, a specific event-study coefficient). An estimator that targets a *different* estimand than `the truth` is a bug, not a finding.
 4. **The replication budget** — `R` (number of replications) and the resulting Monte Carlo standard error on the headline metrics.
-5. **The assumption regime** — which assumptions the estimator maintains, whether this run's DGP satisfies all of them, and how that was verified (§2).
+5. **The assumption regime** — which conditions the estimator maintains, whether this run's DGP satisfies each of them, and how that was verified. Required of any run whose output supports a claim, promotes a default, or leaves this machine; not of a disposable exploratory run (§2).
 
 ## 2. The assumption regime
 
@@ -34,9 +34,26 @@ an assumption the estimator maintains can pass every other check here — MCSE r
 scored against the truth, estimand aligned — and still be evidence about the violation rather
 than about the estimator.
 
+### Which runs owe a regime block
+
+**The ones whose output supports a claim, promotes a default, or leaves this machine.** A number
+headed for a paper, a slide, a README, or a referee; the evidence behind shipping something on by
+default; anything handed to a coauthor or packaged for replication. Those owe the full block.
+
+**A disposable exploratory run does not** — checking whether the estimator runs at all, sweeping
+a grid to find where to look, bisecting a DGP that misbehaves. That exemption is stated out loud
+on purpose. An external referee's objection is exact: imposed identically on throwaway runs, this
+becomes ceremony, and ceremony is complied with perfunctorily and then bypassed wholesale —
+including on the runs that needed it. A rule nobody can afford everywhere gets followed nowhere.
+
+**The line is the output, not the intent.** An exploratory run whose number is about to be quoted
+has crossed it, and owes the block **before** the number is quoted — retrofitting a regime onto a
+run whose DGP you no longer remember produces a description of what you think you did, not a
+verification of what you did.
+
 ### The regime block
 
-Every simulation script declares, in its header, four things:
+Every in-scope script declares, in its header, four things:
 
 | Field | What it states |
 |---|---|
@@ -44,6 +61,14 @@ Every simulation script declares, in its header, four things:
 | **Maintained assumptions** | the **full** list the estimator or procedure under study requires — every one, not the interesting ones |
 | **Regime** | `IN-ASSUMPTION`, or the **single** assumption this run relaxes and how severely |
 | **Verified** | per assumption, the checkable property of the DGP that establishes it |
+
+**A map, not a list.** What licenses the run is the *correspondence* between the estimator's
+conditions and the DGP, never the two lists placed side by side. So write it condition by
+condition: each condition the theorem or the documented procedure requires on its own line, and
+opposite it the property of `generate_data()` that establishes it — and where the run departs
+from a condition, that departure is named in the `Regime` line as a **deliberate violation**,
+not quietly missing from `Verified`. A condition with nothing opposite it has recorded a hope; a
+DGP feature with no condition opposite it has recorded a changelog.
 
 **"The DGP is correctly specified" is an assertion, not a verification.** An assumption is
 verified when you can name the property of `generate_data()` that makes it true. Two forms
@@ -216,8 +241,12 @@ Define against **the truth**, never against another estimate:
 [ ] DGP is one parameterized generate_data() function
 [ ] truth computed from params, stored with results
 [ ] each estimator's estimand stated and aligned with truth
-[ ] regime block in the header: estimand, ALL maintained assumptions, regime, verification
+[ ] does this run's output support a claim, promote a default, or leave the machine?
+    if no, the regime items below are optional (§2); everything else still applies
+[ ] regime block in the header: estimand, ALL maintained conditions, regime, verification
 [ ] one condition per assumption line -- no two merged under one label
+[ ] each condition mapped to the DGP property opposite it; deliberate violations named
+    in the regime line, not omitted
 [ ] each maintained assumption verified by a named property, not asserted, and
     every check states a threshold it can fail against (rcond(J) > 1e-8, not
     is.finite(kappa(J)))

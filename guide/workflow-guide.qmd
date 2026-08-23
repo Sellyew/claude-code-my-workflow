@@ -1417,7 +1417,7 @@ But a wired hook is not yet a working hook. A guard can keep its path, keep firi
 denying — an over-broad exception, a regex loosened during a debugging session, an early
 `return allow` left in. Gate 10, the hook battery, drives each active guard with synthetic events
 and requires it to still go red on the failure it was written for, and to stay green on the clean
-controls. Ninety-five cases, and it finishes in seconds.
+controls. 107 cases, and it finishes in seconds.
 
 So check that a guard still objects, not only that it still fires: a control dies as easily by
 running and no longer objecting as by never running at all, and proof of wiring is not proof of

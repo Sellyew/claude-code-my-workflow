@@ -203,6 +203,28 @@ the result, and every claim that later cites it is circular. Demote rather than 
 keeps the thing usable by someone who has read the number and accepted it, while deletion
 destroys the trail and re-opens the question from scratch next release.
 
+**A single noisy estimate does not fire a disposition.** Three conditions gate the trigger, and
+all three belong in the preregistration, written before the number lands:
+
+1. **The bound carries its uncertainty.** A bound is a number *and* the Monte Carlo or sampling
+   error of the measurement that will be compared against it. *"Coverage ≥ 0.93"* is not a bound
+   you can miss; *"coverage ≥ 0.93, at `R` chosen for MCSE ≈ 0.005, missed when the estimate
+   falls below the bound by more than 2 MCSE"* is. Without the second half, every borderline draw
+   is a disposition and the rule fires on noise
+   ([`../rules/simulation-conventions.md`](../rules/simulation-conventions.md) §4).
+2. **A re-measurement precedes the disposition.** Re-run the campaign on fresh seeds, same budget
+   and same bound, and demote only if it misses again. Where a re-measurement is genuinely
+   impossible — a one-shot measurement, an external service that changed underneath you, a
+   campaign nobody will fund twice — **state that reason in the verdict artifact** and record
+   that the disposition rests on one draw. Obligation 2 below is not in tension with this: the
+   confirming re-run is pre-committed and happens *before* the withdrawal; what that obligation
+   forbids is re-rolling a failed campaign *afterwards* until it passes.
+3. **The withdrawal names its own scope.** Exactly one of: the **default** (the capability stays,
+   reachable by explicit opt-in), the **guarantee** (the numeric claim is retracted; the
+   capability ships without it), or the **method** (the procedure itself is withdrawn from
+   recommendation). A bare *"WITHDRAW"* leaves every reader to infer which, and they infer the
+   cheapest one.
+
 Three obligations, and the withdrawal is not finished until all three are discharged:
 
 1. **Publish it where users read.** The failing number, the bound it missed, and the

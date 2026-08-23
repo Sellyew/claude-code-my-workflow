@@ -2,6 +2,31 @@
 
 **The review-fix loop is a real runtime contract, expressed with the primitive every Claude Code session has: the `Agent` subagents.** Skills fan out to forked reviewers, reduce their *structured* findings ([`orchestration-schemas.md`](../references/orchestration-schemas.md)) through a deterministic gate, judge with a hallucination guard, and loop until dry. What is *not* automatic is the **trigger**: nothing launches this loop on its own — the user (or a skill invocation) starts it. That boundary is deliberate (see "What is NOT automatic").
 
+## Proportionality — match the process to the stakes
+
+**Read this before the machinery below.** Everything that follows is a heavyweight apparatus, and
+the fastest way to make it worthless is to point it at everything. An external referee reviewing
+this template put the objection plainly: it *"treats too many exploratory and collaborative states
+like release engineering."* The predicted failure is not careful partial compliance — it is
+perfunctory artifacts, vocabulary games that route around a definition, hatches set globally, or
+the whole template abandoned for exploratory work. The recommendation is adopted here as the
+runtime's own doctrine:
+
+| Surface | Appropriate posture |
+|---|---|
+| Destructive git operations; changes to the controls themselves | hard gate, or explicit external authorization |
+| Claims entering a public paper, a release, or a handoff | reproducible provenance and named verification |
+| Promoting a default; a preregistered evaluation | prespecified pass / fail / escalation rules, written first |
+| Exploratory analysis and interim collaboration | exact status reporting, **minimal ceremony** |
+| High-recall discovery screens | ambiguity retained, not resolved by a default verdict |
+
+Two readings of that table carry the weight. **Exact status reporting is the one thing never cut**
+— naming the state you actually reached ([`research-agent-laws.md`](../references/research-agent-laws.md)
+law 19) costs nothing and is what makes a light-touch exploratory run trustworthy at all. And **a
+surface moves up the table the moment its output does**: an exploratory run whose number is about
+to enter a paper is no longer exploratory, and it acquires the row above it *before* the number is
+quoted, not after.
+
 ## The loop (the contract)
 
 ```
