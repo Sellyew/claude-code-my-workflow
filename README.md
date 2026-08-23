@@ -330,8 +330,6 @@ Rules use path-scoped loading: **always-on** rules load every session; **path-sc
 | `tikz-prevention` (v1.4.x) | `Slides/**`, `Figures/**`, `Preambles/**` | TikZ pre-flight grep checks (P3/P4 collision avoidance) |
 | `agent-authored-code` (v2.5) | `**/*.sh`, `**/*.py`, `**/*.R`, `**/*.do` | The bugs are usually ours: dry-run before any bulk edit, resolve paths before `cd`, monitor by PID file not `pgrep`, cover every terminal state |
 | `writing-with-ai` (v2.5) | `**/*.tex`, `**/*.qmd`, `**/*.md`, `**/*.Rmd` | Internal vs external-facing documents; why a model cannot make its own output stop reading as model output; the human-readable standard |
-| `repo-hygiene` (v2.5) | always-on (enforced repo-wide by the hygiene gate) | Scratch must not become main — rejects root clutter, draft names, superseded copies, version-in-filename, accidental duplicates, tracked build artifacts, undocumented archives |
-| `progress-reports` (v2.5) | always-on | GitHub as memory — issues for defect memory, `quality_reports/` for work memory, `MEMORY.md` for lesson memory |
 | `issue-ledger` (v2.5) | `.github/**` | Evidence standard for an issue: denominator, positive/negative control, explicit non-scope, and a seven-section closure comment |
 | `tikz-measurement` (v1.5.x) | `Slides/**`, `Figures/**`, `Preambles/**`, `scripts/**` | Bézier curve depth math + 6-pass collision protocol (from MixtapeTools) |
 | `content-invariants` (v1.6.x) | `.tex`, `.qmd`, `Preambles/`, `scripts/R/**` | Pre-Flight Reports — proves inputs were read before work |
