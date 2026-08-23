@@ -104,7 +104,7 @@ Things explored during this session that should NOT carry forward — failed hyp
 
 ## Proposed `[LEARN]` entries
 
-Lessons worth promoting to MEMORY.md (or personal-memory.md if machine-specific). User reviews; nothing auto-merged.
+Lessons worth promoting to MEMORY.md (machine-specific ones stay in native auto memory). User reviews; nothing auto-merged.
 
 - `[LEARN:<category>]` <lesson>. **Evidence:** <pointer>.
 - ...

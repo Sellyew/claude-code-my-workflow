@@ -106,7 +106,7 @@ Why: <one sentence on what makes this non-obvious>
 Apply where: <which future situations would benefit>
 ```
 
-If the user says "yes" / "all" / "1 and 3" — append to MEMORY.md (root, the committed one) using the `[LEARN]` format. If the candidate is machine-specific (paths, tool versions, personal preference), recommend the user route it to `.claude/state/personal-memory.md` instead per `.claude/rules/meta-governance.md`.
+If the user says "yes" / "all" / "1 and 3" — append to MEMORY.md (root, the committed one) using the `[LEARN]` format. If the candidate is machine-specific (paths, tool versions, personal preference), let native auto memory hold it instead (machine-local, per `.claude/rules/meta-governance.md`).
 
 Stay below 3 candidates. If you have more, the session was probably under-narrated — flag it and recommend a session-log update instead.
 

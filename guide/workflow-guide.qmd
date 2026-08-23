@@ -1236,7 +1236,7 @@ Use it for:
 - [LEARN:workflow] Every Beamer edit must auto-sync to Quarto
 ```
 
-#### Two-tier memory architecture (`MEMORY.md` vs `personal-memory.md`)
+#### Two-tier memory architecture (`MEMORY.md` vs native auto memory)
 
 The template splits memory into two tiers (see [`meta-governance.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/meta-governance.md)):
 
@@ -1247,7 +1247,7 @@ When a fork user does `git clone`, they get the generic `MEMORY.md`. Their own a
 
 #### `/promote-memory` — graduating learnings (v1.9.0)
 
-The two-tier split poses one question: *who decides which `[LEARN]` entries graduate from `personal-memory.md` to `MEMORY.md`?* The answer is a **five-critic council**.
+The two-tier split poses one question: *who decides which `[LEARN]` entries graduate from native auto memory to `MEMORY.md`?* The answer is a **five-critic council**.
 
 `/promote-memory [filter]` runs five critics in parallel, each reviewing one dimension:
 
@@ -1305,9 +1305,9 @@ The template includes 7 hooks for logging, notifications, context survival, and 
 | Desktop notification | `Notification` | Desktop alert when Claude needs attention (macOS/Linux) |
 | Context state capture | `PreCompact` | Saves plan state before auto-compaction |
 | Context restoration | `SessionStart[compact|resume]` | Restores context after compaction or resume |
-| Context monitor | `PostToolUse[Bash|Task]` | Progressive warnings at 40%/55%/65%/80%/90% context |
+| Context monitor | `PostToolUse[Bash|Agent|Task]` | Progressive warnings at 40%/55%/65%/80%/90% context |
 | Git guardrails | `PreToolUse[Bash]` | Blocks destructive git (`reset --hard`, `clean -f`, `push --force`, `add -A`) |
-| Claim reconcile | `PostToolUse[Edit|Write]` | Flags stale numeric claims when analysis scripts change |
+| Claim reconcile | `PostToolUse[Write|Edit|MultiEdit]` | Flags stale numeric claims when analysis scripts change |
 
 Verification and Beamer-Quarto sync are enforced via auto-loaded rules, which are the right tool for nuanced judgment. Hooks are reserved for enforcement that *must* survive context compression.
 
@@ -2627,7 +2627,7 @@ These are external to this template --- invoke directly, no installation needed.
 
 ## Community Adoption {#sec-community}
 
-As of March 2026, **15+ research groups** across multiple disciplines have forked and adapted this workflow for their own projects:
+Research groups across multiple disciplines have forked and adapted this workflow for their own projects — **15+ at the March 2026 survey**, with the fork network growing steadily since:
 
 - **Economics** --- China innovation policy, mental health and layoffs, AIGC and stock prices, capital/labor shares in healthcare
 - **Energy** --- Nepal and global energy economics, PV module reliability
@@ -3093,7 +3093,7 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | Desktop notification | Notification (command) | `.claude/hooks/notify.sh` |
 | Context state capture | PreCompact (command) | `.claude/hooks/pre-compact.py` — DRAFT-block default is ON |
 | Context restoration | SessionStart[compact\|resume] (command) | `.claude/hooks/post-compact-restore.py` |
-| Context monitor | PostToolUse[Bash\|Task] (command) | `.claude/hooks/context-monitor.py` |
+| Context monitor | PostToolUse[Bash\|Agent\|Task] (command) | `.claude/hooks/context-monitor.py` |
 | Git guardrails | PreToolUse (command) | `.claude/hooks/git-guardrails.py` — blocks `reset --hard` / `clean -f` / `push --force` / `add -A` |
 | Claim reconcile | PostToolUse (command) | `.claude/hooks/claim-reconcile.py` — flags stale numeric claims when scripts change |
 

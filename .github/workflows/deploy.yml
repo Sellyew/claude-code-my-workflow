@@ -1,16 +1,19 @@
 name: deploy-guide
 
-# Renders the workflow guide and publishes it to docs/ on every push to main
-# that touches the guide source, so GitHub Pages stays in sync without a manual
-# `quarto render`. Opt-in: enable Actions on your fork and grant Pages write.
-# Forkers who don't publish a guide can delete this file.
+# Verifies the guide on every push to main that touches guide source.
 #
-# Step order is load-bearing (v2.5 audit found the stamp running BEFORE the
-# docs/ sync, so any run with real work to do refused the divergent pair and
-# died without ever updating docs/):
-#   render -> sync docs -> stamp (verifies guide/docs identical) -> commit ALL
-#   THREE artifacts. Committing only docs/ would leave guide/ HTML and
-#   .render-stamp dirty on main and immediately fail the staleness gate.
+# VERIFY-ONLY by design (v2.5.0 post-release fix). The committed, stamped
+# artifacts (guide/workflow-guide.html + docs/workflow-guide.html +
+# .render-stamp) are authoritative — the local render + stamp-render.sh flow
+# produces them, and the staleness gate binds them to the source by content
+# fingerprint. CI must NOT push a re-render: (a) the repo rule requires
+# changes via PR, so the old push step failed on every release merge; and
+# (b) a different Quarto build produces byte-different HTML, so a CI render
+# would fight the stamp. Instead this job proves two things:
+#   1. the committed tree passes all gates (incl. source<->render stamp), and
+#   2. the guide still renders from scratch on a clean machine.
+# GitHub Pages serves docs/ directly; no CI commit is needed for deploys.
+# (The runner is ephemeral, so the CI render's output is simply abandoned.)
 
 on:
   push:
@@ -19,30 +22,17 @@ on:
       - "guide/**"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  render:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: quarto-dev/quarto-actions/setup@v2
-      - name: Render guide
-        run: quarto render guide/workflow-guide.qmd
-      - name: Sync to docs/
-        run: cp guide/workflow-guide.html docs/workflow-guide.html
-      - name: Stamp render fingerprint
-        run: ./scripts/stamp-render.sh   # refuses if guide/ and docs/ differ
-      - name: Verify gates on the result
+      - name: Verify gates on the committed tree
         run: ./scripts/backtest.sh
-      - name: Commit rendered artifacts
+      - name: Renderability smoke check (output abandoned with the runner)
         run: |
-          if [ -n "$(git status --porcelain guide/workflow-guide.html docs/workflow-guide.html .render-stamp)" ]; then
-            git config user.name  "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add guide/workflow-guide.html docs/workflow-guide.html .render-stamp
-            git commit -m "ci: re-render guide → docs/ (stamped) [skip ci]"
-            git push
-          else
-            echo "already up to date."
-          fi
+          quarto render guide/workflow-guide.qmd
+          echo "render OK — committed artifacts remain authoritative"
