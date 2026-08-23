@@ -4553,8 +4553,8 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 <span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">LEARN:r-code</span><span class="co">]</span> Package X drops obs silently when covariate is missing</span>
 <span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">LEARN:citation</span><span class="co">]</span> Post-LASSO is Belloni (2013), NOT Belloni (2014)</span>
 <span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">LEARN:workflow</span><span class="co">]</span> Every Beamer edit must auto-sync to Quarto</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<section id="two-tier-memory-architecture-memory.md-vs-personal-memory.md" class="level4" data-number="4.8.0.1">
-<h4 data-number="4.8.0.1" class="anchored" data-anchor-id="two-tier-memory-architecture-memory.md-vs-personal-memory.md"><span class="header-section-number">4.8.0.1</span> Two-tier memory architecture (<code>MEMORY.md</code> vs <code>personal-memory.md</code>)</h4>
+<section id="two-tier-memory-architecture-memory.md-vs-native-auto-memory" class="level4" data-number="4.8.0.1">
+<h4 data-number="4.8.0.1" class="anchored" data-anchor-id="two-tier-memory-architecture-memory.md-vs-native-auto-memory"><span class="header-section-number">4.8.0.1</span> Two-tier memory architecture (<code>MEMORY.md</code> vs native auto memory)</h4>
 <p>The template splits memory into two tiers (see <a href="https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/meta-governance.md"><code>meta-governance.md</code></a>):</p>
 <ul>
 <li><strong><code>MEMORY.md</code></strong> (committed, ≤ 200 lines) — generic learnings that help all forkers: workflow patterns, design principles, documentation standards, quality thresholds that transfer across domains.</li>
@@ -4564,7 +4564,7 @@ Orchestrator executes the plan end-to-end --- no prompts.</code></pre>
 </section>
 <section id="promote-memory-graduating-learnings-v1.9.0" class="level4" data-number="4.8.0.2">
 <h4 data-number="4.8.0.2" class="anchored" data-anchor-id="promote-memory-graduating-learnings-v1.9.0"><span class="header-section-number">4.8.0.2</span> <code>/promote-memory</code> — graduating learnings (v1.9.0)</h4>
-<p>The two-tier split poses one question: <em>who decides which <code>[LEARN]</code> entries graduate from <code>personal-memory.md</code> to <code>MEMORY.md</code>?</em> The answer is a <strong>five-critic council</strong>.</p>
+<p>The two-tier split poses one question: <em>who decides which <code>[LEARN]</code> entries graduate from native auto memory to <code>MEMORY.md</code>?</em> The answer is a <strong>five-critic council</strong>.</p>
 <p><code>/promote-memory [filter]</code> runs five critics in parallel, each reviewing one dimension:</p>
 <ol type="1">
 <li><strong>Generality</strong> — would a non-econ forker benefit?</li>

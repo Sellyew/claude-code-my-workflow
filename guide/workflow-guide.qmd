@@ -1236,7 +1236,7 @@ Use it for:
 - [LEARN:workflow] Every Beamer edit must auto-sync to Quarto
 ```
 
-#### Two-tier memory architecture (`MEMORY.md` vs `personal-memory.md`)
+#### Two-tier memory architecture (`MEMORY.md` vs native auto memory)
 
 The template splits memory into two tiers (see [`meta-governance.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/meta-governance.md)):
 
@@ -1247,7 +1247,7 @@ When a fork user does `git clone`, they get the generic `MEMORY.md`. Their own a
 
 #### `/promote-memory` — graduating learnings (v1.9.0)
 
-The two-tier split poses one question: *who decides which `[LEARN]` entries graduate from `personal-memory.md` to `MEMORY.md`?* The answer is a **five-critic council**.
+The two-tier split poses one question: *who decides which `[LEARN]` entries graduate from native auto memory to `MEMORY.md`?* The answer is a **five-critic council**.
 
 `/promote-memory [filter]` runs five critics in parallel, each reviewing one dimension:
 
