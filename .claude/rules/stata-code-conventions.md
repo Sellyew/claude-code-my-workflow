@@ -176,4 +176,5 @@ The [AEA Data Editor checklist](https://aeadataeditor.github.io/) requires:
 
 - [`r-code-conventions.md`](r-code-conventions.md) — analogous discipline for R-first pipelines.
 - [`replication-protocol.md`](replication-protocol.md) — tolerance contract that applies across R / Stata / Python.
+- [`../references/release-engineering.md`](../references/release-engineering.md) — shipping an `.ado` package or a replication package as a versioned artifact: message and silent-resolution censuses, preflight archives, generated status contracts, downstream pinning.
 - [stata-mcp on GitHub](https://github.com/SepineTam/stata-mcp) — the MCP server that lets Claude Code execute Stata `.do` files. Install via `claude mcp add stata-mcp --scope user -- uvx stata-mcp`.

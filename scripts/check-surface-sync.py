@@ -51,8 +51,24 @@ SURFACES = [
     REPO / "CLAUDE.md",
     REPO / "guide/workflow-guide.qmd",
     REPO / "docs/workflow-guide.html",
+    # The render that lands beside the .qmd. It is byte-identical to the docs/
+    # copy above (`cmp` clean at 2026-08-23) but was NOT scanned, so eleven
+    # inventory sites in it — the same eleven the docs/ copy is gated on — took
+    # a planted 99 with both gates green during the 76-site sweep. Cheap to
+    # close, and it keeps the pair from diverging silently if one is re-rendered
+    # and the other is not.
+    REPO / "guide/workflow-guide.html",
     REPO / "docs/index.html",
     REPO / "templates/skill-template.md",
+    # The `/commit` skill's Step 0b quotes the inventory compound verbatim
+    # ("18 agents, 60 skills, 37 rules, 8 hooks") as the worked example of what
+    # the consistency gate checks. It was NOT scanned until 2026-08-23: a
+    # 33-site planted-lie sweep caught 32 sites and missed exactly this one
+    # ("99 agents" here left surface-sync AND derived-counts green), even
+    # though the SAME line's "all ten gates" was already gated by
+    # check-derived-counts.py. A stale inventory inside the skill that runs the
+    # gate is the r1 failure re-armed, so the file is a scanned surface now.
+    REPO / ".claude/skills/commit/SKILL.md",
 ]
 
 # Phrasings that assert THIS TEMPLATE's counts. We deliberately require
@@ -115,6 +131,45 @@ SINGULAR_PHRASINGS: list[tuple[str, str]] = [
     (r"(?:this\s+)?template\s+(?:has|ships|includes|provides|offers)\s+(\d+)\s+skills?\b", "skills"),
     (r"(?:this\s+)?template\s+(?:has|ships|includes|provides|offers)\s+(\d+)\s+agents?\b", "agents"),
     (r"(?:this\s+)?template\s+(?:has|ships|includes|provides|offers)\s+(\d+)\s+rules?\b",  "rules"),
+    # ...and the same scaffold for hooks. Omitted until 2026-08-23, which left
+    # the guide's "The template includes 8 hooks" (Pattern 12 intro) ungated
+    # even though "hooks" was already a GROUND_TRUTH key — a seeded "99 hooks"
+    # there passed all ten gates.
+    (r"(?:this\s+)?template\s+(?:has|ships|includes|provides|offers)\s+(\d+)\s+hooks?\b",  "hooks"),
+    # "all N rules on day one" / "all 18 agents are pinned" — the totalizing
+    # phrasing. It says "all", so it is unambiguously this template's full
+    # inventory, never a "start with 2--3 rules" subset. Added 2026-08-23: the
+    # guide's Lessons Learned item 8 ("face all 37 rules on day one") matched
+    # neither the compound phrasings nor the template-verb scaffold, so a
+    # seeded 99 there shipped green.
+    (r"\ball\s+(\d+)\s+skills?\b",                  "skills"),
+    (r"\ball\s+(\d+)\s+agents?\b",                  "agents"),
+    (r"\ball\s+(\d+)\s+rules?\b",                   "rules"),
+    (r"\ball\s+(\d+)\s+hooks?\b",                   "hooks"),
+    # docs/index.html's "What you get" bullets — the FIRST inventory numbers a
+    # prospective forker sees, on the only surface published to the public web.
+    # Only the compound line above them was gated; the bullets themselves were
+    # not, so seeded 99s survived every gate (2026-08-23).
+    #
+    # Each is anchored on its own bullet tail rather than the bare
+    # `<strong>N kind</strong>` markup, because docs/workflow-guide.html — also
+    # a scanned surface — legitimately contains `<strong>3 agents</strong> is
+    # the sweet spot` and `<strong>17 specialized agents</strong>` (a DIFFERENT
+    # template's count). If you reword a bullet, update the pattern with it: an
+    # unmatched pattern reports nothing, which looks exactly like a pass.
+    (r"<strong>(\d+)\s+skills</strong>\s+covering\b",                        "skills"),
+    (r"<strong>(\d+)\s+specialized\s+agents</strong>\s*[—–-]\s*referees\b",  "agents"),
+    (r"<strong>(\d+)\s+rules</strong>\s*[—–-]\s*most\b",                     "rules"),
+    (r"\bplus\s+(\d+)\s+hooks?\s+that\s+act\b",                             "hooks"),
+    # The guide's feature table: "18 specialized agents for proofreading,
+    # layout, pedagogy, ...". Anchored on the trailing " for" because a bare
+    # "N specialized agents" also occurs as clo-author's "17 specialized
+    # agents" (guide 2710) and README's "21 specialized agents (7 worker-critic
+    # pairs...)" — OTHER projects' counts. Verified 2026-08-23 that
+    # "N specialized agents for" occurs at exactly three sites, all this
+    # template's own. Added after a 76-site planted-lie sweep took a seeded
+    # "99 specialized agents for proofreading" green on every gate.
+    (r"(\d+)\s+specialized\s+agents?\s+for\b",                              "agents"),
 ]
 
 # Enumerative-table markers. A surface opts a markdown table into the

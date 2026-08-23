@@ -104,6 +104,15 @@ oracle -s did-proof-audit-r1 -p "$(cat prompt.md)" -f main.tex supplement.tex --
 
 `browser.runtime.tabUrl` is the **send-committed signal**. No URL → the run never happened.
 
+> **Archive the transcript into the repo — the session directory is not the record.**
+> `~/.oracle/sessions/` is machine-local, unversioned, and one `--force` respawn away from
+> being overwritten. Copy each consult's `artifacts/transcript.md` and its `meta.json` (which
+> carries the exact prompt, the file list, and the conversation URL) into a dated directory:
+> `quality_reports/oracle_audits/YYYY-MM-DD_<topic>/`. Then **any claim that rests on a
+> consult cites the archived transcript**, never "the oracle said" recalled from session
+> memory — the claim record in §5 names that path. A consult nobody can reopen is an
+> anecdote, and a later reader cannot tell an adjudicated finding from a remembered one.
+
 ---
 
 ## 4. The prompt contract — force evidence, not conclusions

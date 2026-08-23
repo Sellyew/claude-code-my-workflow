@@ -41,40 +41,8 @@ and show sensitivity to it.
 
 ---
 
-## Matched and stratified designs
-
-### Rosenbaum Γ bounds
-**Question:** how much would treatment odds have to differ within a matched pair or set, due
-to an unobserved covariate, before the inference changes?
-**Report:** the Γ at which the p-value crosses the threshold, and the design sensitivity.
-**Implementation:** `sensitivitymv`, `rbounds` (R).
-**Watch:** for matched designs — pairs, sets, or full matching. Do not apply to an unmatched
-regression and call it a bound.
-
----
-
-
-## Regression discontinuity
-
-- **McCrary / Cattaneo density test** — manipulation of the running variable. `rddensity`.
-- **Covariate placebo** — predetermined covariates must not jump at the cutoff.
-- **Bandwidth sensitivity** — report the curve over bandwidths, not one MSE-optimal choice.
-- **Donut** — drop observations immediately at the cutoff to probe heaping and sorting.
-  Report the estimate and SE across donut radii, not just significance: a result that dies may
-  reflect manipulation, heaping, **or simply the precision loss** from discarding the most
-  informative observations. The donut localizes a concern; it does not adjudicate it.
-
----
-
-## Instrumental variables
-
-- **The exclusion restriction is not testable.** Any claim that a test "validates" it is wrong.
-- **Over-identification** (Hansen J) is a joint test of *all* instruments' validity plus
-  correct specification; rejecting tells you something is wrong, not what.
-- **Placebo outcomes** the instrument should not affect are the most persuasive available
-  evidence.
-- **First-stage strength** — report the F, and use weak-instrument-robust inference
-  (Anderson–Rubin) rather than only citing a rule of thumb.
+> **Design-specific sections are deliberately absent** for the causal-identification designs
+> (unvetted-methods veto): populate them from your field's canonical sources after vetting.
 
 ---
 

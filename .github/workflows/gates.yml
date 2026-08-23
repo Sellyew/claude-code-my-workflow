@@ -1,9 +1,10 @@
 name: gates
 
-# Runs the deterministic, toolchain-free gates on every PR and push to a
-# feature branch — the same surface-sync + skill-integrity + model-version
-# checks the local pre-commit hook runs. Quality scoring (which needs
-# Quarto / R) stays local; CI guards the cheap, high-signal invariants.
+# Runs the deterministic, toolchain-free gate suite on every PR and push to a
+# feature branch — the same checks the local pre-commit hook runs, enumerated
+# in one place only (scripts/backtest.sh), so adding a gate never leaves a
+# stale list here. Quality scoring (which needs Quarto / R) stays local; CI
+# guards the cheap, high-signal invariants.
 
 on:
   pull_request:
@@ -16,7 +17,7 @@ permissions:
 
 jobs:
   surface-sync:
-    name: backtest (surface-sync + integrity + model-versions + links + spec + staleness)
+    name: backtest (the full gate suite — see scripts/backtest.sh)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

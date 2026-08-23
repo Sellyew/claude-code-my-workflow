@@ -72,6 +72,7 @@ may refuse.
 measuring that the shipped code already met the bar; and a "faithful summary" written without a
 ground-truth check was found by a hostile judge — holding the verbatim source — to contain four
 unfaithful statements. **Executors need room to refuse; reviewers need the ground truth in hand.**
+→ [`templates/executor-contract.md`](../../templates/executor-contract.md) — this law in dispatchable form.
 
 **8. The economy: expensive models plan and judge; cheap executors run gates.**
 Decomposition, adjudication, delicate prose, and irreversible calls stay with the strongest
@@ -164,6 +165,75 @@ Exactly one place states each fact. Governance scaffolding stays out of the rele
 
 ---
 
+## The last mile
+
+**18. A count is a computation, not a reading.**
+Every number that reaches a decision-maker is **produced by a command whose output is the
+number** — `wc -l`, a script's final summary line, a query returning the total — and it is
+reported *with* the command that derived it. A figure taken off a scrolled terminal, a truncated
+tool result, or a recollection of how many rows went past is not a count; it is a guess wearing
+a count's precision.
+*Incident:* an agent reported **10** failing claim-rows when the artifact held **25** — the
+console had truncated, and what got summarized was what was visible; the number was walked back
+twice in one session. The artifact existed and was correct. The failure was reading it by eye.
+*Practice:* the template mechanises the documentation half —
+[`scripts/check-derived-counts.py`](../../scripts/check-derived-counts.py) recomputes each
+enumerable claim in the docs from its own source of truth — but the law is wider than any
+checker. It binds every number you say out loud, including the ones no gate knows about.
+
+**19. "Done" is a state of the repository, not a sentence.**
+Done means the standing gate for the touched surface has been **run** and is green, the work is
+**committed**, and the commit is **pushed** — and only then is it reported. "Implemented, the
+gate should pass" is a hypothesis with a completion notice attached. Hooks catch exceptions;
+they are not the workflow, and a gate left for the pre-commit hook to discover is a gate you did
+not run. Committing is itself a gated act: where it needs explicit sign-off
+([`/commit`](../skills/commit/SKILL.md)), done-for-a-delegated-task means gate-green **and
+handed back with evidence** — the commit is then its own authorized step, not something an
+executor performs to satisfy this law.
+*Incident:* a deliverable reached the turn boundary with its render verification never run;
+only the Stop hook blocked the report, at the cost of an unplanned round-trip. The hook
+worked — and that it *had* to work is the defect this law removes.
+→ [`.claude/rules/progress-reports.md`](../rules/progress-reports.md); this is law 10's practice
+applied to a single task rather than a campaign.
+
+**20. Merges, rebases, and pulls start from a clean tree.**
+`git status --porcelain` **first**. If it prints anything, commit it or stash it under a label
+that says what it is, then merge. Never force the operation past a dirty tree, and never repair
+the result by force-pushing over it. The asymmetry is the whole argument: the check costs one
+command, and the failure it prevents is uncommitted work destroyed by a merge that mostly
+succeeded.
+*Incident:* a fast-forward merge attempted over a dirty **shared** worktree failed
+mid-operation and forced an improvised stash-and-restore with manual branch preservation —
+recovery that a five-second porcelain check would have made unnecessary. On a shared tree the
+dirt may not even be yours.
+*Mechanised:* [`.claude/hooks/git-guardrails.py`](../hooks/git-guardrails.py) refuses the
+operation while the tree is dirty; the hatch is `ALLOW_DIRTY_MERGE=1`, deliberately an explicit
+decision rather than a default.
+
+---
+
+## Screens and waves
+
+**21. Delegated screens run under a written rubric; waves are adjudicated whole.**
+A screening agent gets its rubric **in writing before it runs**: the inclusion and exclusion
+criteria, **EXCLUDE as the default verdict**, and the requirement that every candidate come back
+with its own evidence rather than a bare verdict. The dispatcher then **spot-checks a sample**
+against that same rubric — a screen nobody re-checked is an opinion poll with citations. And a
+wave of parallel agents is adjudicated **once, whole**: early returns are *status*, not input,
+and verdicts join to candidates **by id**, never by a model-authored string (law 1's silent join
+is this same defect one layer down).
+*Incident:* a delegated screen with no written rubric came back too lenient, and the whole
+corpus had to be re-screened by hand under stricter criteria — the missing rubric cost the
+entire screen, twice. The same telemetry is blunt about waves: the sessions with a whole-wave
+adjudication pass went well; the fan-out whose first return was accepted at face value had to
+be redone.
+*Practice:* write the rubric from [`templates/screening-rubric.md`](../../templates/screening-rubric.md)
+and the dispatch from [`templates/executor-contract.md`](../../templates/executor-contract.md).
+→ [`.claude/rules/orchestrator-protocol.md`](../rules/orchestrator-protocol.md) — the screening
+fan-out as a runtime primitive.
+
+---
+
 ## The reporting stance that makes all of it credible
 
 Prespecify the menu, then **print the cells that go against you with the same prominence as the
@@ -176,3 +246,4 @@ favourite consolation.
 
 - [`verification-ladder.md`](verification-ladder.md) · [`provenance-and-ground-truth.md`](provenance-and-ground-truth.md) · [`external-oracle-process.md`](external-oracle-process.md)
 - [`.claude/rules/repo-hygiene.md`](../rules/repo-hygiene.md) — scratch must not become main
+- [`templates/executor-contract.md`](../../templates/executor-contract.md) · [`templates/screening-rubric.md`](../../templates/screening-rubric.md) — the dispatch and screening contracts (laws 7, 21)

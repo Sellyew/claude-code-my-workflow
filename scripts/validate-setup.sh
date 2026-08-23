@@ -82,6 +82,9 @@ fi
 echo ""
 
 echo -e "${BOLD}Claude Code hooks:${RESET}"
+# Executable bit only. Whether each hook registered in .claude/settings.json — and the
+# pre-commit entry point below — is wired to a file that exists, is invocable, and is
+# tracked by git is checked by scripts/check-ledger-coverage.py (a gate in backtest.sh).
 hook_dir="$(dirname "$0")/../.claude/hooks"
 if [ -d "$hook_dir" ]; then
     non_exec=$(find "$hook_dir" -maxdepth 1 \( -name "*.py" -o -name "*.sh" \) ! -perm -u+x 2>/dev/null | wc -l | tr -d ' ')

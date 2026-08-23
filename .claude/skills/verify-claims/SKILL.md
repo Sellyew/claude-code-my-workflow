@@ -98,13 +98,13 @@ If the draft is writeable and the user asked for auto-correction, regenerate the
 ## Example
 
 ```
-/verify-claims quality_reports/lit-review_staggered-did.md --source master_supporting_docs/callaway_santanna_2021.pdf --source master_supporting_docs/dechaisemartin_dhaultfoeuille_2020.pdf
+/verify-claims quality_reports/lit-review_measurement-error.md --source master_supporting_docs/author_2021_method.pdf --source master_supporting_docs/coauthor_2020_survey.pdf
 ```
 
 Expected output (abridged):
 
 ```markdown
-## Post-Flight Verification — lit-review_staggered-did.md
+## Post-Flight Verification — lit-review_measurement-error.md
 
 **Claims extracted:** 14
 **Verified independently:** 14 (forked claim-verifier)
@@ -112,17 +112,17 @@ Expected output (abridged):
 
 ### Discrepancies
 
-- **C7** — draft claims "de Chaisemartin & D'Haultfœuille (2020) *propose* a DR estimator." Source Section 4 shows they propose a weighting estimator, not DR. Recommend correction.
+- **C7** — draft claims "Coauthor (2020) *proposes* a bias-corrected estimator." Source Section 4 shows they propose a weighting estimator, not a bias-corrected one. Recommend correction.
 
 ### Unverifiable
 
-- **C12** — draft cites "Borusyak et al. 2024 (working paper)". No canonical URL in provided sources. Recommend user supply DOI or arXiv link.
+- **C12** — draft cites "Third Author et al. 2024 (working paper)". No canonical URL in provided sources. Recommend user supply DOI or arXiv link.
 
 ### Verified
 
 | ID | Claim | Evidence |
 |----|-------|----------|
-| C1 | "Callaway & Sant'Anna 2021 use group-time ATT" | p. 5, eq. (3) |
+| C1 | "Author 2021 defines the calibration constant as a ratio of moments" | p. 5, eq. (3) |
 | ... | ... | ... |
 ```
 

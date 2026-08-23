@@ -97,3 +97,4 @@ exceptions in the handoff rather than silently changing issue state.
 - [`verification-ladder.md`](../references/verification-ladder.md) — rung 5; the ledger as the arbiter
 - [`provenance-and-ground-truth.md`](../references/provenance-and-ground-truth.md) — §8 evidence contracts
 - [`.claude/skills/adjudicate-review/SKILL.md`](../skills/adjudicate-review/SKILL.md) — findings from others
+- [`agent-authored-code.md`](agent-authored-code.md) — the same revision-stamping standard, stated for every claim about code state, not only the ones that become issues

@@ -17,14 +17,115 @@ paths:
 
 ## 1. The simulation contract
 
-Every Monte Carlo script must make four things explicit and inspectable:
+Every Monte Carlo script must make five things explicit and inspectable:
 
 1. **The DGP** — a single parameterized function `generate_data(params)` that returns a dataset. No data generation scattered through the run loop.
 2. **The truth** — the true value of the target parameter, computed from `params` (not from any estimate), stored alongside the results.
 3. **The estimand** — which quantity each estimator targets (e.g., ATT, ATE, a specific event-study coefficient). An estimator that targets a *different* estimand than `the truth` is a bug, not a finding.
 4. **The replication budget** — `R` (number of replications) and the resulting Monte Carlo standard error on the headline metrics.
+5. **The assumption regime** — which assumptions the estimator maintains, whether this run's DGP satisfies all of them, and how that was verified (§2).
 
-## 2. Reproducibility & seeding
+## 2. The assumption regime
+
+Every estimator maintains assumptions. A DGP either satisfies them or it does not — and a
+simulation that never says which is reporting one of two completely different experiments
+without telling you which. **Nothing else in this file catches that.** A run whose DGP violates
+an assumption the estimator maintains can pass every other check here — MCSE reported, coverage
+scored against the truth, estimand aligned — and still be evidence about the violation rather
+than about the estimator.
+
+### The regime block
+
+Every simulation script declares, in its header, four things:
+
+| Field | What it states |
+|---|---|
+| **Estimand** | the target quantity and how its true value is computed from `params` (§1) |
+| **Maintained assumptions** | the **full** list the estimator or procedure under study requires — every one, not the interesting ones |
+| **Regime** | `IN-ASSUMPTION`, or the **single** assumption this run relaxes and how severely |
+| **Verified** | per assumption, the checkable property of the DGP that establishes it |
+
+**"The DGP is correctly specified" is an assertion, not a verification.** An assumption is
+verified when you can name the property of `generate_data()` that makes it true. Two forms
+count: *by construction* (the DGP draws errors from a distribution with finite variance, so the
+moment condition holds) and *by a check* (a large-draw assertion, a condition number, a
+structural read of the generator). "It looks right" is neither.
+
+```r
+# --- Assumption regime -------------------------------------------------
+# Estimand   theta0, the unique solution of E[psi(W; theta)] = 0 under the
+#            DGP; computed in closed form from params (compute_truth()).
+# Maintained assumptions of the estimator under study:
+#   A1  i.i.d. sampling of W_i
+#   A2  correct specification: the DGP's conditional mean IS the one psi assumes
+#   A3  finite, nonsingular second moments of psi(W; theta0)
+#   A4  theta0 interior to the parameter space; psi differentiable there
+# Regime     IN-ASSUMPTION -- A1-A4 all hold.
+# Verified   A1  rows are drawn i.i.d. within a replication -- no group-level
+#                or latent draw in generate_data() enters more than one row
+#            A2  by construction -- the outcome equation and psi share one
+#                functional form and one coefficient vector; asserted on a
+#                1e6-row draw that mean(psi(W, truth)) is within 4 MCSE of 0
+#            A3  by construction (Gaussian errors, sigma = params$sigma);
+#                Jacobian at theta0 formed, condition number asserted finite
+#            A4  params$theta lies strictly inside the search bounds --
+#                stopifnot() at setup
+# -----------------------------------------------------------------------
+```
+
+An out-of-assumption run changes exactly two lines of that block:
+
+```r
+# Regime     OUT-OF-ASSUMPTION -- relaxes A2 only, at severity
+#            delta in {0, 0.1, 0.25, 0.5}; A1, A3, A4 hold exactly as above.
+# Target     the pseudo-estimand theta*(delta) -- the solution of
+#            E[psi(W; theta)] = 0 under the perturbed DGP, obtained by
+#            root-finding on a 1e7-row draw (no closed form).
+```
+
+### The firewall
+
+**Hard rule: only an in-assumption run may support a within-assumption claim.** A
+within-assumption claim is any claim about how the estimator or procedure behaves where it
+promises to behave — consistency, validity of the analytic standard errors, nominal coverage,
+or the decision to ship a default. Each may cite **only** a run whose regime line reads
+`IN-ASSUMPTION`.
+
+An out-of-assumption run may never support a within-assumption claim, in either direction:
+
+- It cannot confirm one. Coverage near nominal under a violated assumption is a fact about that
+  violation — usually about how mild it was — not about the estimator's inference.
+- It cannot refute one. Bias under a violated assumption is the DGP doing exactly what it was
+  built to do.
+
+So every table carries its regime — in the caption, and **per row** wherever a severity grid
+mixes them (the null-dose arm of a dose–response *is* an in-assumption row and must be labelled
+as one). Carry it into the saved summary object as well, so a reader — or a reviewer six months
+later — can tell which rows license which claims without rerunning anything. This is
+[`credible-claims`](../skills/credible-claims/SKILL.md) discipline applied to the *regime* the
+evidence came from: the claim may never be stronger than the run behind it.
+
+### Designing an out-of-assumption study
+
+1. **Relax exactly one assumption.** Two at once makes a failure unattributable — you learn
+   that something broke, never which thing, and no amount of later analysis repairs it.
+2. **Hold everything else fixed.** Same sampling scheme, same sample sizes, same estimator
+   grid, same seeds. The perturbation is the only difference between the two runs.
+3. **Target the pseudo-estimand, and say which target each metric uses.** Under a violated
+   assumption the estimator no longer targets `truth`; it converges to whatever solves its own
+   criterion under the perturbed DGP. Compute that quantity from the perturbed parameters
+   (numerically if there is no closed form) and score against it — reporting both targets when
+   they differ, because they answer different questions: deviation from the original estimand
+   answers *how wrong is someone who assumed this held*, coverage of the pseudo-estimand
+   answers *does the estimator's own inference still work for what it now targets*. A table
+   that does not say which target it used cannot be read.
+4. **Prefer a dose–response to one extreme dose.** Sweep a severity grid; a single severe
+   violation only shows that an estimator can be broken, which was never in doubt. Include the
+   null dose, which reproduces the in-assumption run — **a positive control on the perturbation
+   machinery.** If the null-dose arm does not match the in-assumption numbers, the perturbation
+   has leaked into something else and every other dose is uninterpretable.
+
+## 3. Reproducibility & seeding
 
 - `set.seed(YYYYMMDD)` **once**, at the top — never inside the replication loop or the DGP.
 - **Parallel runs are not reproducible with a single seed.** When replications run in parallel (`future`/`furrr`, `parallel`, `foreach`), use independent streams:
@@ -39,7 +140,7 @@ Every Monte Carlo script must make four things explicit and inspectable:
 
 - Record the seed and `R` in the saved output object so a result can be traced to the exact run that produced it.
 
-## 3. Replication count & Monte Carlo standard error (MCSE)
+## 4. Replication count & Monte Carlo standard error (MCSE)
 
 **A simulation result without an MCSE is an opinion.** Always report the Monte Carlo uncertainty of the headline metrics, and choose `R` so it is small relative to the effects you claim.
 
@@ -52,7 +153,7 @@ Every Monte Carlo script must make four things explicit and inspectable:
 
 If two estimators differ by less than a couple of MCSEs, say so — do not present the smaller number as "better."
 
-## 4. Metrics: compute them correctly
+## 5. Metrics: compute them correctly
 
 Define against **the truth**, never against another estimate:
 
@@ -62,23 +163,26 @@ Define against **the truth**, never against another estimate:
 - **Coverage** = share of reps whose CI **contains `truth`** — i.e. `mean(ci_lo <= truth & truth <= ci_hi)`. The single most common simulation bug is checking the CI against the point estimate or a mislabeled "true" value.
 - **Size / power** = rejection rate of the test under the null DGP (size) and under the alternative DGP (power). Size must be evaluated under a DGP where the null is literally true.
 
-## 5. Storage: save raw, not just summary
+## 6. Storage: save raw, not just summary
 
 - `saveRDS()` the **per-replication raw results** (a tibble: one row per rep × estimator, with `est`, `se`, `ci_lo`, `ci_hi`, `converged`), not only the aggregated table. Re-aggregation, new metrics, and `sim-reviewer` all need the raw object.
 - Save the summary table as `.rds` **and** a human-readable `.csv`/`.tex`. Outputs go to `scripts/R/_outputs/` (repo canonical path).
 - Never let a headline number exist only in console output — it cannot be audited or re-rendered onto slides.
 
-## 6. Performance & robustness
+## 7. Performance & robustness
 
 - **Pre-allocate**; never grow result vectors with `c()`/`append()` inside the loop (see `r-code-conventions.md` §8).
 - Count and report **failed/non-converged replications** explicitly (`converged` flag) — silently dropping them biases every metric.
 - No per-replication `print()`/`cat()`. Use a single progress bar (`progressr`) or nothing.
 - Guard `NA`/`NaN`/`Inf` in estimates before computing summaries; decide and document whether they count as failures or are excluded.
 
-## 7. Common pitfalls
+## 8. Common pitfalls
 
 | Pitfall | Impact | Prevention |
 |---|---|---|
+| DGP silently violates a maintained assumption | Every other check passes; the result is about the violation, not the estimator | Regime block; verify each assumption rather than asserting it |
+| Within-assumption claim cited from an out-of-assumption run | A promise about the estimator resting on evidence that cannot bear it | The firewall (§2) |
+| Two assumptions relaxed at once | Failure is unattributable — you cannot say which one broke it | One relaxation per run, over a severity grid |
 | `set.seed()` inside the loop | Identical / correlated reps; understated variance | Seed once at top; L'Ecuyer streams for parallel |
 | Coverage vs. the estimate, not the truth | Coverage ≈ nominal by construction — meaningless | `mean(ci_lo <= truth & truth <= ci_hi)` |
 | No MCSE reported | "Estimator A beats B" within noise | Report MCSE on bias/coverage/power |
@@ -86,12 +190,18 @@ Define against **the truth**, never against another estimate:
 | Raw per-rep results discarded | Can't re-aggregate or audit | `saveRDS()` the raw tibble |
 | Dropped failed reps unrecorded | Survivorship bias in all metrics | Track + report `converged` count |
 
-## 8. Checklist
+## 9. Checklist
 
 ```
 [ ] DGP is one parameterized generate_data() function
 [ ] truth computed from params, stored with results
 [ ] each estimator's estimand stated and aligned with truth
+[ ] regime block in the header: estimand, ALL maintained assumptions, regime, verification
+[ ] each maintained assumption verified by a named property, not asserted
+[ ] within-assumption claims (consistency, analytic SEs, coverage, a shipped default)
+    cite an IN-ASSUMPTION run and nothing else
+[ ] out-of-assumption run relaxes ONE assumption, over a severity grid including the
+    null dose, scored against a named target
 [ ] set.seed() once at top (YYYYMMDD); L'Ecuyer streams if parallel
 [ ] R chosen for adequate MCSE; MCSE reported on bias/coverage/power
 [ ] coverage = CI contains truth (not the estimate)
@@ -106,6 +216,7 @@ Define against **the truth**, never against another estimate:
 - [`../agents/sim-reviewer.md`](../agents/sim-reviewer.md) — the agent that enforces this rule.
 - [`../agents/r-reviewer.md`](../agents/r-reviewer.md) — Cat 9 (error handling) + Cat 11 (numerical discipline).
 - [`replication-protocol.md`](replication-protocol.md) — replicate-then-extend tolerance contract (applies when a simulation reproduces a published table).
+- [`../skills/credible-claims/SKILL.md`](../skills/credible-claims/SKILL.md) — never state a claim more strongly than the run behind it; the firewall (§2) is that discipline applied to the assumption regime.
 
 ## Parallelism must be provably run-shape-independent
 

@@ -32,6 +32,17 @@ verdict `PASS / FAIL / BLOCKED`.
 already permits the thing you seeded, "all checks pass" is *correct* and you have learned
 nothing. Verify the seed creates a real violation first.
 
+**A null needs two controls, not one.** The seeded case (the **positive control**) proves the
+checker can fire; it says nothing about how much the checker moves when nothing happened. So an
+invariance check — the claim *"this change moved nothing"* — also carries a **noise floor**: a
+**same-kind no-op** put through the identical measurement (re-run the unchanged input, apply an
+identity transformation, edit the same files without changing semantics), whose observed effect
+is the largest movement that still counts as *nothing*. **Fires on the known-affected case and
+stays quiet on the no-op** — that pair is what makes a null informative, and either one alone
+is decoration. Report the floor next to the null: a "no difference" with no floor under it has
+a threshold too — unstated, and chosen after the fact. *Attribute before repairing*
+([`provenance-and-ground-truth.md`](provenance-and-ground-truth.md) §6) needs both.
+
 ---
 
 ## Rung 1 — Deterministic gates (no model in the loop)
@@ -66,6 +77,17 @@ source **and** a `verified_on` expiry that fails the gate when stale.
 
 Only the fourth catches "all the checks passed and the paper is still wrong."
 
+**Measure at the level where the quantity is computed — and name that level in the claim.**
+Configuration (what was asked for), design (how the run was arranged), and the realized/fitted
+result (what the computation actually produced) are three different levels, and evidence at one
+does **not** transfer to another: a setting present in a config file is not a design that used
+it, and a design is not a result that reflects it. So say which one you inspected — *"the
+fitted output reports X"*, not the level-ambiguous *"the analysis uses X"*. Checking the
+convenient level instead of the computed one is how an artifact passes all four layers above
+while the claim resting on it was never measured at all; the executable form of the same rule
+is [`research-agent-laws.md`](research-agent-laws.md) law 6, dispatch on the realized
+computation rather than on labels.
+
 ---
 
 ## Rung 3 — Independence (the fresh-context fork)
@@ -84,6 +106,12 @@ Two practices that cost nothing and change outcomes:
 - **Independent assessment before reading the plan.** Have the verifier decide what *should*
   exist before it learns what was promised. Otherwise it grades conformance, not adequacy.
 - **Blind the judge.** Strip revision markers before a comparison, or it grades the diff.
+
+All three mechanisms operate on the **context**. None fences the **environment**: a forked
+reviewer with a spotless context still holds the repository checkout — and with it the prior
+round's verdicts and every committed answer key. When the reviewer's output will be compared
+against something, fence the filesystem too:
+[`review-fencing.md`](../rules/review-fencing.md).
 
 ---
 
@@ -107,7 +135,8 @@ So: enumerate the forks and report the distribution.
 - **Specification curve / multiverse** over measure definition, sample filter, control set,
   clustering level, weighting, winsorization.
 - **Named computable sensitivity statistics** — turn "challenge the assumption" into a number:
-  Oster δ, E-value, Cinelli–Hazlett robustness value, Rosenbaum Γ, McCrary/Cattaneo density.
+  the named sensitivity statistics canonical in your design's literature, with their canonical
+  implementations — chosen and vetted by you.
 - **Placebo and falsification** — negative outcomes, negative exposures, timing placebos.
 - Label each statistic **executable here** vs **describe-and-cite** — honesty about what your
   environment can actually run is itself a verification step.
@@ -124,12 +153,26 @@ Four artifacts:
 1. **An instruction contract** — objective, admissible modifications, and a **search budget**.
 2. **An immutable evaluator** — the scoring harness, never edited during the search.
 3. **A single editable surface** — the one file the agent may change.
-4. **An append-only ledger** — every attempt: identifier, score, outcome
+4. **An append-only ledger** — every attempt: identifier, **label** (below), score, outcome
    (`keep / discard / crash`), and a one-line description of the strategy.
 
 Then: **pre-commit the interpretation before running the test** — write what result would
 SUPPORT versus WEAKEN the claim *first*. The ledger is the arbiter. This closes the
 garden-of-forking-paths gap that hypothesis-only preregistration leaves open.
+
+**Label each run when it is queued, never when it lands.** Three labels, and the label is part
+of the append-only row, so it cannot be revised in the direction of the result:
+
+- **pre-specified** — named in the instruction contract before the search began.
+- **confirmatory** — committed before this particular run, as a test of a claim the search has
+  already produced.
+- **exploratory** — everything else: a look, a variant, a hunch.
+
+**Only pre-specified and confirmatory runs can support a headline claim.** An exploratory run
+produces a **hypothesis for the next pre-specification** — it is a reason to write a contract,
+not evidence for the current one. Relabelling after the fact is precisely the forking path this
+rung exists to close ([`/preregister`](../skills/preregister/SKILL.md) is where the
+pre-specified set gets written down).
 
 **Record every attempt, including nulls and failures.** A ledger showing only supporting
 tests is a fishing expedition with good PR.
@@ -144,6 +187,39 @@ Two elements worth carrying over from practice:
 - **A simplicity criterion.** A gain that adds twenty lines of hacky code is probably not
   worth it; an *equal* result from deleting code is a win. A robustness result that survives
   with **fewer** controls is a stronger result — the ledger should say so.
+
+---
+
+## The withdraw disposition — when the number misses its bound
+
+Rung 5 pre-commits the interpretation and records the search. This is the other half of that
+sentence: **what you owe everyone when the recorded number misses the bound you wrote down
+first.**
+
+When a capability, a default, or an automatic behaviour fails the numeric bound it
+preregistered, the disposition is **WITHDRAW** — demote it to **explicit opt-in**. **Never
+widen the bound.** A bound moved after seeing the number is not a bound; it is a description of
+the result, and every claim that later cites it is circular. Demote rather than delete: opt-in
+keeps the thing usable by someone who has read the number and accepted it, while deletion
+destroys the trail and re-opens the question from scratch next release.
+
+Three obligations, and the withdrawal is not finished until all three are discharged:
+
+1. **Publish it where users read.** The failing number, the bound it missed, and the
+   disposition, together, in the release notes (`NEWS` / `CHANGELOG`) — *and* recorded in the
+   verdict artifact. The two are not substitutes: the artifact serves the replicator, the
+   release notes serve the person deciding whether to switch it back on.
+2. **Preserve the failing campaign as negative calibration evidence.** Never deleted, and
+   **never re-run until the underlying thing changes.** A re-run against unchanged inputs is a
+   second draw, and the second draw is the one that gets published.
+3. **Enumerate the impact.** Every adjacent surface listed and dispositioned — affected, or
+   explicitly *not* affected and why. A withdrawal naming only the surface that failed leaves
+   readers to guess at the rest, and they guess low.
+
+**The bound is the promise; the default is the endorsement.** Shipping something on by default
+asserts its bound holds for a user who never looked. Once the measurement says otherwise, the
+honest options are to fix the thing or to stop asserting it — *widen the bound to match what we
+measured* is neither, and it is the single most tempting move on this page.
 
 ---
 

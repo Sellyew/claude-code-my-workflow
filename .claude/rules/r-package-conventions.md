@@ -93,3 +93,4 @@ Before any release or CRAN submission, run [`/r-package-check`](../skills/r-pack
 - [`../agents/r-package-reviewer.md`](../agents/r-package-reviewer.md) — the agent that enforces this rule.
 - [`../agents/r-reviewer.md`](../agents/r-reviewer.md) — general R numerical discipline (Cat 11), still applies inside package functions.
 - [`replication-protocol.md`](replication-protocol.md) — when the package reproduces published results.
+- [`../references/release-engineering.md`](../references/release-engineering.md) — what a *release* demands beyond a clean check: the message and silent-resolution censuses, preflight archives built from `git archive HEAD`, generated status contracts, and downstream pinning.

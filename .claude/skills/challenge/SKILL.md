@@ -91,9 +91,9 @@ See [`references/sensitivity-statistics.md`](references/sensitivity-statistics.m
 |---|---|
 | Unobserved confounding | **E-value**; **Cinelli–Hazlett robustness value** |
 | Selection on observables → unobservables | **Oster δ** (with a stated R²max) |
-| Matched design | **Rosenbaum Γ** bounds |
-| RD | **McCrary/Cattaneo density**; covariate placebo |
-| IV | over-identification and placebo outcomes — the exclusion restriction is **not testable** |
+
+> Rows for the causal-identification designs are **deliberately absent** (unvetted-methods
+> veto): populate them from your field's canonical sources after vetting.
 
 **Label every statistic `executable-here` or `describe-and-cite`.** Honesty about what your
 environment can actually run is itself a verification step; a cited-but-unrun statistic is not

@@ -59,7 +59,7 @@ Sweep a grid (N or #clusters × effect size) so Phase 3 can draw a power curve a
 
 ### Phase 2 — Simulation-based power (non-standard designs)
 
-When the design is **not** a clean two-arm comparison — DiD / staggered event-study, IV / 2SLS (weak-instrument-aware), panel with serial correlation, a non-normal or censored outcome, or any estimator with no closed-form SE — switch to simulation. **Reuse the `/simulation-study` harness** exactly (see [`simulation-study`](../simulation-study/SKILL.md) and [`.claude/rules/simulation-conventions.md`](../../rules/simulation-conventions.md)):
+When the design is **not** a clean two-arm comparison — DiD / staggered event-study, IV / 2SLS, panel with serial correlation, a non-normal or censored outcome, or any estimator with no closed-form SE — switch to simulation. **Reuse the `/simulation-study` harness** exactly (see [`simulation-study`](../simulation-study/SKILL.md) and [`.claude/rules/simulation-conventions.md`](../../rules/simulation-conventions.md)):
 
 1. **Seeded, parameterized DGP** that embeds the hypothesized effect (and the null DGP for size). `set.seed(YYYYMMDD)` once; L'Ecuyer streams if parallel.
 2. **Estimator** = the one you will actually use on the real data (e.g. `fixest::feols` two-way FE, `did::att_gt`, `AER::ivreg`), returning `est, se, ci, p, reject`.

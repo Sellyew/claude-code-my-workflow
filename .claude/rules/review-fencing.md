@@ -1,0 +1,114 @@
+---
+paths:
+  - ".claude/agents/**/*.md"
+  - ".claude/skills/**/SKILL.md"
+---
+
+# Review Fencing — independence is a property of the environment
+
+**A reviewer is only as blind as its working directory.**
+[`verification-ladder.md`](../references/verification-ladder.md) rung 3 gives three ways to make
+a reviewer independent — critic/fixer role tension, cross-artifact traversal, and the CoVe
+fresh-context fork — and all three operate on the **context**. None of them touches the
+filesystem the reviewer is standing on. A forked referee with a spotless context still holds the
+repository checkout, and that checkout contains the earlier round's referee reports, the judge's
+verdict, the passport recording every number the paper claims, and the stamp recording what the
+current render was built from.
+
+Prompting an agent to "review this independently" while it can `grep` for the answer is not
+independence. It is an honour system with a search tool.
+
+> **The rule:** before dispatching an independence-critical reviewer, ask what its *environment*
+> would reveal if it looked — then remove that, rather than instructing it not to look.
+
+## The neutral copy
+
+An independence-critical reviewer receives the artifact as a **copy placed outside the repository
+checkout** — the session scratchpad, or any directory outside the working tree — under a
+**neutral filename**, with no repo access.
+
+Neutral means the name carries no verdict: not `paper_round3_after_referee_fixes.tex`, not
+`protocol_final_v2.md` — `artifact-a.tex` is enough. A filename announcing which round it is has
+already told the reviewer what was found last time.
+
+Fencing is warranted whenever the reviewer's output is about to be **compared** against
+something:
+
+| Fence the environment | In-repo review is fine |
+|---|---|
+| Calibration and fresh-read passes — *what does a reader seeing this cold conclude?* | The artifact's own working review loop, where repo context **is** the point |
+| A second-opinion reviewer meant to corroborate a first | Cross-artifact traversal — paper → table → output → script **requires** the tree |
+| Any reviewer scored against another's findings, or against a planted-defect set | Deterministic gates — a script has no impression to bias |
+| An external-model consult (already a copy — keep the name neutral too) | A fixer applying findings a critic has already confirmed |
+
+The distinction is not important-versus-unimportant review. It is whether a comparison is coming.
+**Two reviewers that both read the first one's report are one reviewer**, and averaging them
+reports agreement that was manufactured rather than found.
+
+## Prior verdicts stay out
+
+Earlier referee reports, judge verdicts, adjudication tables, and prior-round quality reports do
+**not** enter a reviewer's session unless the protocol deliberately feeds them — and a protocol
+that does feed them says so, in writing, before the run.
+
+The sanctioned exception is the R&R continuation. [`/review-paper`](../skills/review-paper/SKILL.md)
+in `--peer --r2` / `--r3` mode reloads the prior round's reports and reuses the same referees and
+dispositions on purpose, because the question has changed from *"is this sound?"* to *"was each
+prior concern resolved?"* — a task that cannot be done without the history. Everything that is
+not that task stays fenced.
+
+**Deliberate means declared.** A protocol that merely leaves the reports where a reviewer will
+find them has not fed them deliberately; it has leaked them.
+
+## Own reading first
+
+A reviewer forms and **records** its own reading before it is shown the plan, the revision note,
+the author response, or the change log. Have it decide what *should* be there before it learns
+what was promised, or it grades conformance instead of adequacy
+([`verification-ladder.md`](../references/verification-ladder.md) rung 3).
+
+The ordering is the entire mechanism. The same two documents in the other order produce a
+reviewer that ticks boxes.
+
+## Fence the positive controls
+
+**A committed expected value is an answer key.** Before asking an agent to reproduce a pinned
+number — which is the whole point of a positive control — confirm the pinned value is not
+readable from where the agent stands. An agent that reports the pinned number after finding it in
+a tracked file has demonstrated `grep`, not reproduction, and the control that was supposed to
+qualify the check now reads green for the wrong reason. Verify by **re-deriving, not re-asking**
+([`research-agent-laws.md`](../references/research-agent-laws.md) law 1).
+
+This template commits three answer keys of its own:
+
+| Answer key | What it pins |
+|---|---|
+| `quality_reports/passports/<paper-slug>.yaml` | the expected value of every verified numeric claim ([`replication-protocol.md`](replication-protocol.md)) |
+| `.render-stamp` | the source and output fingerprints a current render must match |
+| `quality_reports/qualification/LEDGER.md` | which defects a qualification run planted, and what the checker scored against them |
+
+Add whatever else your project pins: baseline manifests, tolerance registries, expected-output
+fixtures, golden files. Then either hand the agent a checkout without them or give the
+reproduction its own scratch directory, and record which fence was used in the qualification
+ledger row. **An unfenced positive control is an unqualified check**
+([`verification-ladder.md`](../references/verification-ladder.md) rung 0).
+
+## What is already fenced
+
+The template already fences one input correctly, and this rule generalizes that rather than
+introducing a new idea. [`claim-verifier`](../agents/claim-verifier.md) receives **claims plus
+source-material pointers and nothing else** — never the draft, never the reasoning trace that
+produced it — and is instructed to ignore the draft even if a caller leaks it into context
+([`post-flight-verification.md`](post-flight-verification.md)). That is an environment fence
+expressed as an input contract: the verifier cannot rubber-stamp the draft's reasoning because it
+does not hold it. Extend the same discipline outward — what that contract does for the draft, the
+neutral copy does for the checkout.
+
+## Cross-references
+
+- [`../references/verification-ladder.md`](../references/verification-ladder.md) — rung 0 (qualify the checker), rung 3 (the three context-level mechanisms this rule extends)
+- [`post-flight-verification.md`](post-flight-verification.md) — the CoVe protocol and the forked verifier
+- [`../agents/claim-verifier.md`](../agents/claim-verifier.md) — the input contract this rule generalizes
+- [`../references/external-oracle-process.md`](../references/external-oracle-process.md) — external consults: blind the judge, verify the transport
+- [`../skills/vaccinate/SKILL.md`](../skills/vaccinate/SKILL.md) — seeded-defect qualification, where an unfenced answer key is fatal
+- [`../references/research-agent-laws.md`](../references/research-agent-laws.md) — law 1 (re-derive, do not re-ask), law 13 (blind the judge)

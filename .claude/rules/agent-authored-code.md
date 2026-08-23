@@ -105,8 +105,21 @@ An invoked known-good script beats a freshly-improvised fragile one, every sessi
 
 ---
 
+## Claims about code carry a revision
+
+Any statement about what the code currently does — "the gate rejects an unregistered fixture",
+"this function returns six elements", "that bug is fixed" — names the revision it was read at:
+run `git rev-parse --short HEAD` at read time and carry that short SHA with the claim. **An
+unstamped claim goes stale silently** — nothing distinguishes a statement that is still true
+from one describing a file three commits ago. [`issue-ledger.md`](issue-ledger.md) already
+requires the exact source revision on a defect report; this is the same standard for every claim
+about code state, not only the ones that become issues.
+
+---
+
 ## Cross-references
 
 - [`.claude/rules/simulation-conventions.md`](simulation-conventions.md) — seed by task, not worker; prove run-shape independence
 - [`.claude/rules/repo-hygiene.md`](repo-hygiene.md) — the scratch scripts these produce must not become main files
+- [`issue-ledger.md`](issue-ledger.md) — the same revision-stamping standard, required on every defect report
 - [`.claude/references/research-agent-laws.md`](../references/research-agent-laws.md) — laws 1, 10

@@ -36,6 +36,10 @@ paths:
 2. Verify output files (PDF, RDS) were created with non-zero size
 3. Spot-check estimates for reasonable magnitude
 
+## Claims About Code Carry a Revision:
+
+Any statement about what the code currently does carries the revision it was read at — the full standard lives in [`agent-authored-code.md`](agent-authored-code.md), which loads whenever a `.sh`/`.py`/`.R`/`.do` file is touched (this rule is scoped to slide/HTML deliverables, so the obligation belongs where code work actually happens).
+
 ## Common Pitfalls:
 - **PDF images in HTML**: Browsers don't render PDFs inline → convert to SVG
 - **Relative paths**: `../Figures/` works from `Quarto/` but not from `docs/slides/` → use `sync_to_docs.sh`
@@ -49,5 +53,6 @@ paths:
 [ ] Images/figures display correctly
 [ ] Paths resolve in deployment location (docs/)
 [ ] Opened in browser/viewer to confirm visual appearance
+[ ] Any claim about code state carries the revision it was read at
 [ ] Reported results to user
 ```

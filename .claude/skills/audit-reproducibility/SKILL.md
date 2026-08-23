@@ -12,9 +12,12 @@ Compare numeric claims in a manuscript (point estimates, standard errors, p-valu
 
 **Core principle:** If the paper says `ATT = -1.632 (0.584)` and the code produces `-1.628 (0.591)`, we verify — **numerically** — that the difference is within the documented tolerance. No more "looks close enough" eyeballing.
 
+**Two directions, not one.** *Vertically*, each claim is checked against the output that produced it. *Horizontally*, it is checked against every **other** artifact that displays the same number — the supplement table, the slide deck, the poster. The vertical check passes contentedly while a deck quotes last month's value; only the horizontal one catches that. Declared displays live in the passport's `appears_in` list — see [`replication-protocol.md` → The horizontal check](../../rules/replication-protocol.md#the-horizontal-check).
+
 ## When to use
 
 - **Before submission.** Catches the "I updated the analysis but forgot to update Table 2" bug.
+- **Before presenting or teaching from the same numbers.** Catches the deck, the poster, or the supplement that was never regenerated after the last rerun.
 - **Before releasing a replication package.** Verifies the code actually reproduces the paper.
 - **After a major revision.** Ensures the paper still matches the latest code.
 - **Quality-gate in `/commit`.** Pair with a pre-commit invocation on manuscript + analysis changes.
@@ -80,6 +83,26 @@ Record each extracted result:
 }
 ```
 
+### Phase 2b: Collect every declared display (passport mode)
+
+For each passport claim, read its `appears_in` list and pull the value **as displayed** at each entry:
+
+```
+{
+  claim_id: "C3",
+  displays: [
+    { path: "manuscript.tex", locator: "Table 1, Col 2", display_precision: 3, shown: 0.342 },
+    { path: "Slides/Lecture04_Results.tex", locator: "frame 'Main result'", display_precision: 2, shown: 0.34 }
+  ]
+}
+```
+
+Rules for this pass:
+
+- The primary `location:` is one of the displays, not a separate thing — if `appears_in` repeats it, that is one display, not two.
+- **A declared display that cannot be resolved — missing file, or no value at the `locator` — is recorded as `shown: NOT_FOUND`.** It resolves to FAIL in Phase 4c. Never skip it: a locator that has quietly stopped matching is exactly where a stale number hides.
+- A claim with **no** `appears_in` list is horizontally *unchecked*, not horizontally clean. Report it that way (see Phase 5) rather than silently passing it.
+
 ### Phase 3: Match claims to results
 
 Use fuzzy heuristics when exact labels don't match:
@@ -136,6 +159,18 @@ The author is the **auditor**: the skill stages the two-sided comparison (report
 
 Reuse the two-strikes rule from `review-paper --adversarial` and [`summary-parity.md`](../../rules/summary-parity.md): if the **same** claim is downgraded to EXPLAINED in **two consecutive audits** without ever being corrected to PASS (the author keeps invoking the alternative but never updates paper or code), stop treating it as quietly resolved. Surface it prominently in Phase 5 — *"this contested number has been EXPLAINED twice but never corrected"* — so a standing disagreement can't hide behind a recorded note indefinitely. In passport mode, detect this by comparing the current `status`/`notes` against the prior audit's.
 
+### Phase 4c: Horizontal check — the displays must agree with each other
+
+Phase 4 compared the claim to the code. This phase compares the claim's displays to **each other**, pairwise over the `displays` collected in Phase 2b:
+
+1. **Round both sides to the coarser precision.** Two displays agree when they are equal after both are rounded to the **smaller** of their two `display_precision` values. `0.34` in a deck against `0.342` in the paper agrees at 2 decimals; `0.29` against `0.342` does not.
+2. **No tolerance applies.** The `tolerance:` block governs the vertical comparison, where two *measurements* are compared. Two displays of one number are two *copies* — after the rounding in step 1 they either match or they do not.
+3. **Dispositions, in the vocabulary of Phase 4b:**
+   - **PASS** — every pair agrees.
+   - **FAIL** — any pair disagrees, or any display is `NOT_FOUND`. **Never downgradable to EXPLAINED**: a named alternative spec explains why code and paper differ and has nothing to say about why two copies of one number differ. If a display genuinely shows a *different* specification, it is a different claim and belongs in its own passport entry.
+   - **UNCHECKED** — the claim declares no `appears_in` list. Reported, non-blocking; the fix is to declare the displays.
+4. **Report which side moved, not which side is right.** Name the artifact whose value differs from the rest, and when it was last touched; the author decides whether the deck is stale or the paper is. Do not hand-edit one display to match its sibling — re-derive both from the output the claim points at ([`replication-protocol.md` → Anti-patterns](../../rules/replication-protocol.md#anti-patterns)).
+
 ### Phase 5: Report
 
 Write `quality_reports/reproducibility_audit_[manuscript-name].md`:
@@ -152,11 +187,13 @@ Write `quality_reports/reproducibility_audit_[manuscript-name].md`:
 
 | Status | Count |
 |---|---|
-| PASS | N |
+| PASS (vertical and horizontal) | N |
 | FAIL (diff > tolerance, no named alternative) | M |
 | EXPLAINED (out of tolerance, named alternative recorded) | E |
 | UNMATCHED (manual review) | K |
-| **Overall verdict** | **PASS / FAIL** (FAIL iff M > 0; EXPLAINED does not fail the audit) |
+| HORIZONTAL DRIFT (declared displays disagree, or a display not found) | H |
+| HORIZONTALLY UNCHECKED (claim declares no `appears_in`) | U |
+| **Overall verdict** | **PASS / FAIL** (FAIL iff M > 0 or H > 0; EXPLAINED does not fail the audit) |
 
 ## PASS (all within tolerance)
 | Claim | Reported | Computed | Diff | Tolerance |
@@ -176,19 +213,31 @@ Write `quality_reports/reproducibility_audit_[manuscript-name].md`:
 | Claim | Raw context | Candidate sources |
 |---|---|---|
 
+## HORIZONTAL DRIFT (one number, two values — BLOCKER)
+| Claim | Display A | Display B | Compared at | Values | Which side moved |
+|---|---|---|---|---|---|
+| C3 | manuscript.tex — Table 1, Col 2 | Slides/Lecture04_Results.tex — frame 'Main result' | 2 decimals | 0.34 vs 0.29 | deck older than the claim's output_file |
+
+## HORIZONTALLY UNCHECKED (no `appears_in` declared)
+| Claim | Primary display | Other artifacts to declare |
+|---|---|---|
+
 ## Environment
 [sessionInfo excerpt]
 
 ## Next steps
 1. Resolve each FAIL row — either correct the manuscript, rerun the analysis, or (if the gap is a defensible alternative spec) record a concrete named alternative to downgrade it to EXPLAINED.
-2. Review UNMATCHED rows — add explicit lookup keys or widen the search scope.
-3. Review EXPLAINED rows before submission — each should map to a sentence in the response-to-referees.
-4. After zero FAILs (EXPLAINED rows allowed), the paper is replication-ready.
+2. Resolve each HORIZONTAL DRIFT row — regenerate the lagging display from the claim's output, never by retyping the other display's value. A `NOT_FOUND` display is fixed by correcting the `locator`, not by dropping the entry.
+3. Review UNMATCHED rows — add explicit lookup keys or widen the search scope.
+4. Declare `appears_in` for the HORIZONTALLY UNCHECKED rows — every artifact a reader sees the number in.
+5. Review EXPLAINED rows before submission — each should map to a sentence in the response-to-referees.
+6. After zero FAILs and zero HORIZONTAL DRIFT (EXPLAINED rows allowed), the paper is replication-ready.
 ```
 
 ## Exit behavior
 
 - **All PASS (or PASS + EXPLAINED):** exit 0, summary printed.
+- **Any HORIZONTAL DRIFT:** exit 1, on the same footing as a FAIL — two artifacts showing different values for one number is a defect whichever of them is right. HORIZONTALLY UNCHECKED rows warn (exit 0) and are listed.
 - **Any FAIL:** exit 1, summary printed to stderr. This makes the skill usable as a `/commit` pre-commit gate — see `replication-protocol.md` for the enforcement pattern. **EXPLAINED rows do NOT count as FAIL and never trigger exit 1** — they are surfaced, not blocking. The gate keeps its full teeth for genuine FAILs (no named alternative) and for fabricated/UNMATCHED claims.
 - **UNMATCHED > 0 (with 0 FAIL):** exit 0 with warning — user must manually review.
 
@@ -212,12 +261,12 @@ The skill compares manuscript claims against outputs in three source-language ec
 
 When `quality_reports/passports/<paper-slug>.yaml` exists, the skill operates in **passport mode**: instead of emitting a one-shot report, it **reads, updates, and rewrites** the passport file in place.
 
-- For each `claims:` entry in the passport, perform the same numeric audit as the default mode (extract reported value from manuscript at `location`, locate computed value at `source_file:source_line` / `output_file:output_field`, compare against `tolerance:`).
+- For each `claims:` entry in the passport, perform the same numeric audit as the default mode (extract reported value from manuscript at `location`, locate computed value at `source_file:source_line` / `output_file:output_field`, compare against `tolerance:`), **then** the horizontal sweep of Phases 2b and 4c over the entry's `appears_in` list.
 - After each claim is audited, update `status` in place:
-  - PASS → claim within tolerance.
-  - FAIL → claim outside tolerance **and** the entry's `notes` does not name a concrete alternative. Record the discrepancy (reported vs computed) in `notes`. Blocks (exit 1).
+  - PASS → claim within tolerance **and** every declared display agrees at the coarser precision.
+  - FAIL → claim outside tolerance **and** the entry's `notes` does not name a concrete alternative; **or** two declared displays disagree; **or** an `appears_in` entry could not be located in its file. Record the discrepancy in `notes` — reported vs computed for a vertical FAIL, the two display values and their paths for a horizontal one. Blocks (exit 1).
   - EXPLAINED → claim outside tolerance **but** the entry's `notes` already records a *specific named alternative spec* (not blank, not "unclear"). The skill reads `notes` on its next run and resolves the same out-of-tolerance claim to EXPLAINED instead of FAIL — surfaced, non-blocking. The hard floor still applies: an UNMATCHED claim or a note without a named alternative stays FAIL.
-  - STALE → if `source_file` or `output_file` modification time is later than `last_verified_on`, mark STALE and re-run the audit logic (after the rerun, status becomes PASS / FAIL / EXPLAINED — STALE is transient).
+  - STALE → if `source_file`, `output_file`, or any `appears_in` path has a modification time later than `last_verified_on`, mark STALE and re-run the audit logic (after the rerun, status becomes PASS / FAIL / EXPLAINED — STALE is transient).
 - Update `last_verified_on` and `last_verified_by: "/audit-reproducibility"` per claim.
 - Update `paper.last_audit` at the top level.
 
@@ -225,12 +274,15 @@ If a claim in the manuscript is detected that has no matching passport entry, em
 
 Passport mode does NOT delete passport entries. If a claim disappears from the manuscript, the passport entry remains with a STALE status — the author decides whether to delete (claim retracted) or update the entry's `location` (claim moved).
 
+Nor does it add `appears_in` entries on its own. A display the sweep happens to notice — the same value in a deck or a supplement that the passport never declared — is reported as a suggestion in the HORIZONTALLY UNCHECKED table; the author declares it. Same reasoning as the no-auto-populate rule above: an inferred display that is actually a different quantity would fail the horizontal check forever.
+
 See [`.claude/rules/replication-protocol.md`](../../rules/replication-protocol.md) "Claims Provenance: `passport.yaml`" for the full schema and integration points (`/commit`, `/review-paper`).
 
 ## Cross-references
 
 - [`.claude/rules/replication-protocol.md`](../../rules/replication-protocol.md) — the tolerance contract + passport schema.
-- [`templates/passport-template.yaml`](../../../templates/passport-template.yaml) — starter file to copy for a new paper.
+- [`templates/passport-template.yaml`](../../../templates/passport-template.yaml) — starter file to copy for a new paper; the `appears_in` list is where displays are declared.
+- [`.claude/hooks/claim-reconcile.py`](../../hooks/claim-reconcile.py) — the event-driven nudge: writing a tracked script, output, or declared display names the claims to re-audit. It counts declarations; this skill does the comparing.
 - [`.claude/skills/review-r/SKILL.md`](../review-r/SKILL.md) — catches code-style issues; this skill catches NUMERICAL reproducibility.
 - [`.claude/skills/diagnose/SKILL.md`](../diagnose/SKILL.md) — when a claim resolves to **FAIL** and you need to localize *which* pipeline step produced the out-of-tolerance value, hand off to `/diagnose` (single-claim root-cause: reproduce → minimise → bisect).
 - [`.claude/skills/review-paper/SKILL.md`](../review-paper/SKILL.md) — content review; pair with this skill for a full pre-submission audit.
