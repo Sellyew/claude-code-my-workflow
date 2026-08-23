@@ -24,7 +24,7 @@ claims:
     source_line: 147
     output_file: scripts/R/_outputs/main_did.rds
     output_field: att_overall
-    tolerance:
+    tolerance:                      # typed: pass if |x-y| <= atol + rtol*|reported|
       point_estimate: 0.01         # absolute tolerance for the headline value
       standard_error: 0.05         # absolute tolerance for SE / CI half-width
       n: exact                     # sample-size mismatch is never tolerated

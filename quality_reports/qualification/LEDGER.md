@@ -98,6 +98,13 @@ output as unverified.
 > seen. Total assertions went 29 → 34 across this release; a falling number is the signal to
 > look for.
 
+## New staleness checks from the Oracle-review adoption (2026-08-22)
+
+| Check | Seeded defect | Red? | Control | Green? |
+|---|---|---|---|---|
+| staleness: guide-version parity | guide frontmatter set to 9.9.9 vs CHANGELOG v2.5.0 | yes — STALE-VERSION, exit 1 | matching 2.5.0 | yes |
+| staleness: reversed injection syntax | seeded `` `!git status --short` `` into skill-template | yes — BAD-INJECT-SYNTAX, exit 1 | clean tree incl. diagnose's legitimate `` `!anyNA(w)` `` (guard: parenthesized R negations and `/shell/` paths excluded) | yes — no false alarm |
+
 ## Harness re-qualification after Codex round 3 (2026-08-22)
 
 Three confirmed findings (PR #140 round 3) changed the harness and validator; each fix was

@@ -142,11 +142,15 @@ claims:
     location: "manuscript.tex:Table 2, Col 3"     # where it appears in the paper
     source_file: scripts/R/03_analyze.R           # script that produced the value
     source_line: 147                              # nearest line in the script
-    output_file: scripts/R/_outputs/main_did.rds  # where the value lives on disk
+    output_file: scripts/R/_outputs/main_model.rds # where the value lives on disk
     output_field: att_overall                      # field within the output (e.g., list element, column)
     tolerance:
-      point_estimate: 0.01                         # absolute tolerance per Phase 3 above
+      point_estimate: 0.01                         # absolute floor (atol); see typed rule below
       standard_error: 0.05
+      rtol: 0.001                                  # optional relative component: pass if
+                                                   #   |x - y| <= atol + rtol * |reported|
+      units: "log points"                          # units + display rounding make the
+      display_rounding: 3                          #   comparison meaningful across scales
       n: exact
     last_verified_on: <ISO-8601>
     last_verified_by: "/audit-reproducibility"

@@ -172,6 +172,20 @@ routines, where *did not run* is a failure rather than silence.
 **Inventory at release: 60 skills, 18 agents, 36 rules, 7 hooks, 15 references, 8 gates**
 (was 52 / 18 / 32 / 7 / 9 / 3 at v2.1.0).
 
+### Changed — external Oracle referee review adopted (2026-08-22)
+
+An independent GPT-5.6 Sol referee run over the full guide (34 min, complete coverage
+ledger) returned 28 findings and 15 suggestions. Adjudication: 26 findings confirmed and
+fixed (including a safety-relevant false claim that bypass mode still prompts on protected
+paths — current docs say it does not), 2 refuted against the official docs (auto mode IS
+the Pro/Max/Team default; /checkpoint does not collide with a built-in). High-value
+suggestions adopted: adoption ladder, enforcement-contract matrix, pattern pathways,
+red-then-green demo, git survival kit, data-license decision steps, claims legend, typed
+replication tolerances, and two new staleness checks (guide-version parity, reversed
+injection syntax). Remaining suggestions dispositioned in `v2.0-backlog.md` under the
+owner's two rulings: no further session-time enforcement hooks, and no prescriptive
+empirical-practice content without explicit sign-off.
+
 ### Upgrading from v2.1
 
 1. Pull, then run `./scripts/install-hooks.sh` if you have not already — the gate suite now

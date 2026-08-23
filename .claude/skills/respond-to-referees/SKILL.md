@@ -85,7 +85,7 @@ Write the output to `response-to-referees.md` (matching the template filename) o
 1. **Header** — journal, manuscript ID, revision round, date.
 2. **Cover paragraph** — one paragraph thanking the editor and referees, summarizing the major changes at a high level.
 3. **Per-referee sections** — for each referee, a numbered list of responses produced in Step 4.
-4. **Concern matrix** — at the end, a single table summarizing every concern, classification, and response location for editor convenience.
+4. **Concern matrix** — at the end, a single table summarizing every concern: ID, classification, promised action, affected files/exhibits, code-rerun status, passport status for any renumbered claim, and response location. This is the obligation ledger — nothing promised in the letter without a row, no row without its evidence trail.
 
 ### Step 5.5: Post-Flight Verification (MANDATORY, CoVe)
 

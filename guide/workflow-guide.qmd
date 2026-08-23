@@ -167,6 +167,20 @@ This guide describes the full system --- 18 agents, 60 skills, 36 rules. That is
 
 ---
 
+::: {.callout-note}
+## How to read claims in this guide
+
+Not every declarative sentence here has the same standing. Five kinds appear, and the wording tells you which:
+
+- **Platform feature** — Claude Code behavior, verified against official docs with an as-of date where it could drift.
+- **Template implementation** — what this repo's shipped code actually does (checkable in the file named).
+- **Measured in this repo** — a number with a date and, where the qualification ledger covers it, a recorded row.
+- **Heuristic** — our practice from real projects, flagged as such ("in our use…"); not a benchmark.
+- **Policy requirement** — a journal's or funder's rule, stated with its actual strength ("required" vs "strongly encouraged").
+
+When a claim matters to you, the label tells you how to check it — and if you catch one drifting, that is a bug: open an issue.
+:::
+
 # Getting Started {#sec-setup}
 
 You need four things: install Claude Code, fork the repo, run `./scripts/install-hooks.sh` once (this wires the real pre-commit gate — until you run it, the hook file sits inert), and paste a prompt. Claude handles everything else. (The gate scripts need Python 3, which macOS and most Linux distros already ship.)
@@ -204,6 +218,7 @@ Claude Code itself is free to install (the source is public on GitHub, but under
 
 - [ ] Install Claude Code: `curl -fsSL https://claude.ai/install.sh | bash`
 - [ ] Fork the repo and clone it locally
+- [ ] Run `./scripts/install-hooks.sh` once (wires the real pre-commit gate — inert until you do)
 - [ ] Run `claude` in the project directory (first run will prompt for authentication)
 - [ ] Paste the starter prompt (fill in your project details)
 - [ ] Wait for Claude to customize `CLAUDE.md` for your project
@@ -211,7 +226,7 @@ Claude Code itself is free to install (the source is public on GitHub, but under
 - [ ] Ask Claude to do something: *"Review my slides"* or *"Create a lecture on [topic]"*
 - [ ] Approve the task plan, watch it work, review the output
 
-That's it. Everything else — agents, hooks, rules — runs automatically in the background.
+That's it. Everything else — agents, hooks, rules — runs automatically in the background (the commit gate from the moment you've run `install-hooks.sh`).
 :::
 
 ::: {.callout-tip collapse="true"}
@@ -226,6 +241,22 @@ That's it. Everything else — agents, hooks, rules — runs automatically in th
 **"What does plan approval look like?"** Claude presents a numbered plan and asks for your input. Say "approved", "looks good", or "revise step 3". That's it --- no special commands needed.
 
 For more, see [Troubleshooting](#troubleshooting) in the Appendix.
+:::
+
+::: {.callout-tip collapse="true"}
+## Five minutes in: make a gate go red, then green
+
+The fastest way to *believe* the verification layer is to watch it catch you. From a fresh clone:
+
+```bash
+./scripts/backtest.sh          # all eight gates green on a clean tree
+sed -i '' 's/60 skills/61 skills/' README.md   # plant a lie (Linux: sed -i without '')
+./scripts/backtest.sh          # surface-sync goes RED: claim says 61, disk says 60
+git checkout -- README.md      # undo
+./scripts/backtest.sh          # green again
+```
+
+That loop — green, seeded defect, red, restore, green — is the whole philosophy in four commands. Every gate in this repo has been through it; the results live in `quality_reports/qualification/LEDGER.md`.
 :::
 
 ## Step 1: Fork & Clone
@@ -359,6 +390,20 @@ You approve the spec, then Claude plans implementation. This reduces mid-plan pi
 
 ---
 
+## The Adoption Ladder
+
+You do not need all of this on day one — and adopting it all at once is the classic way to bounce off. Each level below is a stable place to live; **"you may stop here" is written into every rung deliberately**.
+
+| Level | You use | You get | Stop here if… |
+|---|---|---|---|
+| **0 — One safe task** | plain prompts; read the diff before accepting | a feel for what Claude does to *your* files | you mainly want an occasional assistant |
+| **1 — Repeatability** | a customized `CLAUDE.md` + 2–3 skills you actually repeat | the same quality every time, without re-explaining | your work is mostly writing and slides |
+| **2 — Mechanical gates** | `install-hooks.sh`, the backtest suite, compile/render checks | commits that cannot silently drift from reality | you work solo and trust your own review |
+| **3 — Adversarial review** | fresh-context reviewers, `/vaccinate`, review loops | findings from readers who never saw your reasoning | your stakes are internal (teaching, drafts) |
+| **4 — Submission credibility** | numeric-claim passports, `/seven-pass-review`, the external oracle | an audit trail a referee or replicator can walk | — this is the top |
+
+Climb when a level's failure mode actually bites you, not before. The rest of this guide teaches every rung; the [pattern pathways](#sec-patterns) map which patterns belong to which kind of work.
+
 # The System in Action {#sec-system}
 
 With setup covered, here is what the system actually *does*. This section walks through the three core mechanisms that make the workflow powerful: specialized agents, adversarial QA, and automatic quality scoring.
@@ -469,6 +514,22 @@ Points are deducted for issues:
 The verification protocol (`.claude/rules/verification-protocol.md`) requires that Claude compile, render, or otherwise verify every output before reporting a task as complete. Skills that implement the orchestrator pattern enforce this as Step 2: VERIFY. This means Claude **cannot** say "done" from within those skills without actually checking the output. One honest caveat: the *mechanical* quality gate is static analysis plus a best-effort render — when Quarto or XeLaTeX is unavailable or times out, it records `UNVERIFIED` rather than failing. Treat `UNVERIFIED` notes as *not cleared*, and rely on the verifier agent (which actually compiles) for execution-level assurance.
 
 ::: {.callout-warning}
+## What Is Actually Enforced (and how)
+
+A skeptical reader should distinguish "Claude was told to check" from "a deterministic process ran and left evidence." Here is the honest map:
+
+| Check | Mechanism | Scope | Fail behavior | Bypass | Evidence left |
+|---|---|---|---|---|---|
+| Backtest (8 gates) | scripts, pre-commit + CI | repo-wide consistency/currency | **closed** — commit blocked | `--no-verify` | gate output, CI log |
+| Quality score ≥ 80 | script, pre-commit | staged `.tex`/`.qmd`/`.R` | **closed**; render checks best-effort → `UNVERIFIED` noted, not failed | `SKIP_QUALITY_GATE=1` | score report |
+| Destructive-git guard | PreToolUse hook | `git` commands in-session | **closed** — call blocked | run it yourself in a terminal | hook message |
+| Numeric-claim passport | script + skill | claims declared per paper | FAIL/STALE = must-fix at `/commit` | named override, recorded | `passport.yaml` rows |
+| `/verify-claims` | forked verifier agent | citations, numbers in a draft | HIGH-WARN = must-fix | explicit `--no-fail-closed` | verification report |
+| Review agents / referees | model reviewers | manuscripts, slides, code | **advisory** — reports, never auto-gates | n/a | report files |
+| `/humanize`, proofread | model auditors | prose | **advisory**, detect-only | n/a | report files |
+
+Two design rules behind this table: everything **closed** is deterministic (scripts, not model judgment), and model judgment is never a gate — it produces reports a human adjudicates. And deliberately, this template does **not** pile on session-time enforcement hooks beyond the git guard: each one slows every single interaction, and the cost lands on you every minute you work.
+
 ## Don't Skip Verification
 
 In Econ 730, verification caught unverified TikZ diagrams that would have deployed with overlapping labels, broken SVGs in Quarto slides that wouldn't display, and R scripts with missing intercept terms that produced silently wrong estimates.
@@ -1354,6 +1415,17 @@ Now that you understand the building blocks, here's what's new: Claude Code has 
 
 The first two patterns are **meta-patterns** --- they govern how every task flows. Learn these first, then the specific workflows make more sense.
 
+**Choose your path.** Nineteen patterns is a reference shelf, not a syllabus. Four worked sequences cover the common kinds of academic work — each starts from Pattern 1 (plan first) and ends at a verification rung:
+
+| Your work | Follow, in order |
+|---|---|
+| **A lecture** | 1 → 3 (new lecture) → 4 (Beamer→Quarto) → 6 (multi-agent review) → 14 (deck rhetoric) |
+| **A paper / R&R** | 1 → 2 (contractor mode) → 15 (adversarial audits) → 16 (preregistration & submission) → 18 (external oracle) |
+| **Data & replication** | 1 → 5 (replication-first) → 10 (exploration) → 13 (compliance) → 19 (challenge the result) |
+| **A simulation study** | 1 → 5 → 9 (parallel agents) → 17 (vaccinate the checks) → 19 |
+
+Patterns 7–8, 11–12 are power-ups you add to any path once the base sequence feels natural.
+
 ## Pattern 1: Plan-First Development {#pattern-1-plan-first-development}
 
 The plan-first pattern ensures that non-trivial tasks begin with thinking, not typing.
@@ -1897,6 +1969,19 @@ For a production-grade paper pipeline, a dedicated fork takes these same skills 
 This pattern is optional and primarily useful for major translations, risky refactors, or multi-day projects. Most day-to-day work doesn't need it.
 :::
 
+::: {.callout-tip collapse="true"}
+## Git survival kit — the six failures this pattern will show you
+
+Strong statisticians hit these six walls more than any others; each has a one-line diagnosis:
+
+1. **"Which directory am I in?"** — `pwd`. Worktrees mean the *same repo* exists in two places; every git command acts on the one you are standing in.
+2. **"What branch is checked out where?"** — `git worktree list` shows every directory and its branch.
+3. **"What is staged?"** — `git status`; only the green (staged) files enter the next commit.
+4. **"Why did `git checkout main` fail?"** — a branch can be checked out in only ONE worktree at a time; `cd` back to the primary worktree instead.
+5. **"Why does `git branch -d` refuse after my squash merge?"** — a squash merge copies the changes but not the ancestry, so git can't see the branch as merged; use `-D` once the squash commit is in.
+6. **"How do I undo without `reset --hard`?"** — `git checkout -- <file>` for one file, `git stash` to shelve everything; the template's git guard blocks the destructive forms for exactly this reason.
+:::
+
 Git worktrees create a **separate working directory** linked to the same repository. Each directory has its own branch but shares commit history. Subagents can use worktrees via the `isolation: worktree` field (see [Advanced Agent Configuration](#sec-agent-config)).
 
 ```
@@ -2016,6 +2101,14 @@ The [Template README for Social Science Replication Packages](https://social-sci
 | References | Proper bibliographic citations for all data sources |
 
 The **Table/Figure Mapping** row is exactly what `passport.yaml` (v1.9.0) machine-encodes: each numeric claim → script + line + output file + tolerance + verified-on timestamp. The Data Editor's template asks for the *spreadsheet-style* version; the passport is the *programmatic* version. They're complementary — generate the AEA spreadsheet from the passport when you submit.
+
+#### Which data license? Five questions, in order
+
+1. **Did you create the data?** If not, you cannot choose its license — the provider's terms travel with it (AEA policy: authors *convey* inherited permissions and restrictions).
+2. **Do any third-party terms govern a component?** (commercial feeds, admin records, DUAs) → those components ship as access instructions, not files.
+3. **May you redistribute publicly?** Only then is an open license (e.g. CC-BY) on the table — for the parts you own.
+4. **Privacy / IRB / contractual constraints?** → restricted-access or synthetic-data route; document it in the Data Availability Statement.
+5. **What does the venue actually require?** Distinguish *required policy* (a complete deposit, a DAS) from *recommended template* from *repository default* — and when genuinely unsure, that's a question for the data provider or counsel, not a guess.
 
 #### Pre-Submission Checklist
 

@@ -90,11 +90,52 @@ def main():
             if today > m.group(1):
                 expired.append(f"model-versions.md expired {m.group(1)} (today {today}) — re-verify against the docs")
 
+    # guide version <-> CHANGELOG parity (Oracle review, 2026-08-22: the source
+    # shipped with no version and a stale date; this pins it to the release).
+    meta = []
+    gq = os.path.join(ROOT, "guide/workflow-guide.qmd")
+    cl = os.path.join(ROOT, "CHANGELOG.md")
+    if os.path.exists(gq) and os.path.exists(cl):
+        gt = open(gq, encoding='utf-8', errors='ignore').read(2000)
+        ct = open(cl, encoding='utf-8', errors='ignore').read(4000)
+        gv = re.search(r'^version:\s*"?v?(\d+\.\d+\.\d+)"?', gt, re.M)
+        cv = re.search(r'^## v(\d+\.\d+\.\d+)', ct, re.M)
+        if not gv:
+            meta.append("guide frontmatter has no version: field — add one matching the CHANGELOG release")
+        elif cv and gv.group(1) != cv.group(1):
+            meta.append(f"guide version {gv.group(1)} != CHANGELOG latest v{cv.group(1)} — update the frontmatter")
+
+    # reversed dynamic-injection syntax: `!cmd` (backtick-first) is inert; the
+    # real grammar is !`cmd` (Oracle review, 2026-08-22 — the guide shipped the
+    # reversed form and readers copy examples verbatim).
+    inject = []
+    scan = []
+    for base in ("guide/workflow-guide.qmd", "templates/skill-template.md"):
+        p = os.path.join(ROOT, base)
+        if os.path.exists(p): scan.append(p)
+    skdir = os.path.join(ROOT, ".claude/skills")
+    if os.path.isdir(skdir):
+        for d in sorted(os.listdir(skdir)):
+            p = os.path.join(skdir, d, "SKILL.md")
+            if os.path.exists(p): scan.append(p)
+    inj_pat = re.compile(r"`![a-z][a-z0-9._-]*(?:\s+[^`\n]*)?`")
+    for p in scan:
+        rel = os.path.relpath(p, ROOT)
+        for i, line in enumerate(open(p, encoding='utf-8', errors='ignore'), 1):
+            for m in inj_pat.finditer(line):
+                frag = m.group(0)
+                # R-code negations like `!anyNA(w)` and shell paths like
+                # `!/shell/erase` are not injection attempts.
+                if "(" in frag or frag.startswith("`!/"): continue
+                inject.append(f"{rel}:{i}: {frag} — reversed injection syntax; write !`cmd`, not `!cmd`")
+
     print(f"check-staleness: {len(files)} surfaces scanned")
-    bad = hits or render or expired
+    bad = hits or render or expired or meta or inject
     for cid, rel, i, desc, line in hits: print(f"  [{cid}] {rel}:{i}  {desc}\n      {line}")
     for r in render:  print(f"  [STALE-RENDER] {r}")
     for e in expired: print(f"  [STALE-EXPIRY] {e}")
+    for x in meta:    print(f"  [STALE-VERSION] {x}")
+    for x in inject:  print(f"  [BAD-INJECT-SYNTAX] {x}")
     if not bad: print("No stale recommendations, no source/render divergence, no expired currency claims.")
     return 1 if bad else 0
 
