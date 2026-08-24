@@ -882,8 +882,31 @@ _LINE_CONT = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 
 def _join_continuations(cmd: str) -> str:
     """Splice POSIX line continuations, so a command formatted across several
-    lines is tokenised as the ONE command bash will actually run."""
-    return _LINE_CONT.sub(r"\1 ", cmd)
+    lines is tokenised as the ONE command bash will actually run.
+
+    THE REPLACEMENT IS EMPTY, NOT A SPACE (r20 fix), and the difference is a
+    bypass. POSIX REMOVES a backslash-newline; it does not turn it into a word
+    separator. Substituting a space is invisible where the continuation sits at
+    a token boundary — which is every example r12 was written against, and why
+    this stood — and DECISIVE where it sits inside a word, because a space there
+    splits one word into two and the split halves match no rule.
+
+    Measured at 727a66c on a dirty fixture repository, guard verdict then what
+    bash makes of the same string: a continuation inside the SUBCOMMAND
+    (`git re\\<newline>set --hard`) ALLOW(silent), inside the FLAG
+    (`--ha\\<newline>rd`) ALLOW(silent), inside a force push
+    (`--for\\<newline>ce`) ALLOW(silent), and inside the program word itself
+    (`gi\\<newline>t`) ALLOW(silent) — while every literal twin DENIED, and
+    `printf '%s' re\\<newline>set` prints the single word `reset`. So the guard
+    read two words where bash reads one, and every destructive verb was
+    spellable straight through the deny list.
+
+    Found by the SIBLING hook's r20 audit: the identical substitution was fixed
+    there first, and the same defect was sitting in this file. Two copies of one
+    rule drifted apart in the direction neither author checked — which is the
+    argument for the shared-helper routing this pair already uses for the deny
+    list itself."""
+    return _LINE_CONT.sub(r"\1", cmd)
 
 
 def _segments(cmd: str) -> list[list[str]]:

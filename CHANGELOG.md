@@ -25,7 +25,7 @@ claims were true, v2.6 asks whether the things that check them still work.
   typo can no longer disable a hook silently while every gate stays green. The registered set
   is derived live from the gate runner, the session settings, and the commit entry point;
   grepping the ledger cannot know what actually runs.
-- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (198 cases, seconds to run)
+- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (224 cases, seconds to run)
   that re-fires every active guard hook's target failure on **every backtest run**: the deny
   cases, the clean controls that must stay silent, fail-open on a malformed event, and the
   documented escape hatches. Gate 9 proves a hook is *wired*; gate 10 proves it still *acts*.
@@ -237,30 +237,42 @@ two could not.** That is the finding worth carrying forward: no single method wa
 and the one that mattered most was the one that asked a different question.
 
 **The adversarial rounds** — fresh-context lenses, refute-biased verification of every finding,
-fix, re-audit, repeat until two consecutive rounds came back dry — drove the mechanical surface.
-They were good at what they were pointed at: counts recomputed from source, links, staleness,
-guard bypasses. They were also their own worst enemy in a useful way: **round after round, the
-defect found was one the previous round's own fix had introduced** — which is the argument for
-re-auditing in fresh context rather than trusting a fixer's report of its own work. Two findings
-are worth naming because the class generalizes. A guard folded a path's parent segments by string
-while the tool it guards folds them through the kernel; the two agree until a symlink sits in
-front, and then they name different repositories — so the guard read one tree and the command
-changed another. And a docstring enumerated four spellings of a redirection while the shell
-accepts five; the code implemented exactly what the docstring listed, so the list *was* the bug.
-Both were found by running the command, not by reading the code.
+fix, re-audit — drove the mechanical surface. They were good at what they were pointed at: counts
+recomputed from source, links, staleness, guard bypasses. Twice the defect a round found was one
+the *previous* round's own fix had introduced, and once a round's fix had disclosed a residual
+list that was itself wrong about what it had missed — which is the argument for re-auditing in
+fresh context rather than trusting a fixer's report of its own work. Two findings are worth
+naming because the class generalizes. A guard folded a path's parent segments by string while the
+tool it guards folds them through the kernel; the two agree until a symlink sits in front, and
+then they name different repositories — so the guard read one tree and the command changed
+another. And a docstring enumerating the redirection spellings a guard catches drifted from the
+code in *both* directions at once: it listed four, the regex already caught a fifth nobody had
+written down, and the shell accepts a sixth that neither had. Both were found by running the
+command, not by reading the code — and the second is the concrete cost of the open debt this
+release records, that nothing gates a docstring against the code it describes.
 
-**And the rounds measured something about themselves worth more than any single fix.** Four
-consecutive rounds each found a *new* class of spelling that reaches the same file: a comment
-that merely mentions a heredoc, a path folded through a symlink, a redirection operator absent
-from the list, ANSI-C `$'…'` quoting that survives unquoting as a stray `$`, an uppercase command
-word that a case-insensitive filesystem resolves to the same binary. Each fix was correct and
-each was followed by another class. That is not bad luck; it is a measurement, and the honest
-reading is that **a textual recognizer over an adversarial spelling space does not converge.**
-"The last round found nothing" would be evidence about the round, not about the guard. So the
-release stops claiming the recognizer is closing, and the guards' own docstrings say what they
-have always been asked to say: these lists record where the parser has been *probed*, not where
-it is complete. A guard whose advertised coverage exceeds its actual coverage is worse than none,
-because you stop looking — which is this repository's own rule, now applied to itself.
+**And the rounds measured something about themselves worth more than any single fix.** Every
+round from the guards' first hardening onward found at least one *new* class of spelling that
+reaches the same file — among them a comment that merely mentions a heredoc, a shell glob, a path
+folded through a symlink, a redirection operator missing from the list, ANSI-C `$'…'` quoting that
+survives unquoting as a stray `$`, an uppercase command word that a case-insensitive filesystem
+resolves to the same binary, and a quote sitting inside the protected directory's own name. Each
+fix was correct and each was followed by another class. That is not bad luck; it is a
+measurement, and the honest reading is that **a textual recognizer over an adversarial spelling
+space does not converge.** "The last round found nothing" would be evidence about the round, not
+about the guard. So the release stops claiming the recognizer is closing, and both guards' residual
+lists now say what only one of them used to: they record where the parser has been *probed*, not
+where it is complete — assume there are more. A guard whose advertised coverage exceeds its actual
+coverage is worse than none, because you stop looking — which is this repository's own rule, now
+applied to itself.
+
+The boundary that argument reaches is worth stating, because it is not the same as "keep
+looking". Every class above is a **textual** transformation the shell performs on the command
+line, and the information is present in the string, so a scanner can be taught to see it. A
+symbolic link is not a spelling — it is filesystem state, and no amount of reading the command
+line recovers it. That class is disclosed in the guard rather than closed, and it marks where
+this design stops rather than one more gap inside it. If you need a guarantee instead of a speed
+bump, the mechanism has to stop being a text scan.
 
 **The template's own skills, run against the template**, found what those rounds structurally
 could not — the rounds asked *"is this correct?"*, never *"what does this do to a user?"*

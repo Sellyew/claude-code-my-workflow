@@ -103,12 +103,45 @@ def _battery_sections():
     return secs
 
 def n_battery_named(letters):
-    # The LEDGER's grading-the-grader row records, per guard, how many cases go
-    # red when that guard is replaced by an always-allow stub. A stub allows
-    # everything, so exactly the expect_deny / expect_contains cases in that
-    # guard's sections fail — count those call sites. Until 2026-08-23 these
-    # three numbers (17 / 13 / 2) were the ledger's own, ungated: planting 99 in
-    # each left every gate green, which is the r7 defect one document over.
+    # The LEDGER's grading-the-grader row records, per guard, the expect_deny /
+    # expect_contains cases in that guard's OWN `# ── (x)` sections. Until
+    # 2026-08-23 these three numbers (17 / 13 / 2) were the ledger's own,
+    # ungated: planting 99 in each left every gate green, which is the r7 defect
+    # one document over.
+    #
+    # NARROWED 2026-08-24, and the narrowing IS the fix. This comment used to
+    # assert a premise the count does not support: "a stub allows everything, so
+    # exactly the expect_deny / expect_contains cases in that guard's sections
+    # fail — count those call sites." False, and falsifiably so. A section letter
+    # records which hook a case FIRES; a stub outcome turns on which hook
+    # DECIDES, and those are two different partitions.
+    # `root-of-trust-guard.py` imports `git-guardrails.py` and delegates the
+    # destructive-verb deny list to it, so a set of section-(a) cases go red
+    # under EITHER guard's stub. MEASURED at 727a66c, with an import-safe
+    # always-allow stub of `git-guardrails.py` built exactly as the ledger's
+    # reproduction note prescribes and run as
+    #   HOOK_DIR=<copy> bash scripts/hook-battery.sh
+    # the run reddened 81 cases — 8 in (a) + 24 in (b) + 49 in (c) — against the
+    # 73 this function returns for "bc". So the gate did not merely miss the
+    # right number, it DEFENDED the wrong one: planting the reproducible 81 in
+    # the ledger made check-derived-counts FAIL.
+    #
+    # Widening the count was tried first and measured wrong inside the same
+    # session, which is why the claim is narrowed instead. Widening needs a way
+    # to IDENTIFY the routed cases, and the battery offers only prose — the
+    # `CROSS-HOOK` marker some labels carry. That proxy was implemented and
+    # returned 8; the r20 wave then added `a106`, a case the sibling decides
+    # whose label says "cross-hook" in running prose and carries no marker, so
+    # the marker-derived figure said 81 while the stub reddened 82. Which guard
+    # DECIDES a case is a RUNTIME property. No static read of the battery text
+    # recovers it, and a gate resting on an unenforced labelling convention
+    # under-counts SILENTLY — precisely the failure this file exists to prevent.
+    #
+    # So the gate certifies what it can actually compute: the per-guard section
+    # tally, which is also each guard row's N and the companion of its FPR
+    # denominator. The stub OUTCOMES live in the ledger's reproduction note as
+    # dated measurements carrying the command that reproduces them — a number
+    # nobody can derive from this file should not be asserted by this file.
     secs = _battery_sections()
     body = "".join(secs.get(l, "") for l in letters)
     return len(re.findall(r'^[ \t]*expect_(?:deny|contains)[ \t]', body, re.M))
@@ -366,9 +399,13 @@ CHECKS = [
     # grew it returned 0, and a maintainer following it would have concluded the
     # REQ was wrong and dropped eight gated sites out of coverage.)
     ("battery cases (ledger)", r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, exit 0',    [REQ("quality_reports/qualification/LEDGER.md", 8)], n_hook_battery_cases()),
-    ("battery-named root-of-trust", r'`root-of-trust-guard\.py` \((\d+) cases named\)', ["quality_reports/qualification/LEDGER.md"], n_battery_named("a")),
-    ("battery-named git-guardrails", r'`git-guardrails\.py` \((\d+) cases named\)',     ["quality_reports/qualification/LEDGER.md"], n_battery_named("bc")),
-    ("battery-named claim-reconcile", r'`claim-reconcile\.py` \((\d+) cases named\)',   ["quality_reports/qualification/LEDGER.md"], n_battery_named("d")),
+    # The claim these three read used to be phrased "(N cases named)" — the
+    # cases a stubbed run NAMES — while the value is a SECTION TALLY. The
+    # phrasing is now the quantity (2026-08-24); see n_battery_named() for the
+    # measurement that separated the two and why the tally is what gets gated.
+    ("battery-named root-of-trust", r'`root-of-trust-guard\.py` \((\d+) cases in its own sections\)', ["quality_reports/qualification/LEDGER.md"], n_battery_named("a")),
+    ("battery-named git-guardrails", r'`git-guardrails\.py` \((\d+) cases in its own sections\)',     ["quality_reports/qualification/LEDGER.md"], n_battery_named("bc")),
+    ("battery-named claim-reconcile", r'`claim-reconcile\.py` \((\d+) cases in its own sections\)',   ["quality_reports/qualification/LEDGER.md"], n_battery_named("d")),
     # n_patterns() was COMPUTED (and printed as "sequential 1..N") but never
     # compared against the prose, so "Nineteen patterns is a reference shelf"
     # could go stale the moment Pattern 20 landed — sequentiality still passes

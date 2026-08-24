@@ -211,7 +211,16 @@ another name, it truncated `.claude/settings.json` in a throwaway fixture while
 `&>`/`>`/`>|` all denied, and it was missing from BOTH redirection surfaces —
 the tokenizer split it into `>` plus the SEPARATOR `&`, and the backstop's
 target class excludes `&`. Descriptor duplication (`>&2`, `1>&2`, `2>&1`, `>&-`)
-is excluded from it and stays allowed.
+is excluded from it and stays allowed. ORDINARY QUOTING PLACED INSIDE THE
+PROTECTED NAME joined the caught set at r20 — `.clau\de/…`, `.cl'aud'e/…`,
+`.cl"aud"e/…`, `.githook\s/…`, and the same split across a line continuation.
+The scan half always read these correctly; what silenced them was the literal
+substring test in front of it, for the third time (`_may_name_a_protected_path`
+has the measurements). The trigger is now taken on the line with `\`, `'` and
+`"` deleted as well as as written — those three are the whole set of characters
+that can sit inside a word without changing which file it names — and the
+continuation splice was corrected to DELETE the backslash-newline the way the
+shell does rather than substitute a space for it.
 
 WHAT IT DOES NOT CATCH — disclosed residual, in scope for a future audit as
 BOUNDARY, not as a defect:
@@ -234,6 +243,21 @@ BOUNDARY, not as a defect:
     arbitrary command prints, which is the shell simulation `git-guardrails.py`
     tore out at r8 for making the guard's own complexity the leak. The sibling
     hook already discloses the same class for its history ops.
+  - a VARIABLE OR SUBSTITUTION SITTING INSIDE A PROTECTED SEGMENT'S NAME, which
+    is a NARROWER residual than `in_project`'s docstring may suggest and is
+    disclosed here so the two are not confused. That function says an
+    unresolvable token "fails toward DENYING", and it does — for the SCOPE half,
+    which is the only half it speaks for. Measured 2026-08-24 in a throwaway
+    project fixture: `rm -f $UNSET/.claude/hooks/…` DENIES, exactly as that
+    sentence implies, because the segment `.claude` is still there to match.
+    But `rm -f .clau${NOPE}de/hooks/…` and `rm -f .clau$(echo d)e/hooks/…` are
+    both ALLOWED (silent), because the PATTERN half never sees a protected name
+    at all — bash expands `.clau${NOPE}de` to `.claude` (an unset variable
+    expands to nothing), while this scan reads the token as written. Position,
+    not presence, decides: a variable BEFORE the protected segment leaves the
+    segment intact and is caught; one INSIDE it destroys the only thing the
+    pattern half matches on. Closing it means expanding variables and running
+    substitutions — the shell simulation this pair deliberately refuses.
   - a git write whose target is NOT a literal path operand — `git apply <patch>`
     (the paths live inside the patch), `git reset --hard`, `git merge`,
     `git checkout <branch>` with no pathspec. These rewrite the tree from
@@ -300,6 +324,16 @@ BOUNDARY, not as a defect:
     stall the hook. The inline note above `_segment_matches` keeps the full
     reasoning. The cwd residual is real but belongs to PATH RESOLUTION, not to
     globbing — it is the `cd` bullet above.)
+  - ANY SPELLING THAT PUTS A PROTECTED PATH SOMEWHERE THIS SCAN DOES NOT LOOK.
+    The bullets above are the set known on 2026-08-24. They record where this
+    scanner has been PROBED; they do not establish where it is complete, and
+    reading the list as a closed enumeration is the mistake. Five consecutive
+    rounds each turned up a spelling every earlier round had missed — globs
+    (r15), `..` segments (r16), `>&` (r18), the `$'…'` openers and case (r19),
+    quoting inside the protected NAME itself (r20) — and every one of them
+    failed toward ALLOW while its literal twin denied. Those are closed; the
+    CLASS is not. Assume there are more, and that the next one also looks
+    ordinary.
 These are not closed, and nothing here closes them. The honest statement is that
 they are UNCOVERED: the Edit/Write channel makes some of them visible after the
 fact, which is not the same as covering them.
@@ -915,13 +949,37 @@ def unquote(w: str) -> str:
 # backslash in front of it is untouched and still separates commands, and a
 # backslash NOT followed by a newline (a literal `\` inside a quoted string) is
 # never matched at all.
+#
+# r20 — THE SPLICE INSERTED A SPACE, AND THE SHELL DOES NOT. POSIX is explicit:
+# "the <backslash> and <newline> shall be removed before splitting the input
+# into tokens" — REMOVED, not replaced. The r11 repair substituted `" "`, which
+# is indistinguishable from removal at a token BOUNDARY (its own measured case
+# had whitespace on both sides) and wrong INSIDE a word: it split one word bash
+# keeps whole, so the halves were scored separately and matched nothing.
+# Measured 2026-08-24 at 727a66c, event cwd = the project:
+#
+#     rm -f .claude/hooks/git-guardrails.py    DENY   (literal control)
+#     rm -f .clau\ + newline + de/hooks/…      ALLOW (silent)
+#
+# while `printf '%s\n'` on the same string prints ONE word,
+# `.claude/hooks/git-guardrails.py`. Same class as the fast-path defect above —
+# a backslash inside the protected directory name — and the same failure
+# direction, so it is closed with it rather than disclosed. The substitution
+# now emits the even-backslash prefix and NOTHING else.
 _LINE_CONT = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 
 
 def join_continuations(cmd: str) -> str:
     """Splice POSIX line continuations, so a command formatted across several
-    lines is tokenised as the ONE command bash will actually run."""
-    return _LINE_CONT.sub(r"\1 ", cmd)
+    lines is tokenised as the ONE command bash will actually run.
+
+    The backslash-newline is DELETED, which is what the shell does with it; a
+    continuation inside a word therefore joins the word rather than splitting
+    it. Whitespace that was already there is untouched, so the token-boundary
+    spelling this function was written for (r11: `rm -f \\` + newline +
+    `    <path>`) still tokenises exactly as before — the leading spaces of the
+    continued line are what separate the words, and always were."""
+    return _LINE_CONT.sub(r"\1", cmd)
 
 
 # THE OPENER SCAN IS QUOTE-AWARE AND HERESTRING-AWARE (r16). It used to be one
@@ -1562,8 +1620,15 @@ def scan(raw: str, depth: int = 0) -> tuple[str, str] | None:
 #     this hook too, but git-guardrails already denies it; testing it here as
 #     well would produce two denials for one command and make each hook's
 #     battery depend on the other's behaviour.
-#   * fail-open on anything: if the sibling cannot be imported or raises, this
-#     returns None and the call proceeds exactly as it did before.
+#   * fail-open on anything the sibling RAISES — including a `SystemExit`. The
+#     sibling is exec'd IN THIS PROCESS, so a `sys.exit()` reached while its
+#     module body runs is not the sibling's problem, it is this hook's death:
+#     the process ends with status 0 and an EMPTY stdout, and an empty stdout is
+#     exactly what an ALLOW looks like. Both foreign-code entry points
+#     (`exec_module`, and the `git_deny_reason` call) therefore catch
+#     `BaseException`, not `Exception`. What is NOT survivable is named in
+#     `_git_guardrails`'s docstring; the honest boundary is "raises", not "any
+#     failure".
 
 _GG_MODULE = None          # the imported sibling, or None
 _GG_TRIED = False          # import attempted (once per process)
@@ -1575,8 +1640,34 @@ def _git_guardrails():
     Loaded BY PATH because the filename is not an identifier (a hyphen), and
     from THIS file's directory so a hook directory selected for a fixture run
     pairs with its own sibling rather than the repository's. The module is
-    import-safe: it does all its work under `if __name__ == "__main__"`.
-    Returns None on any failure — this hook fails open on its own errors."""
+    import-safe as shipped: it does all its work under `if __name__ ==
+    "__main__"`.
+
+    SURVIVABLE — returns None, the caller gets no cross-hook opinion, and this
+    hook's own path rules run exactly as they did before the sibling existed:
+    the file missing, unreadable, or not loadable as a module; and ANYTHING the
+    sibling's module body RAISES. That last word is the r20 correction. The
+    sentence here used to read "Returns None on any failure", and the block
+    above promised "fail-open on anything", while the code caught `Exception` —
+    which is not `BaseException`. Because the sibling is exec'd IN THIS PROCESS,
+    a `SystemExit` raised at its import time terminated root-of-trust-guard.py
+    itself with status 0 and an EMPTY stdout, and empty stdout is
+    indistinguishable from an allow. Measured 2026-08-24 at 727a66c: with
+    `.claude/hooks/git-guardrails.py` replaced by `import sys; sys.exit(0)`, a
+    write into `.claude/hooks/` returned rc=0 and said nothing — a SILENT ALLOW
+    of a gate-file write. Not hypothetical either: an audit agent hit it by
+    accident while building a stub and read the spurious result as a finding.
+    `BaseException` is caught now, so `SystemExit`, `KeyboardInterrupt` and
+    every ordinary exception all land in the same place.
+
+    NOT SURVIVABLE, and no `except` clause can make it so: anything that ends
+    the PROCESS without raising in this thread — `os._exit()`, a fatal signal, a
+    crash inside a C extension the sibling imports — or a sibling whose module
+    body never returns, since the harness then kills the hook on its registered
+    timeout. In every one of those this file dies with nothing on stdout, which
+    the harness reads as an allow. The mitigation is not here: it is that the
+    sibling is a shipped, gated file, and a fixture run that replaces it points
+    HOOK_DIR at a copy."""
     global _GG_MODULE, _GG_TRIED
     if _GG_TRIED:
         return _GG_MODULE
@@ -1590,10 +1681,10 @@ def _git_guardrails():
         if spec is None or spec.loader is None:
             return None
         mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        spec.loader.exec_module(mod)      # FOREIGN CODE, IN THIS PROCESS
         if callable(getattr(mod, "git_deny_reason", None)):
             _GG_MODULE = mod
-    except Exception:
+    except BaseException:                 # r20: SystemExit is not an Exception
         _GG_MODULE = None
     return _GG_MODULE
 
@@ -1619,9 +1710,9 @@ def wrapped_git_deny(raw: str, depth: int = 0) -> str | None:
             if payload is None:
                 continue
             try:
-                reason = mod.git_deny_reason(payload)
-            except Exception:
-                reason = None
+                reason = mod.git_deny_reason(payload)   # FOREIGN CODE, IN-PROCESS
+            except BaseException:   # r20: the same reason as the loader above —
+                reason = None       # a sys.exit() here would end THIS hook silently
             if reason:
                 return reason
             if depth < 2:
@@ -1658,6 +1749,26 @@ def deny(reason: str) -> None:
     }}, sys.stdout)
 
 
+# Bash's THREE quoting characters, and they are the complete set: the escape
+# `\`, the single quote, and the double quote. Every other quoting form bash
+# has is one of these with a `$` glued to the front (`$'…'`, `$"…"`), and that
+# `$` is tested for separately below. Nothing else in the language can sit
+# INSIDE a word without changing which file the word names.
+_QUOTING_NOISE = str.maketrans("", "", "'\"\\")
+
+
+def _denoise(cmd: str) -> str:
+    """The command line with every quoting character DELETED.
+
+    `.clau\\de` -> `.claude`, `.cl'aud'e` -> `.claude`, `.cl"aud"e` ->
+    `.claude`, and — because deletion does not care how deeply the quotes are
+    nested — `bash -c 'rm .clau\\de/hooks/x'` -> `bash -c rm .claude/hooks/x`.
+    This is a TRIGGER-ONLY transform: it can only glue text together, so it can
+    only make the test below say True more often, and the verdict itself is
+    still decided by the scan on properly tokenised, properly unquoted words."""
+    return cmd.translate(_QUOTING_NOISE)
+
+
 def _may_name_a_protected_path(cmd: str) -> bool:
     """The fast path: can this command line name a gate-defining path at all?
 
@@ -1692,11 +1803,51 @@ def _may_name_a_protected_path(cmd: str) -> bool:
         appears. A line carrying a `$'` or `$"` opener therefore always goes
         through to the scan, where `unquote` decodes it.
 
-    Both widenings fail toward SCANNING, which costs string work and can only
-    add denials."""
-    low = cmd.lower()
-    if ".claude" in low or ".githooks" in low:
-        return True
+    r20 — THE THIRD DEFECT FROM THIS ONE FAST PATH, AND THE LAST ONE THAT WILL
+    BE PATCHED AS AN INSTANCE. Ordinary shell quoting placed INSIDE the
+    protected directory NAME carries neither literal, no glob metacharacter and
+    no `$` opener, so the line was rejected here and the scan — which unquotes
+    every word at every nesting depth, and would have denied all six — never
+    ran. Measured 2026-08-24 at 727a66c on a throwaway project fixture, guard
+    verdict then what bash actually did:
+
+        rm -f .claude/hooks/git-guardrails.py      DENY   (literal control)
+        rm -f .clau\\de/hooks/git-guardrails.py     ALLOW (silent) -> file DELETED
+        echo X > .clau\\de/settings.json            ALLOW (silent)
+        rm -f .githook\\s/pre-commit                ALLOW (silent)
+        rm -f .cl'aud'e/hooks/git-guardrails.py   ALLOW (silent) -> file DELETED
+        rm -f .cl"aud"e/hooks/git-guardrails.py   ALLOW (silent)
+
+    WHY THIS CLOSES THE CLASS RATHER THAN THREE MORE INSTANCES. The trigger is
+    now computed on `_denoise(cmd)` as WELL as on the raw line: a copy with
+    bash's quote characters deleted. `\\`, `'` and `"` are the COMPLETE set of
+    characters that can sit inside a word without changing which file the word
+    names — every remaining quoting form is one of them with a `$` in front,
+    and that `$` has its own test here since r19. Deleting all three therefore
+    collapses EVERY arrangement of them, in any quantity, in any order, at any
+    nesting depth, back to the literal the shell will use; there is no fourth
+    spelling to enumerate later because there is no fourth character. That is
+    the difference between this and the r15/r19 repairs, which each taught the
+    trigger one more thing to look for.
+
+    THE FOURTH MEMBER OF THE SAME CLASS, found by probing this repair rather
+    than reported: a LINE CONTINUATION inside the name (`.clau\\` + newline +
+    `de/hooks/…`). The backslash is quoting noise like any other, but the
+    newline behind it is not, so deletion alone leaves `.clau\\nde`. It is the
+    SPLICE that has to be right, and it was not — see the r20 note above
+    `join_continuations`, which used to substitute a space where the shell
+    deletes. With the splicer corrected the trigger simply runs on the spliced
+    line, and the scan (which splices too) agrees with it.
+
+    Each widening fails toward SCANNING, and that direction is what makes them
+    safe: this function decides only whether to LOOK. A false trigger costs one
+    tokenisation of a string that the scan will then clear (`echo ".clau"`
+    denoises to `echo .clau`, matches nothing, allowed); it cannot produce a
+    false deny, because the deny is the scan's verdict on the real words."""
+    for text in (cmd, _denoise(join_continuations(cmd))):
+        low = text.lower()
+        if ".claude" in low or ".githooks" in low:
+            return True
     if "$'" in cmd or '$"' in cmd:      # ANSI-C / locale quoting: see above
         return True
     return any(ch in cmd for ch in "*?[{")

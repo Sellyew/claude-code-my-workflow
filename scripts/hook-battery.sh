@@ -140,6 +140,19 @@ fire_in() {  # fire_in <hook-process-cwd> <hook-file> <event-json> -> sets OUT, 
     RC=$?
 }
 
+fire_from() {  # fire_from <hook-dir> <hook-file> <event-json> -> sets OUT, RC
+    # Like fire(), but the hook DIRECTORY is given per call instead of taken
+    # from $HOOKS. Cases a103-a107 need a guard whose SIBLING is a stub, and the
+    # sibling is located from the guard file's OWN directory — so the only way to
+    # pair one with the other is to run a copy of the guard out of a directory
+    # built for the case. The copy is always taken from $HOOKS, so a seeded
+    # HOOK_DIR still reaches these cases.
+    local dir="$1" hook="$2" ev="$3"
+    OUT="$(env -u ALLOW_ROOT_OF_TRUST_WRITE -u ALLOW_DIRTY_MERGE -u CLAUDE_STRICT_PATHS \
+           "${UNSET_GIT_ENV[@]}" python3 "$dir/$hook" < "$ev" 2>/dev/null)"
+    RC=$?
+}
+
 verdict() {  # verdict <text> — hand a LOCALLY computed result to the expect_
              # helpers, so a case that does not fire a hook (section (e), which
              # tests the battery's own isolation) is still counted and reported
@@ -932,6 +945,208 @@ expect_silent "a90 r19 CONTROL: a READ through the case-varied spelling (cat .CL
 fire root-of-trust-guard.py "$TMP/a91.json"
 expect_silent "a91 r19 CONTROL: the case-varied spelling aimed at a clone OUTSIDE the project stays allowed — the r11 scoping survives the case fold too"
 
+# a92-a102 — r20, THE THIRD DEFECT FROM THE SAME FAST PATH: ORDINARY QUOTING
+# PLACED INSIDE THE PROTECTED DIRECTORY NAME. `_may_name_a_protected_path` is a
+# case-folded LITERAL substring test standing in front of the entire scan, and a
+# quote or a backslash sprinkled through `.claude`/`.githooks` carries neither
+# literal, no glob metacharacter and no `$` opener — so the line was rejected
+# there and the scan, which unquotes every word at every nesting depth and would
+# have denied all of these, never ran. Measured 2026-08-24 at 727a66c, event cwd
+# = the project, guard verdict then what bash actually does:
+#
+#     rm -f .claude/hooks/git-guardrails.py     DENY   (literal control)
+#     rm -f .clau\de/hooks/git-guardrails.py    ALLOW (silent) -> file DELETED
+#     echo X > .clau\de/settings.json           ALLOW (silent)
+#     rm -f .githook\s/pre-commit               ALLOW (silent)
+#     rm -f .cl'aud'e/hooks/git-guardrails.py   ALLOW (silent) -> file DELETED
+#     rm -f .cl"aud"e/hooks/git-guardrails.py   ALLOW (silent)
+#
+# THIS IS THE THIRD TIME THIS ONE TEST HAS PRODUCED A FALSE ALLOW (r15 globs,
+# r19 case and `$'…'`), so the repair is the CLASS and not three more spellings:
+# the trigger is now also computed on a copy of the line with `\`, `'` and `"`
+# DELETED. Those three are the complete set of characters that can sit inside a
+# word without changing which file the word names — every other quoting form
+# bash has is one of them with a `$` in front, which r19 already tests for — so
+# deletion collapses every arrangement of them, at any depth, back to the
+# literal the shell will use. a97 is the depth case; there is no fourth
+# character to enumerate later.
+#
+# THE CONTROLS ARE WHAT KEEP THE WIDENING HONEST. a98/a99 pin that the same
+# quoting in an UNPROTECTED path is untouched; a100 that every READ is still
+# allowed through the new spelling; a101 that the r11 project scoping still
+# holds (the same spelling aimed at a clone outside the project stays silent);
+# and a102 is the sharp one — a target whose denoised form LOOKS protected while
+# bash resolves it to a different file entirely, proving the denoise is a
+# TRIGGER and not a verdict. What bash really does with both spellings was
+# measured with printf on bash 5.3.9, not assumed: `.clau\de/hooks/x` ->
+# `.claude/hooks/x` (the guard file), `$'.clau\de/hooks/x'` -> `.clau\de/hooks/x`
+# (an unrecognised ANSI-C escape keeps BOTH characters, so this is a different
+# name). a83 already pins the plain-text `$'…'` control and stays green.
+cat > "$TMP/a92.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .clau\\\\de/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a93.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf disabled > .clau\\\\de/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a94.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .githook\\\\s/pre-commit"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a95.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .cl'aud'e/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a96.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .cl\"aud\"e/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a97.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'rm -f .clau\\\\de/hooks/git-guardrails.py'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a98.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f do\\\\cs/note.txt"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a99.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f 'docs'/note.txt"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a100.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"cat .clau\\\\de/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a101.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f $TMP/rot-clone/.clau\\\\de/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a102.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f \$'.clau\\\\de/hooks/git-guardrails.py'"},"cwd":"$ROOT"}
+EOF
+
+fire root-of-trust-guard.py "$TMP/a92.json"
+expect_deny   "a92 r20 THE MEASURED CASE: a BACKSLASH inside the protected directory name (rm -f .clau\\de/hooks/…) is denied — bash resolves it to the guard file and really deleted it, while the literal twin (a5/a20) denied"
+fire root-of-trust-guard.py "$TMP/a93.json"
+expect_deny   "a93 r20: the same noise in front of a REDIRECTION target (> .clau\\de/settings.json) is denied — the file that decides which hooks fire"
+fire root-of-trust-guard.py "$TMP/a94.json"
+expect_deny   "a94 r20: the backslash inside the OTHER protected root (.githook\\s/pre-commit) is denied — the fast path rejected this one on both literals at once"
+fire root-of-trust-guard.py "$TMP/a95.json"
+expect_deny   "a95 r20: SINGLE QUOTES splitting the name (.cl'aud'e/hooks/…) are denied — quoting is not a spelling of the path, and this one deleted the guard file too"
+fire root-of-trust-guard.py "$TMP/a96.json"
+expect_deny   "a96 r20: DOUBLE QUOTES splitting the name (.cl\"aud\"e/hooks/…) are denied — the third and last quoting character"
+fire root-of-trust-guard.py "$TMP/a97.json"
+expect_deny   "a97 r20 THE DEPTH CASE: the same backslash spelling NESTED in a bash -c payload is denied — deleting the quoting characters does not care how deeply they are nested, which is why this closes a class and not three spellings"
+fire root-of-trust-guard.py "$TMP/a98.json"
+expect_silent "a98 r20 CONTROL: a backslash in an UNPROTECTED path (rm -f do\\cs/note.txt) is untouched — the widened trigger scans more, it does not deny more"
+fire root-of-trust-guard.py "$TMP/a99.json"
+expect_silent "a99 r20 CONTROL: quotes in an UNPROTECTED path (rm -f 'docs'/note.txt) are untouched — the most ordinary quoting there is"
+fire root-of-trust-guard.py "$TMP/a100.json"
+expect_silent "a100 r20 CONTROL: a READ through the newly-recognised spelling (cat .clau\\de/settings.json) stays allowed — 'every READ is untouched' survives the fix"
+fire root-of-trust-guard.py "$TMP/a101.json"
+expect_silent "a101 r20 CONTROL + SCOPE: the same newly-recognised spelling aimed at a clone OUTSIDE the project stays allowed, so the r11 project scoping is not weakened by widening the trigger"
+fire root-of-trust-guard.py "$TMP/a102.json"
+expect_silent "a102 r20 CONTROL, THE SHARP ONE: rm -f \$'.clau\\de/hooks/…' stays allowed. Its denoised form LOOKS protected and the trigger duly fires, but bash keeps BOTH characters of an unrecognised ANSI-C escape (measured with printf on bash 5.3.9), so the word really names .clau\\de/hooks/… and not the guard. The verdict is still the scan's, on the real word — a widened trigger cannot manufacture a deny"
+
+# a103-a107 — r20, THE SIBLING LOADER'S DOCUMENTED FAIL-OPEN DID NOT HOLD.
+# `_git_guardrails()` execs git-guardrails.py IN THIS PROCESS to borrow the
+# shared destructive-git deny list, and wrapped that exec in `except Exception`
+# while promising "fail-open on anything" and "Returns None on any failure".
+# `SystemExit` is not an `Exception`. So a `sys.exit()` reached while the
+# sibling's module body ran terminated root-of-trust-guard.py ITSELF with status
+# 0 and an EMPTY stdout — and empty stdout is exactly what an ALLOW looks like,
+# with no way to tell the two apart from outside. Measured 2026-08-24 at
+# 727a66c: with git-guardrails.py replaced by `import sys; sys.exit(0)`, a write
+# into `.claude/hooks/` returned rc=0 and said nothing. A SILENT ALLOW of a
+# gate-file write, caused by the loader for a rule that had not even run yet.
+# Not hypothetical: an audit agent hit it by accident while building a stub and
+# read the spurious result as a finding.
+#
+# Each case runs a COPY of the guard out of a directory built beside a stub
+# sibling, because the sibling is located from the guard file's own directory.
+# a104 is the behaviour that must NOT regress — an ordinary Exception at the
+# sibling's import time is genuinely survivable and always was — and a105/a106
+# are what stop the repair from becoming "deny whenever the sibling is broken":
+# a read stays silent, and the real sibling still supplies the cross-hook deny.
+ROT_SE="$TMP/rot-sib-sysexit"; ROT_EX="$TMP/rot-sib-exception"
+mkdir -p "$ROT_SE" "$ROT_EX"
+cp "$HOOKS/root-of-trust-guard.py" "$ROT_SE/" 2>/dev/null
+cp "$HOOKS/root-of-trust-guard.py" "$ROT_EX/" 2>/dev/null
+printf 'import sys\nsys.exit(0)\n'                > "$ROT_SE/git-guardrails.py"
+printf "raise RuntimeError('stub blows up')\n"    > "$ROT_EX/git-guardrails.py"
+
+cat > "$TMP/a103.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .claude/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a105.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"cat .claude/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a106.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'git reset --hard'"},"cwd":"$ROOT"}
+EOF
+
+fire_from "$ROT_SE" root-of-trust-guard.py "$TMP/a103.json"
+expect_deny   "a103 r20 THE MEASURED CASE: with a sibling that calls sys.exit() at IMPORT time, a write into .claude/hooks/ is still DENIED. Before the fix the SystemExit propagated out of exec_module past 'except Exception' and ended this hook with rc=0 and empty stdout — a silent ALLOW of a gate-file write"
+fire_from "$ROT_EX" root-of-trust-guard.py "$TMP/a103.json"
+expect_deny   "a104 r20 CONTROL, the behaviour that must not regress: a sibling raising an ORDINARY Exception at import STILL fails open — the loader returns None and the hook's own path rules run, so the same write is denied. This case was green before the fix and must stay green"
+fire_from "$ROT_SE" root-of-trust-guard.py "$TMP/a105.json"
+expect_silent "a105 r20 CONTROL: with the same sys.exit() sibling, a READ stays silent — catching BaseException did not turn a broken sibling into a blanket deny"
+fire_from "$HOOKS" root-of-trust-guard.py "$TMP/a106.json"
+expect_deny   "a106 r20 CONTROL: with the REAL sibling, the cross-hook rule still fires (bash -c '<git reset --hard>' is denied) — widening the except did not break the import that makes a31-a38 work"
+fire_from "$ROT_SE" root-of-trust-guard.py "$TMP/a106.json"
+expect_silent "a107 r20 CONTROL, the honest half: with a sibling that cannot be loaded, the cross-hook rule has no deny list to consult and the wrapped git op is ALLOWED. That is the documented fail-open, stated as a fact rather than left to be discovered — a guard that invented a verdict without the shared rules would be worse"
+
+# a108/a109 — the SECOND foreign-code entry point, and the reason the r20 repair
+# is stated as a class. `_git_guardrails()` is not the only place this hook runs
+# the sibling's code in its own process: `wrapped_git_deny` CALLS
+# `mod.git_deny_reason(payload)`, and that call carried the same `except
+# Exception`. A sibling that imports cleanly and then exits from inside the deny
+# list kills this hook at exactly the same cost — rc=0, empty stdout, a silent
+# allow — so both call sites catch BaseException now. a109 is the control: with
+# the same sibling, a harmless payload must still be silent.
+ROT_CE="$TMP/rot-sib-callexit"
+mkdir -p "$ROT_CE"
+cp "$HOOKS/root-of-trust-guard.py" "$ROT_CE/" 2>/dev/null
+printf 'import sys\n\n\ndef git_deny_reason(cmd):\n    sys.exit(0)\n' > "$ROT_CE/git-guardrails.py"
+
+cat > "$TMP/a108.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'rm -f .claude/hooks/git-guardrails.py'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a109.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"bash -c 'ls -la docs'"},"cwd":"$ROOT"}
+EOF
+
+fire_from "$ROT_CE" root-of-trust-guard.py "$TMP/a108.json"
+expect_deny   "a108 r20: a sibling that imports CLEANLY and then calls sys.exit() from INSIDE git_deny_reason no longer kills this hook — the wrapped deletion of a hook file falls through to the path rules and is denied. The loader was the measured case; this is the other in-process entry point, closed with it"
+fire_from "$ROT_CE" root-of-trust-guard.py "$TMP/a109.json"
+expect_silent "a109 r20 CONTROL: with that same sibling, a HARMLESS wrapped payload (bash -c 'ls -la docs') stays silent — swallowing the sibling's exit did not become denying whatever the deny list failed to answer for"
+
+# a110-a112 — r20, THE FOURTH MEMBER OF THE QUOTING CLASS, found by probing the
+# a92-a102 repair instead of being reported: a LINE CONTINUATION inside the
+# protected directory name. Two things had to be wrong at once for it to reach a
+# false ALLOW, and only the second is about the fast path:
+#
+#   * `join_continuations` substituted a SPACE for the backslash-newline. POSIX
+#     says the pair is REMOVED ("the <backslash> and <newline> shall be removed
+#     before splitting the input into tokens"), and the difference is invisible
+#     at a token BOUNDARY — which is where r11's own measured case sat — and
+#     decisive INSIDE a word: the splice split one word bash keeps whole.
+#   * the fast path then never saw `.claude` in either the raw line or the
+#     denoised one, because deleting the backslash still leaves the newline.
+#
+# Measured 2026-08-24 at 727a66c, event cwd = the project: `rm -f .clau\` +
+# newline + `de/hooks/git-guardrails.py` was ALLOWED (silent) while the literal
+# twin DENIED, and `printf '%s\n'` on the same string prints ONE word,
+# `.claude/hooks/git-guardrails.py`. a111 is the r11 spelling this splicer was
+# written for and must keep working; a112 is the control that a naive
+# "delete the backslash-newline and glue everything" repair fails — a
+# continuation followed by INDENTATION is still two words to bash, and
+# `.clau` + `   de/hooks/…` names nothing protected.
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"rm -f .clau\\' > "$TMP/a110.json"
+printf '\\nde/hooks/git-guardrails.py"},"cwd":"%s"}\n' "$ROOT" >> "$TMP/a110.json"
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"rm -f \\' > "$TMP/a111.json"
+printf '\\n    .claude/hooks/git-guardrails.py"},"cwd":"%s"}\n' "$ROOT" >> "$TMP/a111.json"
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"rm -f .clau\\' > "$TMP/a112.json"
+printf '\\n   de/hooks/git-guardrails.py"},"cwd":"%s"}\n' "$ROOT" >> "$TMP/a112.json"
+
+fire root-of-trust-guard.py "$TMP/a110.json"
+expect_deny   "a110 r20 THE PROBE'S CASE: a LINE CONTINUATION inside the protected directory name (rm -f .clau\\<newline>de/hooks/…) is denied. bash removes the backslash-newline and runs the deletion on the guard file; this guard substituted a SPACE for it and scored two words that name nothing"
+fire root-of-trust-guard.py "$TMP/a111.json"
+expect_deny   "a111 r20 CONTROL, the r11 spelling this splicer exists for: a continuation at a TOKEN BOUNDARY (rm -f \\<newline>    .claude/hooks/…) is still denied — the leading whitespace of the continued line is what separates the words, so removing the space the splice used to invent changed nothing here"
+fire root-of-trust-guard.py "$TMP/a112.json"
+expect_silent "a112 r20 CONTROL, the sharp one: a continuation followed by INDENTATION (rm -f .clau\\<newline>   de/hooks/…) stays allowed — bash removes only the backslash-newline, so this is still the two words '.clau' and 'de/hooks/…' and names nothing protected. A repair that glued the halves unconditionally would false-deny here"
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"
@@ -1197,6 +1412,38 @@ fire git-guardrails.py "$TMP/b32.json"
 expect_silent "b32 r19 CONTROL: a \$'…' that is a quoted MENTION (echo \$'never run git reset --hard here') is one word whose basename is not git, and stays silent — the b13 false-deny rule survives the new opener"
 fire git-guardrails.py "$TMP/b33.json"
 expect_silent "b33 r19 CONTROL: GIT status --porcelain stays silent — folding the program word did not make every uppercase git invocation destructive, and the SUBCOMMAND is deliberately not folded because git itself rejects a case-varied one (git STATUS exits 128 on 2.50.1)"
+
+# b34-b38 (r20): THE LINE-CONTINUATION SPLICE, the sibling's defect sitting in
+# this file too. POSIX REMOVES a backslash-newline; `_join_continuations`
+# substituted a SPACE. That is invisible where the continuation sits at a token
+# boundary -- every spelling r12 was written against, which is why it stood --
+# and decisive INSIDE a word, where the invented space splits one word into two
+# that match no rule. Measured at 727a66c on a dirty fixture: a continuation
+# inside the subcommand, the flag, a force push, and the program word itself all
+# went SILENT while every literal twin DENIED, and `printf '%s' re\<newline>set`
+# prints the single word `reset`. Found by the r20 audit of the SIBLING hook,
+# which carried the identical substitution -- two copies of one rule drifting
+# apart in the direction neither author checked.
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git re\\' > "$TMP/b34.json"
+printf '\\nset --hard HEAD"}}\n' >> "$TMP/b34.json"
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git reset --ha\\' > "$TMP/b35.json"
+printf '\\nrd HEAD"}}\n' >> "$TMP/b35.json"
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git push --for\\' > "$TMP/b36.json"
+printf '\\nce origin main"}}\n' >> "$TMP/b36.json"
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"gi\\' > "$TMP/b37.json"
+printf '\\nt reset --hard HEAD"}}\n' >> "$TMP/b37.json"
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"echo re\\' > "$TMP/b38.json"
+printf '\\nset is a word here"}}\n' >> "$TMP/b38.json"
+fire git-guardrails.py "$TMP/b34.json"
+expect_deny   "b34 r20: a LINE CONTINUATION inside the SUBCOMMAND (git re\\<newline>set --hard) is denied — bash removes the backslash-newline and runs reset --hard; this guard substituted a space and scored two words that name no rule"
+fire git-guardrails.py "$TMP/b35.json"
+expect_deny   "b35 r20: the same split inside the FLAG (--ha\\<newline>rd) is denied — the class is the splice, not one position in the command"
+fire git-guardrails.py "$TMP/b36.json"
+expect_deny   "b36 r20: a force push split across a continuation (--for\\<newline>ce) is denied — a third deny-list rule, proving the whole list was reachable this way and not two spellings"
+fire git-guardrails.py "$TMP/b37.json"
+expect_deny   "b37 r20 THE SHARP ONE: the split inside the PROGRAM WORD (gi\\<newline>t reset --hard) is denied — with the word broken the segment carried no basename 'git' at all, so neither the deny list NOR the clean-tree precondition ever ran"
+fire git-guardrails.py "$TMP/b38.json"
+expect_silent "b38 r20 CONTROL: a continuation inside a word of an ORDINARY command (echo re\\<newline>set is a word here) stays silent — joining the halves did not make every spliced word a destructive verb, and the basename is echo"
 
 # ── (c) git-guardrails: the clean-tree precondition ────────────────────────
 # Needs a real repository to answer `git status --porcelain`, so build a
