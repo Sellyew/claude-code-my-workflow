@@ -251,27 +251,20 @@ written down, and the shell accepts a sixth that neither had. Both were found by
 command, not by reading the code — and the second is the concrete cost of the open debt this
 release records, that nothing gates a docstring against the code it describes.
 
-**And the rounds measured something about themselves worth more than any single fix.** Six consecutive rounds each found at least one *new* class of spelling that
-reaches the same file — among them a comment that merely mentions a heredoc, a shell glob, a
-redirection operator missing from the list, ANSI-C `$'…'` quoting that
-survives unquoting as a stray `$`, an uppercase command word that a case-insensitive filesystem
-resolves to the same binary, and a quote sitting inside the protected directory's own name. Each
-fix was correct and each was followed by another class. That is not bad luck; it is a
-measurement, and the honest reading is that **a textual recognizer over an adversarial spelling
-space does not converge.** "The last round found nothing" would be evidence about the round, not
-about the guard. So the release stops claiming the recognizer is closing, and both guards' residual
-lists now say what only one of them used to: they record where the parser has been *probed*, not
-where it is complete — assume there are more. A guard whose advertised coverage exceeds its actual
-coverage is worse than none, because you stop looking — which is this repository's own rule, now
-applied to itself.
+**The guards catch the direct forms, and not every spelling of them.** A path can be written many
+ways that all reach the same file — a glob, a different case on a case-insensitive filesystem,
+a quote or a backslash sitting inside the name, a variable, a command substitution. Successive
+review rounds each turned up another one, which is what a text scan over shell syntax is like:
+useful, and not a closed set. Both guards' residual lists say plainly which forms they have been
+tested against and that there are others; they are not an enumeration of everything that exists.
+We are not trying to catch every spelling, and nothing here should be read as claiming to.
 
-The boundary that argument reaches is worth stating, because it is not the same as "keep
-looking". Every class above is a **textual** transformation the shell performs on the command
-line, and the information is present in the string, so a scanner can be taught to see it. A
-symbolic link is not a spelling — it is filesystem state, and no amount of reading the command
-line recovers it. That class is disclosed in the guard rather than closed, and it marks where
-this design stops rather than one more gap inside it. If you need a guarantee instead of a speed
-bump, the mechanism has to stop being a text scan.
+One distinction is worth keeping, because it changes what a fix can do. Most of those forms are
+just *text*: the information is in the command line, so a scanner can be taught to read it. A
+symbolic link is not — it is a fact about the filesystem, and reading the command line cannot
+recover it. So that one is written down as out of reach rather than chased. What the guards buy
+is that the ordinary accident costs a denial; if you need a guarantee, the mechanism has to be
+something other than a text scan.
 
 **The template's own skills, run against the template**, found what those rounds structurally
 could not — the rounds asked *"is this correct?"*, never *"what does this do to a user?"*
