@@ -208,16 +208,35 @@ def n_seven_pass():
 #
 # 2026-08-23, one dimension further in: `found` moved from per-ROW to per-SURFACE
 # and stopped there, so the SAME leak reappeared per INSTANCE. A surface that
-# states its claim at several sites — LEDGER.md carries the battery count at six,
-# README.md carries the gate count at two — could have ONE instance reworded and
-# stay green on its siblings, with the file then asserting two different numbers
-# for one measurement. Proven, not assumed: rewriting the FIRST "(131 cases,
-# exit 0)" in LEDGER.md to "(99 cases pass, exit 0)" left check-derived-counts,
-# check-surface-sync, check-ledger-coverage and check-staleness all at exit 0.
-# There is no way to detect an instance the pattern no longer matches, so the
-# expectation is DECLARED like everything else here: REQ(path, n) says this
-# surface must carry the claim at n sites AT LEAST. Below n is a failure; above
-# it is fine, so adding a site never goes red and losing one always does.
+# states its claim at several sites — LEDGER.md carries the battery count at
+# eight, README.md carries the gate count at two — could have ONE instance
+# reworded and stay green on its siblings, with the file then asserting two
+# different numbers for one measurement. Proven, not assumed: rewriting the
+# FIRST "(131 cases, exit 0)" in LEDGER.md to "(99 cases pass, exit 0)" left
+# check-derived-counts, check-surface-sync, check-ledger-coverage and
+# check-staleness all at exit 0. There is no way to detect an instance the
+# pattern no longer matches, so the expectation is DECLARED like everything else
+# here: REQ(path, n) says this surface carries the claim at EXACTLY n sites.
+#
+# EXACTLY, not "at least" — corrected 2026-08-24, and this is the second defect
+# the same declaration produced. The rule shipped as "n AT LEAST: below n is a
+# failure; above it is fine, so adding a site never goes red and losing one
+# always does". The second clause was FALSE whenever the declared number fell
+# behind the file, and it had: the row below declared six while LEDGER.md
+# carried the claim at SEVEN (`grep -o '146 cases, exit 0' … | wc -l` -> 7),
+# the only under-declared surface among the 31 in CHECKS. Measured on a copy of
+# c285699 with all six count gates green: rewriting ONE of the seven out of
+# coverage left check-derived-counts, check-surface-sync, check-staleness,
+# check-ledger-coverage, check-skill-integrity and check-spec-conformance all at
+# exit 0 — verified for each of the seven in turn — while rewriting TWO went
+# red. So the machinery worked and the LITERAL had drifted, silently, because
+# nothing checked it against the file it describes. A REQ surface carrying MORE
+# sites than declared is now a FAILURE too: adding a site costs one number in
+# this file, and in exchange the declared count can never again be quietly below
+# reality. Disclosed residual: a BARE path still means "at least one", so a file
+# that grows a second site and later loses it is still silent — promote such a
+# surface to REQ (that is what REQ is for) rather than assuming the bare form
+# gates instance counts.
 OPT = namedtuple("OPT", "path why")
 REQ = namedtuple("REQ", "path n")
 
@@ -247,6 +266,13 @@ def _surface_min(s):
     if isinstance(s, OPT): return 0
     if isinstance(s, REQ): return s.n
     return 1
+
+def _surface_max(s):
+    """The most matching instances this surface may carry, or None for no upper
+    bound. Only REQ has one: its declared n is EXACT, so a site added without
+    updating the number is a failure — see the REQ comment above for the drift
+    that made this necessary. OPT, SEC and bare paths keep "at least"."""
+    return s.n if isinstance(s, REQ) else None
 
 # Extracted once, so every release-inventory row below reads the SAME window.
 _CL_CURRENT = changelog_current_release()
@@ -326,9 +352,14 @@ CHECKS = [
     # exists to prevent, sitting in the ledger: a maintainer re-qualifying the
     # guards runs the battery, sees a different N, and cannot tell whether a
     # case was added or whether the recall DENOMINATOR was never updated.
-    # SIX sites, declared: the ledger states this denominator once per qualified
-    # guard plus the roll-up, and rewording any one of them used to be silent.
-    ("battery cases (ledger)", r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, exit 0',    [REQ("quality_reports/qualification/LEDGER.md", 6)], n_hook_battery_cases()),
+    # EIGHT sites, declared and now EXACT: the ledger states this denominator
+    # once per qualified guard, once per seeded-reproduction paragraph, and once
+    # in the roll-up, and rewording any one of them used to be silent. The
+    # number was declared as SIX while the file carried SEVEN until 2026-08-24 —
+    # the drift that made REQ exact rather than a floor (see the REQ comment
+    # above). Recompute it, do not guess it:
+    #   grep -o '152 cases, exit 0' quality_reports/qualification/LEDGER.md | wc -l
+    ("battery cases (ledger)", r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, exit 0',    [REQ("quality_reports/qualification/LEDGER.md", 8)], n_hook_battery_cases()),
     ("battery-named root-of-trust", r'`root-of-trust-guard\.py` \((\d+) cases named\)', ["quality_reports/qualification/LEDGER.md"], n_battery_named("a")),
     ("battery-named git-guardrails", r'`git-guardrails\.py` \((\d+) cases named\)',     ["quality_reports/qualification/LEDGER.md"], n_battery_named("bc")),
     ("battery-named claim-reconcile", r'`claim-reconcile\.py` \((\d+) cases named\)',   ["quality_reports/qualification/LEDGER.md"], n_battery_named("d")),
@@ -410,6 +441,18 @@ def main():
                            f"was reworded, so that site is no longer checked "
                            f"(restore the phrasing, update the pattern, adjust the "
                            f"declared site count, or mark the surface OPT with a reason)")
+            elif _surface_max(s) is not None and seen > _surface_max(s):
+                # The declared count is EXACT (see the REQ comment). A surface
+                # carrying MORE sites than declared is how the number silently
+                # falls behind the file: every extra site is ungated, and one of
+                # them can then be reworded out of coverage with every gate
+                # green — which is the very leak REQ was added to close. Fail
+                # here so the literal cannot drift away from reality again.
+                print(f"  {label:<22} {f:<28} {f'{seen} SITES, {need} DECLARED':<18}  UNDER-DECLARED")
+                bad.append(f"{f}: the {label} pattern matches {seen} site(s) there but "
+                           f"REQ declares {need} — the extra site(s) are UNGATED and could be "
+                           f"reworded out of coverage silently (raise the declared count to "
+                           f"{seen}, or remove the extra site)")
     # patterns are sequential-by-construction: 1..N with no gaps
     ids = sorted(int(x) for x in set(re.findall(r'^#{2,3} Pattern (\d+)', read("guide/workflow-guide.qmd"), re.M)))
     if ids and ids != list(range(1, len(ids) + 1)):

@@ -626,7 +626,41 @@ def _unquote(w: str) -> str:
 # command in quote state, so no opener is found and NO text is dropped — that
 # fails toward scanning more, which is the safe direction here.
 #
-# Disclosed residual, unchanged by this fix: a `<<` in an arithmetic left-shift
+# r17 — THE WALK IS ALSO COMMENT-AWARE, and the r16 fix above is what made that
+# necessary: it modelled quoting and herestrings but gave the scan NO notion of
+# a shell COMMENT, while `_strip_heredocs` runs BEFORE the comment-aware
+# `_segments` (`git_deny_reason` and `dirty_tree_reason` both call
+# `_segments(_join_continuations(_strip_heredocs(cmd)))`). So an ORDINARY `#`
+# comment that merely NAMES a heredoc opened one, and every following line was
+# DELETED before anything was tokenised. This class was INTRODUCED by r16: its
+# disclosed residual named exactly one surviving opener misread (the arithmetic
+# shift below), and this was a second one, one character away from the quoted
+# spelling r16 had just closed.
+#
+# Measured 2026-08-23 against throwaway fixtures (a project fixture holding
+# `.claude/hooks/` and `.claude/settings.json`; a git fixture with one modified
+# tracked file), line 2 carrying the real op. With line 1 =
+# `# heredoc <<EOF` this hook went SILENT on `git reset --hard HEAD~1`, on a
+# destructive `clean -fdx`, on a force push, on `git add -A` and on a
+# dirty-tree `git merge main`, and the sibling guard went SILENT on
+# `rm -f .claude/hooks/git-guardrails.py` and on a redirect into
+# `.claude/settings.json`. With line 1 = an ordinary comment carrying no `<<`,
+# every one of them DENIED. Executed, not simulated: `bash -c` on the two-line
+# form left the guard file absent, so bash runs line 2 while the hook writes
+# nothing — and a hook that writes nothing is what an allow looks like.
+#
+# THE RULE: an unquoted `#` that BEGINS a word — start of line, or preceded by
+# whitespace or one of `;&|()` — ends the line for opener purposes. That is the
+# same test `_segments` applies to raw words, so the two parsers stop
+# disagreeing about what a comment is; the separator set here is deliberately a
+# SUPERSET of `_SEG_TOKEN`'s, because erring toward "this is a comment" makes
+# the scan stop EARLIER, find FEWER openers and drop LESS text — the safe
+# direction, the same one the quote handling already fails toward. A `#` inside
+# quotes is untouched (`echo '#'` still opens nothing), a `#` in mid-word is not
+# a comment (`git log --format=%h#%s <<EOF` still opens one), and an unbalanced
+# quote still drops NOTHING.
+#
+# Disclosed residual, unchanged by either fix: a `<<` in an arithmetic left-shift
 # whose right operand is an identifier (`$(( x << n ))`) still reads as an
 # opener and still drops the lines after it. Requiring the `<<` to sit in
 # redirection position would close it and would also stop recognising the
@@ -646,7 +680,10 @@ _HEREDOC_DELIM = re.compile(
 def _heredoc_opener(line: str, quote: str = "") -> "tuple[str | None, str]":
     """The delimiter of the LAST heredoc this line OPENS (None if it opens
     none), and the quote state the line ends in — fed back in for the next
-    line, so a string spanning lines stays quoted."""
+    line, so a string spanning lines stays quoted.
+
+    An unquoted `#` that BEGINS a word ENDS the line: everything after it is a
+    shell COMMENT and can open nothing. See the r17 paragraph above."""
     delim = None
     i, n = 0, len(line)
     while i < n:
@@ -666,6 +703,8 @@ def _heredoc_opener(line: str, quote: str = "") -> "tuple[str | None, str]":
             quote = c
             i += 1
             continue
+        if c == "#" and (i == 0 or line[i - 1] in " \t;&|()"):
+            break                           # a COMMENT: no shell text follows
         if line.startswith("<<<", i):
             i += 3                          # HERESTRING: never an opener
             continue

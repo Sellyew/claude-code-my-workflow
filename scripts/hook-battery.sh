@@ -716,6 +716,37 @@ verdict "$A64"
 expect_contains "a64 r16: root-of-trust-guard.py's registered timeout in .claude/settings.json equals the bound the hook itself declares — a deny branch that cannot RETURN inside the registration does not exist, because a killed hook emits nothing and nothing is what an ALLOW looks like" \
                 "registration-matches-the-declared-bound"
 
+# a65-a67 (r17): THE COMMENT BLINDNESS THE r16 FIX INTRODUCED. r16 taught the
+# opener walk about quotes and herestrings but gave it no notion of a shell
+# COMMENT, and `strip_heredocs` runs BEFORE any comment-aware tokenising — so an
+# ORDINARY `#` comment that merely NAMES a heredoc opened one and DELETED every
+# following line. Measured 2026-08-23 at c285699: with line 1 =
+# `# heredoc <<EOF` this guard went SILENT on the deletion of a hook file and on
+# a redirect into settings.json; with line 1 = `# just a comment` both DENIED,
+# and `bash -c` on the two-line form really did remove the guard file. a67 is
+# the control in the other direction, and it is the interaction that matters: a
+# REAL opener followed by a TRAILING comment must still open, so the body is
+# still dropped as prose — comment-awareness must not have bought its recall by
+# keeping every heredoc body.
+A65_CMD='# regenerate the config with a heredoc <<EOF\nrm -f .claude/hooks/git-guardrails.py'
+A66_CMD='echo hi   # uses <<EOF here\nprintf disabled > .claude/settings.json'
+A67_CMD='cat <<'"'"'EOF'"'"' > notes.md  # write the notes\nrm -f .claude/hooks/git-guardrails.py\nEOF'
+cat > "$TMP/a65.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$A65_CMD"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a66.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$A66_CMD"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a67.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$A67_CMD"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a65.json"
+expect_deny   "a65 r17: a FULL-LINE comment naming a heredoc (# … <<EOF) no longer suppresses line 2 — the deletion of a hook is seen and denied"
+fire root-of-trust-guard.py "$TMP/a66.json"
+expect_deny   "a66 r17: a TRAILING comment naming a heredoc (echo hi # uses <<EOF here) no longer suppresses line 2 — the redirect into settings.json is seen and denied"
+fire root-of-trust-guard.py "$TMP/a67.json"
+expect_silent 'a67 r17 control: a REAL heredoc opener with a trailing comment after it still OPENS, so its body documenting `rm .claude/hooks/x` is still dropped as prose — comment-awareness did not buy its recall by keeping every body'
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"
@@ -871,6 +902,33 @@ fire git-guardrails.py "$TMP/b19.json"
 expect_deny   "b19 r16: a <<WORD inside a QUOTED string on line 1 no longer opens a heredoc — git clean -fd on line 2 is seen and denied"
 fire git-guardrails.py "$TMP/b20.json"
 expect_silent 'b20 r16 control: a REAL heredoc body carrying `git push --force` is still dropped as prose — quote-awareness did not buy its recall by keeping every body'
+
+# b21-b23 (r17): the sibling of a65-a67 — the SAME comment blindness, in this
+# hook's byte-identical copy of `_heredoc_opener`, reaching the UNCONDITIONAL
+# deny list. Measured 2026-08-23 at c285699: with line 1 = `# heredoc <<EOF`
+# this hook went SILENT on `git reset --hard HEAD~1`, on a destructive clean, on
+# a force push, on `git add -A` and on a dirty-tree merge; with line 1 =
+# `# just a comment` every one of them DENIED, and bash runs line 2 in all of
+# them. b23 is the control: a REAL opener with a trailing comment still opens,
+# so its body stays prose.
+B21_CMD='# regenerate the runbook with a heredoc <<EOF\ngit reset --hard HEAD~1'
+B22_CMD='echo hi   # uses <<EOF here\ngit clean -fdx'
+B23_CMD='cat <<'"'"'EOF'"'"' > runbook.md  # write the runbook\ngit push --force origin main\nEOF'
+cat > "$TMP/b21.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$B21_CMD"}}
+EOF
+cat > "$TMP/b22.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$B22_CMD"}}
+EOF
+cat > "$TMP/b23.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$B23_CMD"}}
+EOF
+fire git-guardrails.py "$TMP/b21.json"
+expect_deny   "b21 r17: a FULL-LINE comment naming a heredoc (# … <<EOF) no longer suppresses line 2 — git reset --hard is seen and denied"
+fire git-guardrails.py "$TMP/b22.json"
+expect_deny   "b22 r17: a TRAILING comment naming a heredoc (echo hi # uses <<EOF here) no longer suppresses line 2 — the destructive clean is seen and denied"
+fire git-guardrails.py "$TMP/b23.json"
+expect_silent 'b23 r17 control: a REAL heredoc opener with a trailing comment after it still OPENS, so its body carrying `git push --force` is still dropped as prose'
 
 # ── (c) git-guardrails: the clean-tree precondition ────────────────────────
 # Needs a real repository to answer `git status --porcelain`, so build a

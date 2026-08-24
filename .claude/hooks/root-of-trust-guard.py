@@ -189,10 +189,14 @@ multi-line spelling of a write is read as the one command bash will run — it
 used to split into two segments and go silent. A protected path spelled with a
 shell GLOB or a BRACE GROUP is caught since r15 (`rm -f .claude/hook?/…`,
 `.claude/*/…`, `.clau*/hooks/…`, `settings.jso?`, `hook[s]`, `{hooks,rules}`,
-`.githook?/…`): the token is expanded against the filesystem and every match
-tested, and a pattern that expands to nothing here is still matched textually
-segment by segment. Before r15 every one of those spellings was ALLOWED while
-its literal twin was denied — a one-character edit flipped the verdict.
+`.githook?/…`): the token's BRACE GROUPS are expanded into their alternatives,
+and then each path SEGMENT is compared against the protected names with
+`fnmatch`. That test is LEXICAL — no `glob`, no `stat`, no filesystem call
+anywhere in it (r13 doc fix; `glob` is not even imported) — so the verdict never
+depends on what happens to exist when the hook runs, and a pattern that would
+expand to nothing here is matched all the same. Before r15 every one of those
+spellings was ALLOWED while its literal twin was denied — a one-character edit
+flipped the verdict.
 
 WHAT IT DOES NOT CATCH — disclosed residual, in scope for a future audit as
 BOUNDARY, not as a defect:
@@ -230,14 +234,25 @@ BOUNDARY, not as a defect:
     attach its value, which skips too LITTLE — a real command word is still
     scanned — rather than too much, so it fails toward catching the write).
   - a GLOB whose expansion depends on a shell OPTION this scan does not model
-    (r15, the residual left by the glob fix). `glob.glob` is used, so a bare
-    `*` does NOT match a dotfile — with `dotglob` set, `rm -rf *` really would
-    take `.claude` with it and is allowed here. `extglob` forms (`@(a|b)`,
-    `!(x)`, `+(…)`) are not expanded either, and a pattern is expanded against
-    the EVENT's cwd, so a command whose real cwd differs is judged against the
-    wrong directory. What the fix does close is the ordinary case: a glob whose
-    literal characters already name a protected segment is denied whether or
-    not it expands to anything here.
+    (r15, the residual left by the glob fix). A bare wildcard segment does not
+    match a DOT-name because of an EXPLICIT rule in `_segment_matches` — a
+    segment carrying no literal character of its own (`*`, `?`, `[a-z]*`) is
+    refused against `.claude`/`.githooks` — not because of any `glob` module
+    semantic, since nothing here expands anything. That rule mirrors bash
+    WITHOUT `dotglob`, so with `dotglob` actually set `rm -rf *` really would
+    take `.claude` with it and is allowed here; and the rule is load-bearing —
+    delete it as "redundant" and every `rm -f build/*` starts being denied.
+    `extglob` forms (`@(a|b)`, `!(x)`, `+(…)`) are not modelled either. What
+    the fix does close is the ordinary case: a glob whose literal characters
+    already name a protected segment is denied whether or not anything matching
+    it exists. (Expanding for REAL — `glob.glob` against the event's cwd — was
+    implemented first and DROPPED: it made the verdict depend on what happened
+    to exist at hook time, could not see the not-yet-created
+    `> .claude/settings.jso?` case, added filesystem work to every command
+    carrying a `*`, and handed a pathological pattern like `/*/*/*/*` a way to
+    stall the hook. The inline note above `_segment_matches` keeps the full
+    reasoning. The cwd residual is real but belongs to PATH RESOLUTION, not to
+    globbing — it is the `cd` bullet above.)
 These are not closed, and nothing here closes them. The honest statement is that
 they are UNCOVERED: the Edit/Write channel makes some of them visible after the
 fact, which is not the same as covering them.
@@ -726,7 +741,41 @@ def join_continuations(cmd: str) -> str:
 # command in quote state, so no opener is found and NO text is dropped — that
 # fails toward scanning more, which is the safe direction here.
 #
-# Disclosed residual, unchanged by this fix: a `<<` in an arithmetic left-shift
+# r17 — THE WALK IS ALSO COMMENT-AWARE, and the r16 fix above is what made that
+# necessary: it modelled quoting and herestrings but gave the scan NO notion of
+# a shell COMMENT, while `strip_heredocs` runs BEFORE the comment-aware
+# segmenting the sibling hook performs on the same text. So an ORDINARY `#`
+# comment that merely NAMES a heredoc opened one, and every following line was
+# DELETED before anything was tokenised. This class was INTRODUCED by r16: its
+# disclosed residual named exactly one surviving opener misread (the arithmetic
+# shift below), and this was a second one, one character away from the quoted
+# spelling r16 had just closed.
+#
+# Measured 2026-08-23 against throwaway fixtures (a project fixture holding
+# `.claude/hooks/` and `.claude/settings.json`; a git fixture with one modified
+# tracked file), line 2 carrying the real op. With line 1 =
+# `# heredoc <<EOF` this guard went SILENT on
+# `rm -f .claude/hooks/git-guardrails.py` and on a redirect into
+# `.claude/settings.json`, and the sibling hook went SILENT on
+# `git reset --hard HEAD~1`, a destructive `clean -fdx`, a force push,
+# `git add -A` and a dirty-tree `git merge main`. With line 1 = an ordinary
+# comment carrying no `<<`, every one of them DENIED. Executed, not simulated:
+# `bash -c` on the two-line form left the guard file absent, so bash runs line 2
+# while the hook writes nothing — and a hook that writes nothing is what an
+# allow looks like.
+#
+# THE RULE: an unquoted `#` that BEGINS a word — start of line, or preceded by
+# whitespace or one of `;&|()` — ends the line for opener purposes. That is the
+# same test the sibling's `_segments` applies to raw words, so the two parsers
+# stop disagreeing about what a comment is; the separator set here is
+# deliberately a SUPERSET of that tokenizer's, because erring toward "this is a
+# comment" makes the scan stop EARLIER, find FEWER openers and drop LESS text —
+# the safe direction, the same one the quote handling already fails toward. A
+# `#` inside quotes is untouched (`echo '#'` still opens nothing), a `#` in
+# mid-word is not a comment (`git log --format=%h#%s <<EOF` still opens one),
+# and an unbalanced quote still drops NOTHING.
+#
+# Disclosed residual, unchanged by either fix: a `<<` in an arithmetic left-shift
 # whose right operand is an identifier (`$(( x << n ))`) still reads as an
 # opener and still drops the lines after it. Requiring the `<<` to sit in
 # redirection position would close it and would also stop recognising the
@@ -746,7 +795,10 @@ _HEREDOC_DELIM = re.compile(
 def _heredoc_opener(line: str, quote: str = "") -> "tuple[str | None, str]":
     """The delimiter of the LAST heredoc this line OPENS (None if it opens
     none), and the quote state the line ends in — fed back in for the next
-    line, so a string spanning lines stays quoted."""
+    line, so a string spanning lines stays quoted.
+
+    An unquoted `#` that BEGINS a word ENDS the line: everything after it is a
+    shell COMMENT and can open nothing. See the r17 paragraph above."""
     delim = None
     i, n = 0, len(line)
     while i < n:
@@ -766,6 +818,8 @@ def _heredoc_opener(line: str, quote: str = "") -> "tuple[str | None, str]":
             quote = c
             i += 1
             continue
+        if c == "#" and (i == 0 or line[i - 1] in " \t;&|()"):
+            break                           # a COMMENT: no shell text follows
         if line.startswith("<<<", i):
             i += 3                          # HERESTRING: never an opener
             continue
