@@ -617,25 +617,25 @@ not.
 *A constructed illustration, not a logged incident — the mechanism is real, the numbers are chosen to make it concrete.*
 
 An R package for assay analysis ships an automatic baseline-correction routine as its default. The
-maintainers wrote the bound before running anything: over the preregistered holdout of 300
-spike-in samples of known concentration, the nominal 95% intervals must cover the true
-concentration at **94% or better**. The campaign runs. Measured coverage: **267 of 300 = 89.0%**,
-with a standard error of 1.8 percentage points — not a near miss, and not noise.
+maintainers wrote the bound before running anything, and wrote what would count as missing it:
+over the preregistered holdout of 300 spike-in samples of known concentration, the nominal 95%
+intervals must cover the true concentration at **94% or better**, counted as missed only if the
+measurement falls below that by more than two standard errors, and confirmed by one pre-committed
+re-run on fresh seeds at the same budget before any disposition fires. The campaign runs. Measured
+coverage: **267 of 300 = 89.0%**, with a standard error of 1.8 percentage points — not a near
+miss, and not noise. The confirming re-run misses too.
 
 The tempting move is to widen. 89% is *usable*, the shortfall is concentrated in the noisiest
 plates, and the bound was, after all, chosen by the same people now looking at the result. The
 maintainers instead demote the routine: still available, still documented, now
 `baseline = "auto"` rather than the default. `NEWS` for that release carries the number and the
-bound it missed, verbatim, next to the disposition. The failing campaign is kept in the
-repository — not deleted, and not re-run, because a second draw against unchanged inputs is the
-draw that ends up published. Two downstream functions inherited the default; both are listed,
-one affected, one explicitly not and why.
+bound it missed, verbatim, next to the disposition. Both campaigns are kept in the repository.
+What the preregistration forbids is the other order — re-rolling a failed campaign *after* the
+disposition until some draw clears the bound. Two downstream functions inherited the default;
+both are listed, one affected, one explicitly not and why.
 
 What made this a real bound was not its value. It was that missing it had a consequence written
 down in advance.
-
-A threshold you are still willing to move after seeing the number was never a threshold, and a
-project only finds out which kind it had by missing one.
 :::
 
 ::: {.callout-note}
@@ -1367,13 +1367,15 @@ The template includes 8 hooks for logging, notifications, context survival, git 
 | Claim reconcile | `PostToolUse[Write|Edit|MultiEdit]` | Flags stale numeric claims when analysis scripts change |
 | Root-of-trust guard | `PreToolUse[Bash]` | A tripwire, not a lock: denies *silent shell* writes into `.claude/settings*.json`, `.claude/hooks/`, and `.githooks/` — the files that define every other gate — and applies the destructive-git deny list to `bash -c` / `env -S` payloads. `Edit`/`Write`, a branch switch, or a bug in the hook can still replace them |
 
-Two of these deserve a note, because both encode a lesson rather than a preference. **Git guardrails** refuses a merge, rebase, or pull while the working tree is dirty: the operation either aborts mid-way or quietly folds uncommitted work into the result, and neither outcome announces itself. Stash with a label first, or set `ALLOW_DIRTY_MERGE=1` if you mean it (`--abort`, `--continue`, and `--autostash` are exempt — the last because git does the stashing itself).
+Two of these deserve a note, because both encode a lesson rather than a preference. **Git guardrails** refuses a merge, rebase, or pull while the working tree is dirty: the operation either aborts mid-way or quietly folds uncommitted work into the result, and neither outcome announces itself. Stash with a label first, or set `ALLOW_DIRTY_MERGE=1` if you mean it. `--abort` and `--continue` are exempt outright — they are how you get *out* of a dirty in-progress operation. `--autostash` is not: it is allowed only when `git status --porcelain` reports no untracked entry, because `git stash` does not stash untracked files, so an autostash over a `??` line leaves that line exactly where it was.
 
-It refuses **even when the same command line would have cleaned the tree first** — `git stash push -m wip && git merge` is denied, and you run the two steps separately instead. That looks pedantic until you see what the alternative cost. The check originally tried to *predict*, from the text of a chained command, whether the tree would still be dirty by the time the merge ran. Round after round of adversarial review found one more thing the prediction got wrong — stash flags, then stash subcommands, then intervening segments, then output redirection, then command substitution, and finally the plain fact that `git stash` does not stash untracked files at all, so even a correctly-parsed "this cleans the tree" was sometimes false. The rule now reads the tree as it *actually is* and refuses. **Deleting the prediction took the whole class of defect with it** — at the cost of one extra keystroke.
+It refuses **even when the same command line would have cleaned the tree first** — `git stash push -m wip && git merge` is denied, and you run the two steps separately instead. That looks pedantic until you see what the alternative cost. The check originally tried to *predict*, from the text of a chained command, whether the tree would still be dirty by the time the merge ran. Round after round of adversarial review found one more thing the prediction got wrong — stash flags, then stash subcommands, then intervening segments, then output redirection, then command substitution, and finally the plain fact that `git stash` does not stash untracked files at all, so even a correctly-parsed "this cleans the tree" was sometimes false. The rule now reads the tree as it *actually is* and refuses.
+
+The reading has to be earned, though, and that is **rule 0: standalone or nothing.** A `PreToolUse` hook decides before bash runs the line, so a reading taken now says nothing about the tree the op will actually start from — `printf '\n# note\n' >> analysis.R && git merge main` reads clean at hook time and executes dirty. So an identified merge, rebase, or pull reaches the tree reading only as a *standalone simple command*. A second shell segment, a pipeline, a redirection, a command or process substitution in its arguments, a grouping, a `cd`, or a variable assignment on the same line is denied outright, without the tree being read at all. That closes every write-then-op ordering by construction instead of by enumeration, and it also denies ordinary trailing conveniences — `git pull | tail -5`, `git pull > log 2>&1`, `git merge x && npm install`. **Deleting the prediction took the whole class of defect with it** — at the cost of one extra tool call, with its own hook cycle and agent round trip.
 
 The hook did not end up smaller, and the reason is the useful part of the lesson. What replaced the prediction was *parsing* — working out which part of a command line is a git invocation, and whether a flag is really a flag or just a word inside a message. That is a harder-looking job that is nonetheless **finite and checkable**: shell grammar can be read correctly, and when the reading is wrong a test says so. Predicting what a command will *do* to the working tree has no such floor. Trading an unbounded problem for a bounded one is worth paying code for; the mistake was ever being on the unbounded side.
 
-What it still cannot see is written in its docstring rather than implied away: a `git merge` carried inside `bash -c`, an interpreter, an alias, a script, or a Makefile; the op hidden inside a command substitution; a `cd` into a different repository; and anything that dirties the tree between the check and the run. The second hook — the file is `root-of-trust-guard.py`, and the honest description is a **silent-shell-write tripwire** — exists because the settings file and the hook directory decide whether any other gate runs at all: a shell one-liner can disable every gate in the repo in a single redirect, and nothing in the transcript looks unusual afterwards. Reads pass, and `Edit` / `Write` stay allowed so a change to a gate arrives as a reviewable diff rather than an invisible overwrite; the hatch is `ALLOW_ROOT_OF_TRUST_WRITE=1`.
+What it still cannot see is written in its docstring rather than implied away: a `git merge` carried inside `bash -c`, an interpreter, an alias, a script, or a Makefile; an op hidden *inside* a command substitution, which never reaches the parser as a segment at all; and a write by **another process** in the milliseconds between the reading and git starting. A `cd` into a different repository was on that list until rule 0 arrived and denied it, along with every other multi-segment form — which is also what closes the case of the same command line doing the dirtying. The second hook — the file is `root-of-trust-guard.py`, and the honest description is a **silent-shell-write tripwire** — exists because the settings file and the hook directory decide whether any other gate runs at all: a shell one-liner can disable every gate in the repo in a single redirect, and nothing in the transcript looks unusual afterwards. Reads pass, and `Edit` / `Write` stay allowed so a change to a gate arrives as a reviewable diff rather than an invisible overwrite; the hatch is `ALLOW_ROOT_OF_TRUST_WRITE=1`.
 
 Because that hook already unwraps `bash -c` and `env -S` payloads to find writes hidden inside them, it now hands the unwrapped payload to git-guardrails' *own* destructive-git deny list as well — imported, not copied, so the two hooks cannot drift apart on what counts as destructive. That closes a gap the two of them had left open between each other: `bash -c 'git reset --hard'` and `bash -c 'git clean -fdx'` named no protected path for the first hook to test and looked like one opaque word to the second, so neither denied them, while the unwrapped spellings had been denied all along. The clean-tree check is *not* shared, so `bash -c 'git merge main'` on a dirty tree is still seen by neither.
 
@@ -1384,7 +1386,7 @@ So state its value exactly: **it changes the channel a modification arrives thro
 Verification and Beamer-Quarto sync are enforced via auto-loaded rules, which are the right tool for nuanced judgment. Hooks are reserved for enforcement that *must* survive context compression.
 
 ::: {.callout-warning collapse="true"}
-## One character, and a hook that was never there
+## The path in `settings.json` did not match the file on disk
 
 *A constructed illustration, not a logged incident — the failure mode is real, the scenario is invented to make it concrete.*
 
@@ -1417,11 +1419,7 @@ But a wired hook is not yet a working hook. A guard can keep its path, keep firi
 denying — an over-broad exception, a regex loosened during a debugging session, an early
 `return allow` left in. Gate 10, the hook battery, drives each active guard with synthetic events
 and requires it to still go red on the failure it was written for, and to stay green on the clean
-controls. 107 cases, and it finishes in seconds.
-
-So check that a guard still objects, not only that it still fires: a control dies as easily by
-running and no longer objecting as by never running at all, and proof of wiring is not proof of
-effect.
+controls. 131 cases, and it finishes in seconds.
 :::
 
 **Hook handler types.** The examples above use `command` hooks (shell scripts), but Claude Code supports five handler types:
@@ -1796,7 +1794,7 @@ The answer is a per-paper `quality_reports/passports/<paper-slug>.yaml` that rec
 `STALE` widened to match: a claim goes stale when the source script, the output file, **or any declared `appears_in` path** is modified after `last_verified_on`. A touched display is as much a reason to re-check as a touched script — it is the edit that puts two artifacts out of step. Three surfaces act on this: the claim-reconcile hook nudges when a display is edited, `nightly-repro-check` marks display-touches STALE, and `/commit` triggers the passport check on display diffs rather than only on script diffs.
 
 ::: {.callout-note collapse="true"}
-## The number nobody regenerated
+## 0.42 on a slide, 0.38 in the paper
 
 *A constructed illustration, not a logged incident — the mechanism is real, the scenario is invented to make it concrete.*
 
@@ -1813,9 +1811,7 @@ in the paper's audit would have touched it — the audit's scope was the manuscr
 The number had a declared `appears_in` entry for the deck. The horizontal check opens
 `Slides/Methods_Binding.tex` at the recorded locator, reads 0.42 against the manuscript's 0.38 at
 the coarser of the two precisions, and fails the claim. One line in a YAML file was the difference
-between catching it and teaching it for a semester — which is the thing that tracing a number to
-its source cannot buy you, since a number is verified only once every place it appears has been
-enumerated and compared, and the copy nobody regenerates is the one an audience reads.
+between catching it and teaching it for a semester.
 :::
 
 Starter file: [`templates/passport-template.yaml`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/templates/passport-template.yaml). Copy once per paper. Pattern attributed to [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills) "Material Passport" concept (scope-reduced for this template: numeric claims only).
@@ -1963,9 +1959,9 @@ point, as in cross-artifact traversal from paper to table to output to script.
 
 *A constructed illustration, not a logged incident — the failure mode is real, the scenario is invented to make it concrete.*
 
-A team qualifying its reproduction agent runs a positive control: reproduce a pinned coefficient
-from a published analysis and report it. The agent returns `-0.07314` in nine seconds. Correct to
-the last printed digit. The team is briefly delighted.
+`-0.07314`, in nine seconds. Correct to the last printed digit. That is what a team qualifying its
+reproduction agent got back from a positive control — reproduce a pinned coefficient from a
+published analysis and report it.
 
 The transcript shows what happened. The agent never opened the analysis script. It ran one
 `grep` across the checkout, hit the claim's row in `passports/marsh-carbon.yaml` — where the
@@ -1982,10 +1978,6 @@ answer had hidden.
 The passport, the ledger, and the render stamp are this template's own answer keys. They exist to
 be authoritative, which is precisely why an independence-critical reviewer must not be standing
 next to them.
-
-Skip that fence and the cost is a control that reads green for the wrong reason: an agent that can
-reach the answer will reach the answer, so independence has to be built into where the reviewer
-stands, not into what it is told.
 :::
 
 ## Research Workflows {#sec-research-workflows}
@@ -2041,8 +2033,11 @@ report success, because from inside the task there is nothing else to report.
 
 [`templates/screening-rubric.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/templates/screening-rubric.md)
 covers the other case — deciding which candidates survive, whether they are papers, datasets,
-specifications, or findings. Its default is **EXCLUDE**: a candidate is out unless a written
-criterion admits it, with the evidence recorded per candidate. It ends in an adjudication table
+specifications, or findings. It makes the **default verdict a declared decision rather than a
+constant**: a precision-first shortlist defaults to EXCLUDE, so a candidate is out unless a
+written criterion admits it, while a recall-first sweep must not, because a wrong exclusion leaves
+no trace for anything downstream to catch. Either way the evidence is recorded per candidate. It
+ends in an adjudication table
 and a dispatcher spot-check of a few decisions, because the person who wrote the rubric is the
 only one who can tell whether it was applied or merely cited. And a fan-out is adjudicated as a
 whole wave — bank every return, reconcile them together, then decide — rather than acting on
@@ -2059,9 +2054,9 @@ The agents come back fast and agreeable. Nineteen are marked relevant. The summa
 each one names a plausible connection, and the shortlist is useless — it is the original list with
 one paper missing.
 
-Nothing malfunctioned. "Relevant" was never defined, so each agent supplied its own definition,
-and any paper can be connected to any topic by a sufficiently generous reading. INCLUDE was the
-path of least resistance and there was no criterion pushing the other way.
+"Relevant" was never defined, so each agent supplied its own definition, and any paper can be
+connected to any topic by a sufficiently generous reading. INCLUDE was the path of least
+resistance and there was no criterion pushing the other way.
 
 The screen is re-run under a written rubric: default EXCLUDE, four inclusion criteria stated in
 advance, and a requirement that each verdict quote the sentence in the paper that satisfies the
@@ -2071,10 +2066,6 @@ external source), which is itself a finding about the literature that the first 
 have produced. The dispatcher then re-reads three candidates by hand — one included, one
 excluded, one borderline — and agrees with all three, which is what licenses trusting the other
 seventeen.
-
-The moment each verdict has to quote the sentence that earns a paper its place, a delegated
-opinion becomes a delegated verdict — because now the agent pays for inclusion instead of for
-exclusion.
 :::
 
 #### Practical Limits
@@ -2300,7 +2291,8 @@ git merge --squash [branch-name]
 git commit -m "feat: description of changes"
 git stash pop
 
-# ...or let git do the stashing, which the hook exempts (tracked changes only):
+# ...or, ONLY if porcelain shows no `??` lines, let git stash the tracked changes:
+git status --porcelain        # no `??` entries, or --autostash is denied too
 git merge --squash --autostash [branch-name]
 git commit -m "feat: description of changes"
 ```
@@ -2309,14 +2301,19 @@ git commit -m "feat: description of changes"
 working, not failing.** You used a worktree so you could keep editing on `main` while the other
 branch ran; those edits are still sitting there. The `git-guardrails` hook denies `git merge` on a
 non-empty `git status --porcelain`, so the merge is refused exactly when the pattern did its job.
-Clear the tree first — stash with a label, merge, pop — or use `--autostash`, which the hook
-exempts because git establishes the clean precondition itself rather than the hook guessing that
-some earlier segment of the command line did. After a `--autostash` squash the merge result is
-*staged* and your restored in-flight edits are *unstaged*, so the plain `git commit` above records
-the merge and leaves your work alone. The one thing `--autostash` does not cover is untracked
-files: if the branch adds a file at a path you are holding untracked, git aborts with *"untracked
-working tree files would be overwritten"* after the autostash has already been taken. When
-porcelain shows `??` lines you care about, use the explicit `-u` stash.
+Clear the tree first — stash with a label, merge, pop. That sequence works whatever porcelain
+shows, which is why it is the recipe above rather than the fallback. `--autostash` is the shorter
+route on a tree whose dirt is *only tracked*: the hook reads porcelain and allows it when there is
+no `??` entry, and denies it when there is, because `git stash` does not stash untracked files —
+so an autostash over a `??` line would start the merge on the same dirty tree the check exists to
+refuse. Two consequences follow. When porcelain is free of `??` lines, `--autostash` is allowed
+and the merge result comes back *staged* while your restored in-flight edits are *unstaged*, so
+the plain `git commit` above records the merge and leaves your work alone. When porcelain shows
+any `??` line — the ordinary case for a worktree you have been editing in — use the explicit `-u`
+stash; git's own behaviour agrees, since a branch that adds a file at a path you are holding
+untracked aborts with *"untracked working tree files would be overwritten"* after the autostash
+has already been taken. Both forms have to be **standalone** commands either way: chaining the
+stash and the merge onto one line is denied under rule 0, whichever route you pick.
 
 ::: {.callout-note}
 ## `worktree.baseRef` (Apr 2026 Week 19)

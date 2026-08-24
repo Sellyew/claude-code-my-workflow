@@ -117,12 +117,17 @@ git pull
 git stash pop
 ```
 
-`git pull --autostash` is the one-command alternative, and the hook exempts it because git — not
-the hook — establishes the precondition. It stashes **tracked** modifications only. Untracked
-files usually ride along harmlessly, but if the incoming commits add a file at a path you are
-holding untracked, git aborts the merge (*"untracked working tree files would be overwritten"*)
-after the autostash has already been taken. When porcelain shows `??` lines you care about,
-prefer the explicit `-u` stash above.
+`git pull --autostash` is the one-command alternative, but only on a tree whose dirt is entirely
+**tracked**. `git stash` does not stash untracked files, so an autostash over a `??` entry starts
+the pull on the same dirty tree the check exists to refuse — the hook therefore reads porcelain
+and **denies** `--autostash` whenever any `??` entry is present. At this step that is the usual
+state, so the explicit `-u` stash above is the default route and `--autostash` is the shortcut for
+the case where `git status --porcelain` shows no `??` lines at all. Git agrees independently: if
+the incoming commits add a file at a path you are holding untracked, it aborts the merge
+(*"untracked working tree files would be overwritten"*) after the autostash has already been
+taken. Either route must be its **own** command — chaining the stash and the pull onto one line is
+denied outright, because an identified history op reaches the tree reading only as a standalone
+simple command.
 
 `ALLOW_DIRTY_MERGE=1` is the hatch for a dirty state you have looked at and can justify out loud.
 It is not the routine remedy, and reaching for it because the block is inconvenient is the

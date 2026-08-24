@@ -186,7 +186,13 @@ the known command wrappers (env/sudo/nice/stdbuf/timeout/…). Both carriers are
 unwrapped and re-scanned (depth <= 2). A command formatted across several lines
 with BACKSLASH-NEWLINE continuations is spliced before tokenising (r12), so the
 multi-line spelling of a write is read as the one command bash will run — it
-used to split into two segments and go silent.
+used to split into two segments and go silent. A protected path spelled with a
+shell GLOB or a BRACE GROUP is caught since r15 (`rm -f .claude/hook?/…`,
+`.claude/*/…`, `.clau*/hooks/…`, `settings.jso?`, `hook[s]`, `{hooks,rules}`,
+`.githook?/…`): the token is expanded against the filesystem and every match
+tested, and a pattern that expands to nothing here is still matched textually
+segment by segment. Before r15 every one of those spellings was ALLOWED while
+its literal twin was denied — a one-character edit flipped the verdict.
 
 WHAT IT DOES NOT CATCH — disclosed residual, in scope for a future audit as
 BOUNDARY, not as a defect:
@@ -223,6 +229,15 @@ BOUNDARY, not as a defect:
     an unlisted wrapper option that takes a SEPARATE value (assumed here to
     attach its value, which skips too LITTLE — a real command word is still
     scanned — rather than too much, so it fails toward catching the write).
+  - a GLOB whose expansion depends on a shell OPTION this scan does not model
+    (r15, the residual left by the glob fix). `glob.glob` is used, so a bare
+    `*` does NOT match a dotfile — with `dotglob` set, `rm -rf *` really would
+    take `.claude` with it and is allowed here. `extglob` forms (`@(a|b)`,
+    `!(x)`, `+(…)`) are not expanded either, and a pattern is expanded against
+    the EVENT's cwd, so a command whose real cwd differs is judged against the
+    wrong directory. What the fix does close is the ordinary case: a glob whose
+    literal characters already name a protected segment is denied whether or
+    not it expands to anything here.
 These are not closed, and nothing here closes them. The honest statement is that
 they are UNCOVERED: the Edit/Write channel makes some of them visible after the
 fact, which is not the same as covering them.
@@ -244,6 +259,7 @@ has to be a deliberate act of the person starting the session.
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import os
 import re
@@ -269,20 +285,126 @@ def normalize(path: str) -> str:
     return p
 
 
+# --- shell GLOBS and BRACE GROUPS (r15) ------------------------------------
+#
+# Until r15 the segment test below was a LITERAL string comparison, so one
+# ordinary metacharacter took a protected path out of the guard's sight while
+# the shell expanded it to exactly the protected file. Measured at 7eee6b2,
+# event cwd = the project, guard verdict vs. what the shell expands to:
+#
+#     rm -f .claude/hook?/git-guardrails.py   ALLOW -> .claude/hooks/git-guardrails.py
+#     rm -f .claude/*/git-guardrails.py       ALLOW -> .claude/hooks/git-guardrails.py
+#     rm -f .clau*/hooks/git-guardrails.py    ALLOW -> .claude/hooks/git-guardrails.py
+#     echo x > .claude/settings.jso?          ALLOW -> .claude/settings.json
+#     rm -rf .claude/hook[s]                  ALLOW
+#     rm -f .claude/{hooks,rules}/…           ALLOW -> .claude/hooks/…
+#     rm -f .githook?/pre-commit              ALLOW -> .githooks/pre-commit
+#
+# while the literal spellings of all three targets DENIED. Globbing was on
+# NEITHER disclosed-residual list, and unlike every item that is on them it
+# failed toward ALLOW. Tab completion and shorthand globs are how people spell
+# paths; this was ordinary usage, not an evasion.
+#
+# THE TEST IS TEXTUAL, not a real expansion, and that is a choice: a segment
+# matches a protected NAME when `fnmatch` says the shell's expansion could
+# produce it. Expanding for real (`glob.glob` against the event cwd) was tried
+# first and buys nothing this does not — see the dotfile rule below — while it
+# would make the verdict depend on what happens to exist at hook time, add
+# filesystem work to every command carrying a `*`, and hand a pathological
+# pattern (`/*/*/*/*`) a way to stall the hook. Text also covers the file that
+# does not exist YET, which is exactly the `> .claude/settings.jso?` case.
+#
+# THE DOTFILE RULE is what keeps this from denying everything. A bare wildcard
+# segment (`*`, `?`, `[a-z]*` — no literal character of its own) fnmatches
+# every name, so without a rule `rm -f build/*` would be DENIED. It must not
+# be: bash without `dotglob`, and Python's glob likewise, never expand a bare
+# wildcard to a DOTFILE, so `*` cannot become `.claude` or `.githooks`. So a
+# segment must carry a literal character to match a DOT-name, while against
+# the ordinary names under `.claude/` (`hooks`, `settings.json`,
+# `settings.local.json`) a bare wildcard matches — because there it really
+# does expand: `rm -rf .claude/*` deletes the hooks. `dotglob` being set is
+# the residual, disclosed in the docstring.
+_GLOB_META = re.compile(r"[*?\[]")
+_BRACE_LIMIT = 64          # bound the expansion of nested/ganged brace groups
+
+
+def _brace_expand(token: str) -> list[str]:
+    """Expand shell BRACE GROUPS: `.claude/{hooks,rules}/x` -> two tokens.
+    Braces are not globs — the shell emits every alternative whether or not it
+    exists — so each alternative is judged as its own literal token."""
+    out = [token]
+    for _ in range(8):                                   # bounded nesting
+        nxt: list[str] = []
+        changed = False
+        for t in out:
+            i = t.find("{")
+            j = t.find("}", i + 1) if i != -1 else -1
+            if i == -1 or j == -1 or "," not in t[i + 1:j]:
+                nxt.append(t)
+                continue
+            changed = True
+            head, body, tail = t[:i], t[i + 1:j], t[j + 1:]
+            for alt in body.split(","):
+                nxt.append(head + alt + tail)
+        out = nxt[:_BRACE_LIMIT]
+        if not changed:
+            break
+    return out
+
+
+def _glob_literal(seg: str) -> str:
+    """The characters of a segment that a glob CANNOT vary — metacharacters and
+    whole `[...]` classes removed. `hook?` -> `hook`, `.clau*` -> `.clau`,
+    `hook[s]` -> `hook`, `*` -> `` (nothing literal at all)."""
+    out: list[str] = []
+    i, n = 0, len(seg)
+    while i < n:
+        c = seg[i]
+        if c == "[":
+            j = seg.find("]", i + 1)
+            i = n if j == -1 else j + 1
+            continue
+        if c in "*?":
+            i += 1
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _segment_matches(seg: str, name: str) -> bool:
+    """Does this path SEGMENT spell a protected NAME — literally, or as a glob
+    the shell could expand to it? A segment with no literal character of its
+    own matches only a NON-dot name: see the dotfile rule above."""
+    if seg == name:
+        return True
+    if not _GLOB_META.search(seg):
+        return False
+    if name.startswith(".") and not _glob_literal(seg):
+        return False
+    try:
+        return fnmatch.fnmatchcase(name, seg)
+    except Exception:
+        return False
+
+
+def _matches_one(path: str) -> bool:
+    segs = [s for s in normalize(path).split("/") if s not in ("", ".")]
+    for i, s in enumerate(segs):
+        if _segment_matches(s, ".githooks"):
+            return True
+        if _segment_matches(s, ".claude"):
+            if i + 1 == len(segs):
+                return True  # the directory itself
+            if any(_segment_matches(segs[i + 1], n) for n in PROTECTED_UNDER_CLAUDE):
+                return True
+    return False
+
+
 def matches_root_of_trust(token: str) -> bool:
     """PATTERN half: does this token spell a gate-defining path at all?
     Says nothing about WHICH tree it is in — see in_project()."""
-    p = normalize(token)
-    segs = [s for s in p.split("/") if s not in ("", ".")]
-    for i, s in enumerate(segs):
-        if s == ".githooks":
-            return True
-        if s == ".claude":
-            if i + 1 == len(segs):
-                return True  # the directory itself
-            if segs[i + 1] in PROTECTED_UNDER_CLAUDE:
-                return True
-    return False
+    return any(_matches_one(alt) for alt in _brace_expand(normalize(token)))
 
 
 # --- project scope ---------------------------------------------------------
@@ -369,7 +491,12 @@ def in_project(token: str) -> bool:
 
 def is_protected(token: str) -> bool:
     """A path this hook defends: the gate-defining PATTERN, inside THIS
-    project. Both halves must hold."""
+    project. Both halves must hold.
+
+    r15: the PATTERN half now reads a glob or brace group the way the shell
+    would (see `_segment_matches`). The SCOPE half is unchanged and still
+    decides on the token as written, so a glob aimed at another tree stays
+    allowed exactly as its literal spelling is (the r11 scope rule)."""
     return matches_root_of_trust(token) and in_project(token)
 
 
@@ -715,6 +842,29 @@ def env_split_payload(seg: list[tuple[str, str]]) -> str | None:
     return None
 
 
+def _compose_dash_c(parts: list[str]) -> str | None:
+    """Fold every `-C <path>` on a git invocation the way git folds them.
+
+    r15, found by auditing the sibling fix: this function kept only the LAST
+    `-C`, so `git -C .claude -C hooks clean -fd` was SILENT while the
+    byte-equivalent `git -C .claude/hooks clean -fd` DENIED (a22) — measured.
+    git(1) composes them left to right: an ABSOLUTE value replaces what came
+    before, a relative one is appended, an empty one is a no-op. The composed
+    token is what the writer's working directory will actually be, and it is
+    what `is_protected` is asked about; a relative result still resolves
+    against the event cwd there, exactly as a single relative `-C` did."""
+    cur: str | None = None
+    for raw in parts:
+        if not raw:                            # `-C ""` leaves the cwd alone
+            continue
+        expanded = os.path.expandvars(os.path.expanduser(raw))
+        if cur is None or os.path.isabs(expanded):
+            cur = raw
+            continue
+        cur = os.path.join(cur, raw)
+    return cur
+
+
 def git_write_target(args: list[str]) -> tuple[str, str] | None:
     """For a segment whose command word is `git`, return (protected path, how)
     when a WORKING-TREE-WRITING subcommand names a protected path, else None.
@@ -733,20 +883,23 @@ def git_write_target(args: list[str]) -> tuple[str, str] | None:
 
     A `-C <dir>` that is itself protected is also a write when the subcommand
     writes: `git -C .claude/hooks clean -fd` deletes hooks without ever naming
-    one as an operand."""
-    i, dash_c = 0, None
+    one as an operand. MULTIPLE `-C` options are composed (r15) — see
+    `_compose_dash_c`; keeping only the last one let the same deletion through
+    spelled as `git -C .claude -C hooks clean -fd`."""
+    i, dash_c_parts = 0, []
     while i < len(args):                       # 1. global options → subcommand
         w = args[i]
         if not w.startswith("-"):
             break
         if w in _GIT_GLOBAL_ARG_OPTS and i + 1 < len(args):
             if w == "-C":
-                dash_c = args[i + 1]
+                dash_c_parts.append(args[i + 1])
             i += 2
             continue
         if w.startswith("-C") and len(w) > 2:  # attached `-Cdir`
-            dash_c = w[2:]
+            dash_c_parts.append(w[2:])
         i += 1
+    dash_c = _compose_dash_c(dash_c_parts)
     if i >= len(args):
         return None
     sub = args[i]
@@ -1037,6 +1190,29 @@ def deny(reason: str) -> None:
     }}, sys.stdout)
 
 
+def _may_name_a_protected_path(cmd: str) -> bool:
+    """The fast path: can this command line name a gate-defining path at all?
+
+    r15 — THE SAME LITERAL-COMPARISON DEFECT, ONE LEVEL UP. This used to be
+    `".claude" not in cmd and ".githooks" not in cmd → return 0`, which is a
+    LITERAL substring test standing in front of the whole scan. Fixing
+    `matches_root_of_trust` to read globs was therefore not enough on its own:
+    `rm -f .clau*/hooks/git-guardrails.py` and `rm -f .githook?/pre-commit`
+    still returned before anything looked at them, because the metacharacter
+    sits inside the protected DIRECTORY name and neither literal appears.
+    Measured: both went SILENT with the pattern half already fixed.
+
+    So the trigger is widened to "or the line carries a glob/brace
+    metacharacter", which fails toward SCANNING. The cost is that a command
+    containing a `*` is now tokenised and scored; that is pure string work
+    (the pattern half touches no filesystem, and `in_project` runs only once a
+    pattern has matched), and it is the same work the scan already did for
+    every command mentioning `.claude`."""
+    if ".claude" in cmd or ".githooks" in cmd:
+        return True
+    return any(ch in cmd for ch in "*?[{")
+
+
 def main() -> int:
     if os.environ.get("ALLOW_ROOT_OF_TRUST_WRITE", "") == "1":
         return 0
@@ -1067,7 +1243,7 @@ def main() -> int:
         )
         return 0
 
-    if ".claude" not in cmd and ".githooks" not in cmd:
+    if not _may_name_a_protected_path(cmd):
         return 0
 
     configure_scope(str(data.get("cwd", "") or ""))

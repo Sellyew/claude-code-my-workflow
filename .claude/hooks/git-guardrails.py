@@ -128,12 +128,42 @@ Two checks, by tool:
            untracked file may not. `--no-autostash` still does not qualify for
            anything and faces rule 3.
         3. Otherwise READ THE TREE, live: `git status --porcelain` in the
-           working directory the invocation itself names (the event cwd, or a
-           `-C <path>` carried by the history-op segment — a quoted `-C` path
-           is honoured, so quoting cannot bypass it, and a RELATIVE `-C` path is
-           resolved against the event cwd, not against whatever directory the
-           hook process happens to have been spawned in). CLEAN → allow.
-           DIRTY → DENY.
+           working directory the invocation itself names (the event cwd, or the
+           `-C <path>` options carried by the history-op segment — a quoted
+           `-C` path is honoured, so quoting cannot bypass it, and a RELATIVE
+           `-C` path is resolved against the event cwd, not against whatever
+           directory the hook process happens to have been spawned in).
+           CLEAN → allow. DIRTY → DENY.
+
+           THE QUESTION IS PINNED AGAINST CONFIGURATION (r15). `git status
+           --porcelain` honours settings that can make a dirty tree report
+           EMPTY, so the flags are part of the question:
+           `--untracked-files=normal` (else `status.showUntrackedFiles=no` —
+           the documented remedy for a slow status — hides every `??` entry,
+           which is precisely the dirt rule 2b exists for) and
+           `--ignore-submodules=none` (else `diff.ignoreSubmodules=all` /
+           `submodule.<name>.ignore` hides a submodule holding modified work).
+           Both measured on git 2.50.1; see `_GIT_STATUS_CMD`. A reading the
+           guarded repository can reconfigure is not a reading.
+
+           EVERY `-C` IS COMPOSED, NOT JUST THE LAST (r15). git folds multiple
+           `-C` options left to right — each subsequent non-absolute one is
+           relative to the preceding one — so keeping only the last and
+           resolving it against the event cwd read a DIFFERENT repository than
+           git would use: `git -C <dirty> -C . merge feature`, fired from a
+           clean checkout, was ALLOWED. `_resolve_dash_c` now folds them git's
+           way (absolute replaces, relative appends, empty is a no-op).
+
+           AN UNREADABLE STATUS DENIES (r15). `read_status` used to return the
+           same None for "this is not a repository" and for "git could not
+           answer" (timeout, non-zero exit, exception), and the no-`-C` caller
+           read that as the former and ALLOWED. A slow `git status` was
+           therefore a silent allow on a dirty tree — the same unanswered
+           question the `-C` branch was fixed for at r13. Only the benign cause
+           (no `.git` at or above the directory, decided from the FILESYSTEM so
+           a broken git cannot fake it) allows now; everything else denies, and
+           the timeout bound is configurable via CLAUDE_GIT_STATUS_TIMEOUT
+           (default 10s) so a genuinely slow worktree can be worked in.
 
            AN UNRESOLVED REPOSITORY SELECTOR NOW DENIES (r13). If the invocation
            names a `-C <path>` that cannot be read as a repository — it does not
@@ -247,9 +277,10 @@ not, it cannot, and nine rounds of trying to enumerate forms is the reason that
 sentence is written this way. Where the parse is ambiguous the code is written
 to fall toward FINDING an op (an unknown git global option is consumed rather
 than mistaken for the subcommand; a `git` word later in a segment is still
-searched for; an unreadable `-C` directory degrades to reading the event cwd
-instead of allowing) — but "falls toward deny where the parse permits" is not
-"denies everything it should". A form the parser does not identify is not
+searched for; a `-C` directory that cannot be read as a repository DENIES since
+r13, rather than falling back to the event cwd) — but "falls toward deny where
+the parse permits" is not "denies everything it should". A form the parser
+does not identify is not
 denied; it is INVISIBLE, and the op runs. That residual is listed next.
 
 THE COST OF FAILING TOWARD DENY, stated as a cost: because a `git` word is
@@ -687,15 +718,25 @@ _REPO_SELECTOR_GLOBALS = frozenset(
     ("--git-dir", "--work-tree", "--namespace", "--bare"))
 
 
-def _walk_git_globals(words: list[str], i: int) -> tuple[int, str | None, list[str]]:
+def _walk_git_globals(words: list[str], i: int) -> tuple[int, list[str], list[str]]:
     """Consume git's GLOBAL options starting just after the `git` word. Returns
-    (index of the subcommand — or len(words) if there is none, `-C` path, the
-    REPOSITORY-SELECTOR globals seen).
+    (index of the subcommand — or len(words) if there is none, EVERY `-C` path
+    in the order given, the REPOSITORY-SELECTOR globals seen).
 
     Only the value-taking names in `_GIT_GLOBAL_VALUE_OPTS` consume a second
     token; ANY other leading `-…` word is consumed as a one-token global. See
-    that table for why enumerating which options exist was the defect."""
-    dash_c = None
+    that table for why enumerating which options exist was the defect.
+
+    r15: this used to keep only the LAST `-C` and throw the rest away. git does
+    not — git(1): "If multiple -C options are given, each subsequent
+    non-absolute -C <path> is interpreted relative to the preceding -C <path>."
+    Measured on git 2.50.1: from a clean checkout, `git -C <dirty> -C . rev-parse
+    --show-toplevel` prints <dirty>, and so does `-C <dirty> -C sub`. Keeping
+    the last one and resolving it against the EVENT cwd therefore read a
+    DIFFERENT repository from the one git would operate on — and allowed when
+    that one was clean. Every value is carried out now and folded by
+    `_resolve_dash_c` the way git folds them."""
+    dash_c: list[str] = []
     selectors: list[str] = []
     while i < len(words):
         w = words[i]
@@ -705,9 +746,9 @@ def _walk_git_globals(words: list[str], i: int) -> tuple[int, str | None, list[s
         if name in _REPO_SELECTOR_GLOBALS and name not in selectors:
             selectors.append(name)
         if w == "-C" and i + 1 < len(words):
-            dash_c = words[i + 1]; i += 2; continue
+            dash_c.append(words[i + 1]); i += 2; continue
         if w.startswith("-C") and len(w) > 2 and "=" not in w:   # -Cdir
-            dash_c = w[2:]; i += 1; continue
+            dash_c.append(w[2:]); i += 1; continue
         if "=" in w:                                             # --opt=value
             i += 1; continue
         if w in _GIT_GLOBAL_VALUE_OPTS and i + 1 < len(words):
@@ -716,10 +757,10 @@ def _walk_git_globals(words: list[str], i: int) -> tuple[int, str | None, list[s
     return i, dash_c, selectors
 
 
-def _git_segment(words: list[str]) -> tuple[str | None, str | None, int, list[str], list[str]]:
-    """If a segment invokes git, return (subcommand, -C path, subcommand index,
-    the words the index refers to, repository-selector globals); else
-    (None, None, -1, words, []).
+def _git_segment(words: list[str]) -> tuple[str | None, list[str], int, list[str], list[str]]:
+    """If a segment invokes git, return (subcommand, EVERY `-C` path in order,
+    subcommand index, the words the index refers to, repository-selector
+    globals); else (None, [], -1, words, []).
 
     The word list is returned because `_strip_shell_head` REWRITES leading words
     (`(git` → `git`), so the index is meaningful only against the list this
@@ -740,9 +781,9 @@ def _git_segment(words: list[str]) -> tuple[str | None, str | None, int, list[st
             j, dash_c, selectors = _walk_git_globals(words, i + 1)
             if j < len(words):
                 return words[j], dash_c, j, words, selectors
-            return None, None, -1, words, []
+            return None, [], -1, words, []
         i += 1
-    return None, None, -1, words, []
+    return None, [], -1, words, []
 
 
 def git_deny_reason(cmd: str) -> str | None:
@@ -813,22 +854,123 @@ def _repo_neutral_env() -> dict:
             if not k.startswith("GIT_") or k == "GIT_EXEC_PATH"}
 
 
-def read_status(cwd: str | None) -> str | None:
-    """The RAW `git status --porcelain` output, or None when git cannot answer
-    (not a repo, git missing, timeout).
+class _NotARepo:
+    """Sentinel: git could not answer, and the directory is not a repository at
+    all — the ONE benign cause of an unanswered status. Distinct from None,
+    which now means the question was asked and went UNANSWERED (see r15)."""
+    __slots__ = ()
+
+    def __repr__(self) -> str:            # pragma: no cover - diagnostics only
+        return "<not-a-repository>"
+
+
+NOT_A_REPO = _NotARepo()
+
+# ── r15: THE STATUS QUERY IS PINNED AGAINST CONFIGURATION ──────────────────
+#
+# `git status --porcelain` is not a fixed question: it honours repository and
+# user CONFIGURATION, and two settings can make it report a dirty tree as
+# empty. An external referee (2026-08-23) reproduced the first on git 2.50.1:
+#
+#   status.showUntrackedFiles=no   — the documented remedy for a slow status on
+#     a large worktree. In a repo carrying an untracked `note.txt`:
+#         git status --porcelain                      -> ''
+#         git status --porcelain --untracked-files=normal -> '?? note.txt'
+#     The guard read '' and ALLOWED both a plain `git merge` and a `--autostash`
+#     one — reproducing verbatim the hole r13 narrowed `--autostash` to close,
+#     since untracked files are the whole reason that narrowing exists.
+#
+#   diff.ignoreSubmodules=all (and submodule.<name>.ignore) — measured on the
+#     same git: a host repo whose submodule holds modified work reports
+#     ' M sub' by default, '' with the setting, and ' M sub' again with
+#     `--ignore-submodules=none`. Same class, same direction, found by auditing
+#     this call rather than by a referee.
+#
+# So the flags below are part of the QUESTION, not decoration: the reading a
+# guard makes must not be reconfigurable by the thing it is guarding. Nothing
+# else in either hook shells out to git — `root-of-trust-guard.py` is a purely
+# textual scan — so this call is the whole of the exposure, and the GIT_*
+# environment (`GIT_CONFIG_GLOBAL`, `GIT_CONFIG_COUNT`, `GIT_DIR`, …) is
+# already stripped by `_repo_neutral_env()`.
+#
+# `--untracked-files=normal`, not `=all`: rule 2b asks whether ANY `??` entry
+# exists, and `normal` already answers that (it collapses an untracked
+# directory into one entry instead of listing its files, which is cheaper on a
+# large tree and cannot change the emptiness of the answer).
+_GIT_STATUS_CMD = ("git", "status", "--porcelain",
+                   "--untracked-files=normal", "--ignore-submodules=none")
+
+_STATUS_TIMEOUT_DEFAULT = 10.0
+_STATUS_TIMEOUT_ENV = "CLAUDE_GIT_STATUS_TIMEOUT"
+
+
+def _status_timeout() -> float:
+    """Seconds to wait for `git status`. Configurable because r15 made an
+    UNREADABLE status a DENY: on a genuinely slow worktree the bound is the
+    difference between a working guard and a blocked session, and 3 s (the old
+    hardcoded value) is reachable on a cold cache over a network filesystem."""
+    try:
+        v = float(os.environ.get(_STATUS_TIMEOUT_ENV, ""))
+        if v > 0:
+            return v
+    except (TypeError, ValueError):
+        pass
+    return _STATUS_TIMEOUT_DEFAULT
+
+
+def _within_git_repo(cwd: str | None) -> bool:
+    """Is there a `.git` entry at `cwd` or above it? Answered from the
+    FILESYSTEM, deliberately not by asking git again: the case this exists to
+    classify is precisely the one where git could not answer, so a second git
+    invocation would inherit the same failure and could be shimmed, broken or
+    slow in the same way. A `.git` FILE (a linked worktree) counts, like a
+    directory."""
+    try:
+        cur = os.path.realpath(cwd or os.getcwd())
+    except OSError:
+        return False
+    try:
+        while True:
+            if os.path.exists(os.path.join(cur, ".git")):
+                return True
+            parent = os.path.dirname(cur)
+            if parent == cur:
+                return False
+            cur = parent
+    except OSError:
+        return False
+
+
+def read_status(cwd: str | None) -> "str | _NotARepo | None":
+    """The RAW porcelain status text, or one of two DIFFERENT non-answers:
+
+        str          — git answered; this is the tree state
+        NOT_A_REPO   — git could not answer AND there is no repository here:
+                       the one benign cause, which the caller may skip
+        None         — the question went UNANSWERED (timeout, a non-zero exit
+                       inside a real repository, git missing, any exception).
+                       The caller must DENY on this; see r15 below.
 
     r13: this used to be `tree_is_dirty()`, returning a bool. The porcelain TEXT
     is needed now, because `--autostash` is allowed only when there is no `??`
     entry — a distinction a boolean cannot carry. Callers derive both answers
-    from the one reading, so a single subprocess still answers the whole rule."""
+    from the one reading, so a single subprocess still answers the whole rule.
+
+    r15: it used to return None for all three cases alike, and the caller
+    treated that as "not a repository at all → git's problem" and CONTINUED —
+    i.e. allowed. A `git status` that merely ran slowly was therefore a silent
+    ALLOW on a dirty tree, which is the same "allowing on an unanswered
+    question" the `-C` path was fixed for at r13 and this path was not. The two
+    causes are now distinguished, and only the benign one allows."""
     try:
-        r = subprocess.run(["git", "status", "--porcelain"], cwd=cwd or None,
+        r = subprocess.run(list(_GIT_STATUS_CMD), cwd=cwd or None,
                            env=_repo_neutral_env(),
-                           capture_output=True, text=True, timeout=3)
+                           capture_output=True, text=True,
+                           timeout=_status_timeout())
     except Exception:
-        return None
+        return None if _within_git_repo(cwd) else NOT_A_REPO
     if r.returncode != 0:
-        return None
+        return None if _within_git_repo(cwd) else NOT_A_REPO
     return r.stdout
 
 
@@ -967,8 +1109,9 @@ def _standalone_violation(spliced: str, n_segments: int,
     return None
 
 
-def _resolve_dash_c(dash_c: str | None, default_cwd: str | None) -> str | None:
-    """Resolve a `-C <path>` against the INVOCATION's directory.
+def _resolve_dash_c(dash_c: list[str], default_cwd: str | None) -> str | None:
+    """Fold EVERY `-C <path>` on the invocation, in order, the way git folds
+    them — starting from the INVOCATION's directory.
 
     r9: the raw string was handed to `subprocess.run(cwd=…)`, which resolves a
     relative path against the HOOK PROCESS's cwd — not the event cwd the same
@@ -976,15 +1119,30 @@ def _resolve_dash_c(dash_c: str | None, default_cwd: str | None) -> str | None:
     tool's cwd drifts; hooks are spawned by the CLI process), `git -C . pull` in
     a dirty repo A was judged against whatever repo B the hook happened to sit
     in, and went SILENT — using the exact spelling the docstring recommends as
-    the remedy for the `cd` residual."""
-    if not dash_c:
-        return default_cwd
-    p = os.path.expanduser(dash_c)
-    if not os.path.isabs(p):
-        if not default_cwd:
+    the remedy for the `cd` residual.
+
+    r15: the same defect one dimension over. Only the LAST `-C` reached here,
+    and it was resolved against the event cwd — so a TRAILING RELATIVE `-C`
+    discarded a leading absolute one, and `git -C <dirty> -C . merge feature`
+    fired from a clean checkout read the CLEAN one and allowed, while git
+    merged in the dirty one. git's own rule, quoted in `_walk_git_globals` and
+    measured on 2.50.1, is a left-to-right fold: an ABSOLUTE value replaces the
+    accumulator, a RELATIVE one is appended to it, and an EMPTY one is a no-op
+    ("If <path> is present but empty … the current working directory is left
+    unchanged"). That is exactly what this does, so the guard reads the
+    directory git will chdir into rather than a guess at which `-C` wins."""
+    cur = default_cwd
+    for raw in dash_c:
+        if not raw:                          # `-C ""` — git leaves cwd alone
+            continue
+        p = os.path.expanduser(raw)
+        if os.path.isabs(p):
+            cur = os.path.normpath(p)        # absolute: replaces what came before
+            continue
+        if not cur:
             return None                      # unanchored → caller degrades
-        p = os.path.join(default_cwd, p)
-    return os.path.normpath(p)
+        cur = os.path.normpath(os.path.join(cur, p))
+    return cur
 
 
 def dirty_tree_reason(cmd: str, event: dict) -> str | None:
@@ -996,9 +1154,9 @@ def dirty_tree_reason(cmd: str, event: dict) -> str | None:
     # NO state carried between segments — no clean marks, no stash effects, no
     # inertness. A segment is looked at for exactly one thing: is it a git
     # history op, and does it carry its own `-C`.
-    seen: dict[str, str | None] = {}
+    seen: dict[str, "str | _NotARepo | None"] = {}
 
-    def read(cwd: str | None) -> str | None:
+    def read(cwd: str | None) -> "str | _NotARepo | None":
         key = cwd or ""
         if key not in seen:
             seen[key] = read_status(cwd)
@@ -1029,19 +1187,39 @@ def dirty_tree_reason(cmd: str, event: dict) -> str | None:
         # Rule 3: read the tree, live, in the directory THIS invocation names.
         cwd = _resolve_dash_c(dash_c, default_cwd)
         status = read(cwd)
-        if dash_c and status is None:
+        if dash_c and not isinstance(status, str):
             # r13 (referee finding 2): an explicit selector that cannot be
             # resolved used to fall back to the EVENT cwd and allow if THAT was
             # clean — which is allowing on the unanswered question. It denies.
+            spelling = " ".join(f"-C {p}" for p in dash_c)
             return (f"git {sub} names a repository this guard cannot resolve "
-                    f"(`-C {dash_c}`): the path does not exist, holds an "
+                    f"(`{spelling}`): the path does not exist, holds an "
                     f"unexpanded variable, or is not a git repository. Rerun the "
                     f"{sub} from that repository, or spell the path literally. "
                     f"Reading a DIFFERENT repository and allowing because it is "
                     f"clean would be allowing on an unanswered question. "
                     f"(Override: ALLOW_DIRTY_MERGE=1 in the session environment.)")
-        if status is None:
+        if status is NOT_A_REPO:
             continue                         # not a repository at all → git's problem
+        if status is None:
+            # r15: THE UNANSWERED QUESTION, ON THE PATH WITH NO `-C`. This used
+            # to fall into the `continue` above on the stated ground that the
+            # only cause was "not a repository at all". It was not: `read_status`
+            # returned None for a TIMEOUT and a non-zero exit as well, so a
+            # `git status` that merely ran slowly — a large worktree on a cold
+            # cache, a network filesystem — was a silent ALLOW of a history op
+            # over uncommitted work. That is the same defect the `-C` branch
+            # above was fixed for at r13 and this branch was not. The two causes
+            # are separated in `read_status` now, and this one denies.
+            return (f"git {sub} is refused here: this guard could not determine "
+                    f"the tree state — `git status` did not answer in "
+                    f"{_status_timeout():g}s, exited non-zero, or could not be "
+                    f"run, in a directory that IS a git repository. An "
+                    f"unanswered question is not an allow. Check `git status` "
+                    f"yourself, or raise the bound with "
+                    f"{_STATUS_TIMEOUT_ENV}=<seconds> in the session "
+                    f"environment. "
+                    f"(Override: ALLOW_DIRTY_MERGE=1 in the session environment.)")
         # Rule 2b (r13): `--autostash` is git's own stash-operate-restore, but
         # `git stash` does not stash UNTRACKED files — the referee reproduced a
         # `--autostash` merge leaving `?? note.txt` untouched. So it is allowed

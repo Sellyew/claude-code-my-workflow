@@ -515,6 +515,113 @@ expect_silent "a41 r14 control: a payload with no git in it at all — bash -c '
 fire root-of-trust-guard.py "$TMP/a42.json"
 expect_silent "a42 r14 control + SCOPE: the UNWRAPPED spelling of the same op is silent HERE — only payloads are routed, so one command never draws two denials (git-guardrails denies this one; case b1)"
 
+# a43-a53 (r15): SHELL GLOBS AND BRACE GROUPS. `matches_root_of_trust` compared
+# path segments LITERALLY against `.claude`, `.githooks`, `settings.json`,
+# `settings.local.json` and `hooks`, so ONE metacharacter took a protected path
+# out of the guard's sight while the shell expanded it to exactly the protected
+# file. Measured at 7eee6b2 with the event cwd at this repository — guard
+# verdict, then what the shell expands the token to:
+#     rm -f .claude/hook?/git-guardrails.py   ALLOW -> .claude/hooks/git-guardrails.py
+#     rm -f .claude/*/git-guardrails.py       ALLOW -> .claude/hooks/git-guardrails.py
+#     rm -f .clau*/hooks/git-guardrails.py    ALLOW -> .claude/hooks/git-guardrails.py
+#     echo x > .claude/settings.jso?          ALLOW -> .claude/settings.json
+#     rm -rf .claude/hook[s]                  ALLOW
+#     rm -f .claude/{hooks,rules}/…           ALLOW -> .claude/hooks/…
+#     rm -f .githook?/pre-commit              ALLOW -> .githooks/pre-commit
+# while the literal spellings of all three targets DENIED — a one-character
+# edit flipped every denied spelling to allowed. Globbing was on NEITHER
+# disclosed-residual list, and unlike everything that IS on them it failed
+# toward ALLOW.
+#
+# a45 and a49 are not repetition: they put the metacharacter inside the
+# protected DIRECTORY name, which also defeated the LITERAL `.claude`/
+# `.githooks` fast path in main() — a second copy of the same defect one level
+# up, and one that stayed silent after the pattern half was fixed. Measured.
+#
+# The four controls are what stop this from being "deny anything with a `*`":
+#   a50 — a glob under `.claude/` that names an UNPROTECTED child (`rule?`)
+#   a51 — a BARE wildcard elsewhere (`rm -f docs/*`). This is the sharp one: a
+#         bare `*` fnmatches every protected name, so the naive fix denies the
+#         most ordinary command in the repo. It must stay silent, and it can,
+#         because bash without `dotglob` never expands `*` to a DOTFILE.
+#   a52 — a READ through a glob stays allowed ("every READ is untouched")
+#   a53 — SCOPE: the same glob aimed at a clone OUTSIDE the project stays
+#         allowed, so the r11 scoping still holds through the glob path
+cat > "$TMP/a43.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .claude/hook?/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a44.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .claude/*/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a45.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .clau*/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a46.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf disabled > .claude/settings.jso?"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a47.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -rf .claude/hook[s]"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a48.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .claude/{hooks,rules}/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a49.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .githook?/pre-commit"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a50.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .claude/rule?/deleted-note.md"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a51.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f docs/*"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a52.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"cat .claude/hook?/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a53.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f $TMP/rot-clone/.claude/hook?/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a43.json"
+expect_deny   "a43 r15: a '?' glob in the hooks DIRECTORY name is denied — the shell expands it to .claude/hooks/git-guardrails.py, and this spelling was ALLOWED while the literal one denied"
+fire root-of-trust-guard.py "$TMP/a44.json"
+expect_deny   "a44 r15: a bare '*' as the child of .claude/ is denied — .claude/*/git-guardrails.py really does expand to the guard file (an ordinary name, not a dotfile)"
+fire root-of-trust-guard.py "$TMP/a45.json"
+expect_deny   "a45 r15: the metacharacter INSIDE the protected directory name (.clau*/hooks/…) is denied — this one also had to defeat the literal '.claude' fast path in main(), which returned before the scan ran"
+fire root-of-trust-guard.py "$TMP/a46.json"
+expect_deny   "a46 r15: a REDIRECTION whose target is globbed (> .claude/settings.jso?) is denied — the file that decides which hooks fire"
+fire root-of-trust-guard.py "$TMP/a47.json"
+expect_deny   "a47 r15: a character CLASS (.claude/hook[s]) is denied"
+fire root-of-trust-guard.py "$TMP/a48.json"
+expect_deny   "a48 r15: a BRACE GROUP (.claude/{hooks,rules}/…) is denied — braces are not globs, the shell emits every alternative whether or not it exists"
+fire root-of-trust-guard.py "$TMP/a49.json"
+expect_deny   "a49 r15: the same glob in the .githooks directory name (.githook?/pre-commit) is denied — the other half of the fast-path defect"
+fire root-of-trust-guard.py "$TMP/a50.json"
+expect_silent "a50 r15 control: a glob naming an UNPROTECTED child of .claude/ (rule?) stays allowed — the glob rule did not become 'anything under .claude'"
+fire root-of-trust-guard.py "$TMP/a51.json"
+expect_silent "a51 r15 control, the sharp one: a BARE wildcard elsewhere (rm -f docs/*) stays allowed. A bare '*' fnmatches every protected name, so a naive glob fix denies the most ordinary command in the repo; it is allowed here because bash without dotglob never expands '*' to a DOTFILE"
+fire root-of-trust-guard.py "$TMP/a52.json"
+expect_silent "a52 r15 control: a READ through the same glob (cat .claude/hook?/…) stays allowed — 'every READ is untouched' survives the fix"
+fire root-of-trust-guard.py "$TMP/a53.json"
+expect_silent "a53 r15 control + SCOPE: the same glob aimed at a clone OUTSIDE the project stays allowed, so r11's project scoping still holds on the glob path"
+
+# a54/a55 (r15): MULTIPLE -C, the sibling of the git-guardrails defect, found by
+# auditing this hook after fixing that one. git composes -C options left to
+# right; git_write_target kept only the LAST, so the writer's working directory
+# was read as 'hooks' — protected by nothing — and the deletion went SILENT,
+# while the byte-equivalent single -C spelling DENIED (a22). Measured at
+# 7eee6b2. a55 is the control: composing is not the same as denying any -C chain
+# that mentions .claude, and a chain that composes its way back OUT stays
+# allowed.
+cat > "$TMP/a54.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C .claude -C hooks clean -fd"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a55.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C .claude -C ../docs clean -fd"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a54.json"
+expect_deny   "a54 r15: multiple -C COMPOSE — git -C .claude -C hooks clean -fd deletes the hooks and is denied; keeping only the last -C read the working directory as an unprotected 'hooks' and went silent, while the single -C spelling of the same deletion denied (a22)"
+fire root-of-trust-guard.py "$TMP/a55.json"
+expect_silent "a55 r15 control: a -C chain that composes its way back OUT of the protected tree (.claude then ../docs) stays allowed — the fold follows git rather than denying any -C chain that mentions .claude"
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"
@@ -1111,6 +1218,225 @@ if [ -n "$TRACKED_STATUS" ] && ! printf '%s\n' "$TRACKED_STATUS" | grep -q '^??'
 else
     no "c42 control: --autostash over tracked-only dirt is still allowed" \
        "the TRACKED_REPO fixture is not modified-tracked-only (status: ${TRACKED_STATUS:-<empty>})"
+fi
+
+# ── (c) continued — r15: THE READING ITSELF WAS THE HOLE ───────────────────
+# r13 fixed WHEN the tree is read and WHICH repository is named. r15 is about
+# the reading: the question git was asked could be reconfigured, the directory
+# it was asked about could be mis-composed, and a question that came back
+# UNANSWERED was scored as a pass.
+#
+#   c43-c46 — `git status --porcelain` HONOURS CONFIGURATION. With
+#     `status.showUntrackedFiles=no` (the documented remedy for a slow status
+#     on a large worktree) porcelain reports NO `??` lines at all: measured on
+#     git 2.50.1, a repo holding one untracked file answers '' to the guard's
+#     query and '?? note.txt' to `--untracked-files=normal`. The guard read ''
+#     and ALLOWED both a plain merge and an `--autostash` one — reproducing
+#     the exact hole r13 narrowed `--autostash` to close, since untracked
+#     files are the whole reason that narrowing exists, and satisfying both
+#     directions of the c9/c42 control because neither sets the config.
+#     c46 is the same class found by auditing the call rather than by a
+#     referee: `diff.ignoreSubmodules=all` hides a submodule holding modified
+#     work from porcelain (measured: ' M sub' by default, '' with the setting,
+#     ' M sub' again with `--ignore-submodules=none`). Both flags are now part
+#     of the query, so the repository being guarded cannot reconfigure the
+#     reading. c45 is the control: the SAME config on a genuinely clean repo
+#     must stay silent, which over-denying cannot satisfy.
+#
+#   c47-c50 — MULTIPLE `-C` COMPOSE. git(1): "If multiple -C options are
+#     given, each subsequent non-absolute -C <path> is interpreted relative to
+#     the preceding -C <path>." The guard kept only the LAST one and resolved
+#     it against the EVENT cwd, so a trailing relative `-C` discarded a
+#     leading absolute one and the guard read a DIFFERENT repository from the
+#     one git operates in. Measured: from a clean checkout, real git resolves
+#     `-C <dirty> -C .` to <dirty> and the guard ALLOWED the merge. c48 and
+#     c50 are the controls that over-denying cannot satisfy — denying every
+#     multi-`-C` invocation would pass c47/c49 and fail both.
+#
+#   c51-c53 — AN UNREADABLE STATUS IS NOT AN ALLOW. `read_status` returned the
+#     same None for a timeout, a non-zero exit and "not a repository", and the
+#     caller with no `-C` read that as "not a repository → git's problem" and
+#     CONTINUED. So a `git status` that merely ran slowly (a large worktree, a
+#     cold cache, a network filesystem — and note that the r15 config defect
+#     above is the documented remedy for exactly that slowness) was a silent
+#     ALLOW on a dirty tree, one line below the `-C` branch that r13 fixed for
+#     being the same mistake. c51/c52 shim a `git` on PATH that cannot answer;
+#     c53 is the control that keeps the one BENIGN cause allowed.
+UNO_REPO="$TMP/uno-repo"
+mkdir -p "$UNO_REPO"
+git -C "$UNO_REPO" init -q >/dev/null 2>&1
+git -C "$UNO_REPO" config status.showUntrackedFiles no >/dev/null 2>&1
+: > "$UNO_REPO/note.txt"                       # dirt the config makes invisible
+
+UNO_CLEAN="$TMP/uno-clean"
+mkdir -p "$UNO_CLEAN"
+git -C "$UNO_CLEAN" init -q >/dev/null 2>&1
+git -C "$UNO_CLEAN" config status.showUntrackedFiles no >/dev/null 2>&1
+: > "$UNO_CLEAN/kept.txt"
+git -C "$UNO_CLEAN" add kept.txt >/dev/null 2>&1
+git -C "$UNO_CLEAN" -c commit.gpgsign=false -c tag.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    commit -q -m "seed" >/dev/null 2>&1
+
+# The submodule fixture for c46. `protocol.file.allow=always` is required by
+# git >= 2.38 to add a submodule over a local path; older git ignores the
+# unknown config. INNER is committed clean, added to HOST, and only THEN
+# modified, so HOST's only dirt is the submodule.
+SUB_INNER="$TMP/sub-inner"
+mkdir -p "$SUB_INNER"
+git -C "$SUB_INNER" init -q >/dev/null 2>&1
+printf 'v1\n' > "$SUB_INNER/inner.R"
+git -C "$SUB_INNER" add inner.R >/dev/null 2>&1
+git -C "$SUB_INNER" -c commit.gpgsign=false -c tag.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    commit -q -m "seed" >/dev/null 2>&1
+SUB_HOST="$TMP/sub-host"
+mkdir -p "$SUB_HOST"
+git -C "$SUB_HOST" init -q >/dev/null 2>&1
+git -C "$SUB_HOST" config diff.ignoreSubmodules all >/dev/null 2>&1
+git -C "$SUB_HOST" -c protocol.file.allow=always -c commit.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    submodule add -q "$SUB_INNER" sub >/dev/null 2>&1
+git -C "$SUB_HOST" -c commit.gpgsign=false -c tag.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    commit -q -m "add sub" >/dev/null 2>&1
+printf 'v2\n' > "$SUB_HOST/sub/inner.R"        # dirt the config makes invisible
+
+# The multi-`-C` fixtures: a DIRTY repo carrying a committed subdirectory (so a
+# relative second `-C sub` has somewhere to land), and a CLEAN one.
+MC_DIRTY="$TMP/mc-dirty"
+mkdir -p "$MC_DIRTY/sub"
+git -C "$MC_DIRTY" init -q >/dev/null 2>&1
+printf 'v1\n' > "$MC_DIRTY/tracked.R"
+printf 'k\n' > "$MC_DIRTY/sub/keep.txt"
+git -C "$MC_DIRTY" add tracked.R sub/keep.txt >/dev/null 2>&1
+git -C "$MC_DIRTY" -c commit.gpgsign=false -c tag.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    commit -q -m "seed" >/dev/null 2>&1
+printf 'v2\n' > "$MC_DIRTY/tracked.R"          # ' M tracked.R'
+MC_CLEAN="$TMP/mc-clean"
+mkdir -p "$MC_CLEAN/sub"
+git -C "$MC_CLEAN" init -q >/dev/null 2>&1
+: > "$MC_CLEAN/kept.txt"
+# A `sub/` in BOTH fixtures, and this is what makes c49 able to fail: with the
+# pre-r15 last-`-C`-wins reading, `-C sub` resolves against the EVENT cwd and
+# lands in mc-clean/sub — a real directory in a CLEAN repository, so the guard
+# reads clean and ALLOWS. Without this directory the seeded revert would deny
+# c49 anyway, for the unrelated reason that the path does not exist.
+: > "$MC_CLEAN/sub/keep.txt"
+git -C "$MC_CLEAN" add kept.txt sub/keep.txt >/dev/null 2>&1
+git -C "$MC_CLEAN" -c commit.gpgsign=false -c tag.gpgsign=false \
+    -c user.email=battery@example.invalid -c user.name=hook-battery \
+    commit -q -m "seed" >/dev/null 2>&1
+
+# The shims for c51/c52: a 'git' on PATH that cannot answer. The battery keeps
+# the timeout bound short through CLAUDE_GIT_STATUS_TIMEOUT so the slow case
+# costs a second rather than the 10s default.
+SHIM_SLOW="$TMP/shim-slow"; mkdir -p "$SHIM_SLOW"
+printf '#!/bin/sh\nsleep 3\nexit 0\n' > "$SHIM_SLOW/git"; chmod +x "$SHIM_SLOW/git"
+SHIM_FAIL="$TMP/shim-fail"; mkdir -p "$SHIM_FAIL"
+printf '#!/bin/sh\necho "fatal: unable to read the index" >&2\nexit 128\n' > "$SHIM_FAIL/git"
+chmod +x "$SHIM_FAIL/git"
+NOT_A_REPO_DIR="$TMP/not-a-repo"; mkdir -p "$NOT_A_REPO_DIR"
+
+cat > "$TMP/c43.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge --autostash feature-x"},"cwd":"$UNO_REPO"}
+EOF
+cat > "$TMP/c44.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$UNO_REPO"}
+EOF
+cat > "$TMP/c45.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$UNO_CLEAN"}
+EOF
+cat > "$TMP/c46.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$SUB_HOST"}
+EOF
+cat > "$TMP/c47.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C $MC_DIRTY -C . merge feature-x"},"cwd":"$MC_CLEAN"}
+EOF
+cat > "$TMP/c48.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C $MC_CLEAN -C . merge feature-x"},"cwd":"$MC_DIRTY"}
+EOF
+cat > "$TMP/c49.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C $MC_DIRTY -C sub merge feature-x"},"cwd":"$MC_CLEAN"}
+EOF
+cat > "$TMP/c50.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git -C $MC_DIRTY -C $MC_CLEAN merge feature-x"},"cwd":"$MC_DIRTY"}
+EOF
+cat > "$TMP/c51.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$MC_DIRTY"}
+EOF
+cat > "$TMP/c52.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$MC_DIRTY"}
+EOF
+cat > "$TMP/c53.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$NOT_A_REPO_DIR"}
+EOF
+
+# Every fixture states the precondition that makes its cases able to fail, and
+# a fixture that did not reach it is a FAILURE, not a skip.
+UNO_HIDDEN="$(git -C "$UNO_REPO" status --porcelain 2>/dev/null)"
+UNO_REAL="$(git -C "$UNO_REPO" status --porcelain --untracked-files=normal 2>/dev/null)"
+if [ -z "$UNO_HIDDEN" ] && [ -n "$UNO_REAL" ]; then
+    fire git-guardrails.py "$TMP/c43.json"
+    expect_deny   "c43 r15 (the referee's case): git merge --autostash on a repo configured status.showUntrackedFiles=no, holding an untracked file, is DENIED. Plain porcelain answers '' here, so the guard used to read this tree as CLEAN and allow the very op r13 narrowed --autostash to refuse"
+    fire git-guardrails.py "$TMP/c44.json"
+    expect_deny   "c44 r15: a PLAIN merge on the same repo is denied too — the config hid the whole of rule 3's evidence, not just the --autostash half"
+else
+    no "c43 --autostash over config-hidden untracked dirt is denied" \
+       "the uno fixture is not in the defect state (plain porcelain: ${UNO_HIDDEN:-<empty>}, -u normal: ${UNO_REAL:-<empty>})"
+    no "c44 a plain merge over config-hidden untracked dirt is denied" \
+       "the uno fixture is not in the defect state"
+fi
+if [ -z "$(git -C "$UNO_CLEAN" status --porcelain --untracked-files=normal 2>/dev/null)" ]; then
+    fire git-guardrails.py "$TMP/c45.json"
+    expect_silent "c45 r15 CONTROL for c43/c44, which over-denying cannot satisfy: the SAME status.showUntrackedFiles=no config on a genuinely CLEAN repo is still allowed — pinning the query did not become refusing every repo that carries the setting"
+else
+    no "c45 control: the same config on a clean repo stays allowed" \
+       "the uno-clean fixture did not come up clean"
+fi
+SUB_HIDDEN="$(git -C "$SUB_HOST" status --porcelain 2>/dev/null)"
+SUB_REAL="$(git -C "$SUB_HOST" status --porcelain --ignore-submodules=none 2>/dev/null)"
+if [ -z "$SUB_HIDDEN" ] && [ -n "$SUB_REAL" ]; then
+    fire git-guardrails.py "$TMP/c46.json"
+    expect_deny   "c46 r15: the SECOND config of the same class — diff.ignoreSubmodules=all hides a submodule holding modified work from porcelain, and the merge over it is denied. Found by auditing the query, not by a referee; it is why the flag is pinned rather than only the untracked one"
+else
+    no "c46 a merge over config-hidden submodule dirt is denied" \
+       "the submodule fixture is not in the defect state (plain porcelain: ${SUB_HIDDEN:-<empty>}, --ignore-submodules=none: ${SUB_REAL:-<empty>})"
+fi
+MC_DIRTY_STATUS="$(git -C "$MC_DIRTY" status --porcelain 2>/dev/null)"
+MC_CLEAN_STATUS="$(git -C "$MC_CLEAN" status --porcelain 2>/dev/null)"
+if [ -n "$MC_DIRTY_STATUS" ] && [ -z "$MC_CLEAN_STATUS" ]; then
+    fire git-guardrails.py "$TMP/c47.json"
+    expect_deny   "c47 r15: git -C <dirty> -C . merge, fired from a CLEAN event cwd, is denied. git composes multiple -C left to right and lands in <dirty>; the guard kept only the LAST one and resolved it against the event cwd, so it read the clean repo and allowed"
+    fire git-guardrails.py "$TMP/c48.json"
+    expect_silent "c48 r15 CONTROL, which denying every multi--C cannot satisfy: git -C <clean> -C . merge, fired from a DIRTY event cwd, stays allowed — the composed directory is the clean repo, which is where git will actually operate"
+    fire git-guardrails.py "$TMP/c49.json"
+    expect_deny   "c49 r15: the COMPOSING form, git -C <dirty> -C sub merge from a clean cwd — a relative second -C resolves against the first, not against the event cwd, and the tree read is still the dirty one"
+    fire git-guardrails.py "$TMP/c50.json"
+    expect_silent "c50 r15 CONTROL: an ABSOLUTE second -C REPLACES the first, so git -C <dirty> -C <clean> merge from the dirty cwd is allowed — the fold follows git's rule rather than picking a -C"
+else
+    no "c47 a composed -C landing in a dirty repo is denied" "the mc fixtures are not dirty/clean as required"
+    no "c48 control: a composed -C landing in a clean repo is allowed" "the mc fixtures are not dirty/clean as required"
+    no "c49 a relative second -C composes against the first" "the mc fixtures are not dirty/clean as required"
+    no "c50 control: an absolute second -C replaces the first" "the mc fixtures are not dirty/clean as required"
+fi
+if [ -n "$MC_DIRTY_STATUS" ]; then
+    fire git-guardrails.py "$TMP/c51.json" PATH="$SHIM_SLOW:$PATH" CLAUDE_GIT_STATUS_TIMEOUT=1
+    expect_contains "c51 r15: a git status that TIMES OUT on a dirty repo is denied, naming the reason. It used to fall into the 'not a repository at all' branch and ALLOW — the same unanswered question r13 fixed for the -C path and left here" \
+                    "could not determine the tree state"
+    fire git-guardrails.py "$TMP/c52.json" PATH="$SHIM_FAIL:$PATH"
+    expect_deny   "c52 r15: a git status that EXITS NON-ZERO inside a real repository is denied too — read_status returned the same None for all three causes and the caller allowed on it"
+else
+    no "c51 a status that times out denies" "the mc-dirty fixture did not come up dirty"
+    no "c52 a status that exits non-zero denies" "the mc-dirty fixture did not come up dirty"
+fi
+if [ ! -e "$NOT_A_REPO_DIR/.git" ] && [ -z "$(git -C "$NOT_A_REPO_DIR" rev-parse --show-toplevel 2>/dev/null)" ]; then
+    fire git-guardrails.py "$TMP/c53.json"
+    expect_silent "c53 r15 CONTROL for c51/c52: the one BENIGN unanswered status — a directory that is not a git repository at all — is still allowed. Repo-ness is decided from the FILESYSTEM (a .git at or above the directory), so a broken or shimmed git cannot claim it"
+else
+    no "c53 control: a directory that is not a repository stays allowed" \
+       "the temp directory is inside a git repository, so the control cannot discriminate"
 fi
 
 # ── (d) claim-reconcile ────────────────────────────────────────────────────

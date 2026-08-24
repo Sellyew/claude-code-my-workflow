@@ -1,11 +1,9 @@
 # Project Memory
 
 Corrections and learned facts that persist across sessions.
-When a mistake is corrected, append a `[LEARN:category]` entry below.
+When a mistake is corrected, append a `[LEARN:category]` entry below; most recent at bottom.
 
 ---
-
-<!-- Append new entries below. Most recent at bottom. -->
 
 ## Workflow Patterns
 
@@ -109,17 +107,17 @@ When a mistake is corrected, append a `[LEARN:category]` entry below.
 
 ## Verification Architecture (three complementary patterns)
 
-[LEARN:pattern] Verification in this repo now operates at three architectural levels, each addressing a different failure mode. Do NOT collapse them — they are complementary, not redundant:
+[LEARN:pattern] Verification here operates at three architectural levels, each addressing a different failure mode. Do NOT collapse them — they are complementary, not redundant:
 
-1. **Critic-fixer loop** (`/qa-quarto`, `/review-paper --adversarial`) — **two agents, serial** — one reads the artifact and flags issues, the other applies fixes; loop until APPROVED. Best for **presentation + structural** bugs (Beamer↔Quarto parity, manuscript completeness). Agents see the full artifact; adversarial tension comes from role assignment.
+1. **Critic-fixer loop** (`/qa-quarto`, `/review-paper --adversarial`) — **two agents, serial** — one flags issues, the other applies fixes; loop until APPROVED. Best for **presentation + structural** bugs (Beamer↔Quarto parity, manuscript completeness). Both see the full artifact; the tension comes from role assignment.
 
-2. **Cross-artifact review** (`/review-paper` + `/review-r` + `/audit-reproducibility`) — **horizontal dependency traversal** — a manuscript's claims depend on scripts' outputs, so the manuscript reviewer spawns script reviewers and reproducibility checkers alongside the paper review. Best for **paper ↔ code consistency** (ATTs, coefficients, N match the outputs that produced them).
+2. **Cross-artifact review** (`/review-paper` + `/review-r` + `/audit-reproducibility`) — **horizontal dependency traversal** — a manuscript's claims depend on scripts' outputs, so the paper reviewer spawns script reviewers and reproducibility checkers alongside it. Best for **paper ↔ code consistency** (ATTs, coefficients, N match the outputs that produced them).
 
 3. **Post-Flight Verification / CoVe** (`/verify-claims` + `claim-verifier` agent, v1.7.0) — **single agent, fresh-context fork** — the verifier has never seen the draft; it answers verification questions from the source material alone, using `context: fork` to architecturally enforce independence. Best for **factual hallucination** (fabricated citations, wrong dataset fields, misattributed findings). Adapted from Dhuliawala et al. 2023 ([arXiv:2309.11495](https://arxiv.org/abs/2309.11495)).
 
-The key insight: each pattern enforces independence differently. Critic-fixer uses role tension; cross-artifact uses dependency graph traversal; CoVe uses context isolation. A skill that needs all three (e.g., `/review-paper --peer`) invokes them at different phases.
+The key insight: each enforces independence differently — role tension, dependency-graph traversal, context isolation. A skill needing all three (e.g. `/review-paper --peer`) invokes them at different phases.
 
-[LEARN:pattern] Post-Flight Reports (v1.7.0) are the output-side twin of Pre-Flight Reports (v1.6.0). Pre-Flight proves inputs were read; Post-Flight proves claims hold. Both use structured output blocks, fail-closed fallbacks, and explicit opt-outs. Together with summary-parity (v1.6.1), they form the **discipline-pattern trilogy**: input discipline + framing discipline + output discipline. When designing a new skill that generates text, ask: does it need all three?
+[LEARN:pattern] Post-Flight Reports (v1.7.0) are the output-side twin of Pre-Flight Reports (v1.6.0). Pre-Flight proves inputs were read, Post-Flight proves claims hold, and both use structured output blocks, fail-closed fallbacks, and explicit opt-outs. With summary-parity (v1.6.1) they form the **discipline-pattern trilogy** — input, framing, output discipline. Ask of a new text-generating skill: does it need all three?
 
 [LEARN:audit] **Skill frontmatter `allowed-tools` must cover every tool the body invokes** — easy to miss, because the body reads as English ("spawn the verifier via Agent") while the frontmatter reads as a bureaucratic array. Four skills promised a tool in prose their `allowed-tools` omitted (PR #92, flagged by two external reviewers); the runtime failure is a permission error or a silent bypass. Sibling check: if rule X's `paths:` names skill Y, confirm Y actually implements X — rule-vs-implementation drift is the same bug one layer up.
 
@@ -195,4 +193,4 @@ The key insight: each pattern enforces independence differently. Critic-fixer us
 
 [LEARN:audit] **Gate every number you publish — including in the release that adds the rule.** A release stating *a count is a computation, not a reading* shipped three counts of its own test battery: one agent wrote the prose while another was still adding cases. **Sequence the change and its count — never parallelize them — and make the count derived**, so a checker recomputing it from source turns silent drift into a red gate.
 
-[LEARN:safety] **When a check keeps leaking, stop patching cases — stop predicting.** A clean-tree guard tried to infer from a chained command whether the tree would still be dirty by the merge. Enumerating safe forms leaked; inverting to deny-on-doubt leaked less but still leaked, because each round found one more unmodelled dimension — flags, subcommands, segments, redirection, substitution — then a semantic one: `git stash` does not stash untracked files, so a correctly-parsed *this cleans the tree* was false. Deleting the prediction — read the real state at decision time and refuse — closed the class. What replaced it was *parsing*, which is finite and testable; the check did not get smaller, it got **bounded**. **Predicting an effect you could measure is itself the defect.**
+[LEARN:safety] **When a check keeps leaking, stop patching cases — stop predicting.** A clean-tree guard tried to infer from a chained command whether the tree would still be dirty by the merge. Enumerating safe forms leaked; deny-on-doubt leaked less but still leaked, because each round found one more unmodelled dimension — flags, subcommands, segments, redirection, substitution — then a semantic one: `git stash` does not stash untracked files, so a correctly-parsed *this cleans the tree* was false. Deleting the prediction was necessary and not sufficient: a reading taken before execution proves only that the tree was clean when the command was *authorized*, and a referee chained a write ahead of the op on a clean tree. The class closed only once the op was also required to be a **standalone simple command** — nothing left on the line that could write in between. **Predicting an effect you could measure is itself the defect — and a measurement taken before the effect is not a measurement of it.**

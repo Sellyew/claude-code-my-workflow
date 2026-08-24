@@ -25,7 +25,7 @@ claims were true, v2.6 asks whether the things that check them still work.
   typo can no longer disable a hook silently while every gate stays green. The registered set
   is derived live from the gate runner, the session settings, and the commit entry point;
   grepping the ledger cannot know what actually runs.
-- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (107 cases, seconds to run)
+- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (131 cases, seconds to run)
   that re-fires every active guard hook's target failure on **every backtest run**: the deny
   cases, the clean controls that must stay silent, fail-open on a malformed event, and the
   documented escape hatches. Gate 9 proves a hook is *wired*; gate 10 proves it still *acts*.
@@ -41,9 +41,26 @@ claims were true, v2.6 asks whether the things that check them still work.
   default.
 - **`git-guardrails.py` gains a clean-tree precondition.** Merges, rebases, and pulls refuse to
   start over a dirty tree — commit it, or stash it under a label that says what it is
-  (`--abort` / `--continue` exempt; hatch `ALLOW_DIRTY_MERGE=1`). The asymmetry is the whole
-  argument: the check costs one command, and the failure it prevents is uncommitted work
-  destroyed by a merge that mostly succeeded.
+  (`--abort` / `--continue` / `--skip` / `--quit` / `--edit-todo` exempt; hatch
+  `ALLOW_DIRTY_MERGE=1`). The asymmetry is the whole argument: the check costs one command, and
+  the failure it prevents is uncommitted work destroyed by a merge that mostly succeeded.
+  **Four of its rules refuse command shapes a fork may be running today — read them before you
+  upgrade.** (1) A history op is accepted **only as a standalone simple command**: a second
+  segment, a pipeline, a redirection, a command or process substitution, a grouping, a `cd`, or
+  a variable assignment denies it *regardless of tree state*, so `git pull | tail -5`,
+  `git pull > log 2>&1`, `git merge x && npm install` and `git merge $(cat branchfile)` are all
+  now refused. That shape is the only thing a PreToolUse hook can honestly stand behind — a
+  tree reading taken before bash runs says nothing about the tree the op starts from unless
+  nothing on the line can write in between. (2) `--autostash` is **no longer unconditionally
+  exempt**: it now reads the tree and is allowed only when no untracked (`??`) entry is
+  present, because `git stash` does not stash untracked files at all. (3) A `-C <path>` the
+  guard cannot resolve — an unexpanded `$var`, a directory that does not exist — **denies**,
+  instead of quietly falling back to the session's own repository and allowing because *that*
+  one was clean. (4) `--git-dir`, `--work-tree`, `--namespace`, `--bare`, and any `NAME=VALUE`
+  assignment on the line (`GIT_DIR=`, `GIT_WORK_TREE=`, …) deny outright; run the op from the
+  repository it belongs to. **The accepted cost is one extra tool call** — with its own hook
+  cycle and agent round trip, not "one extra keystroke", as an earlier draft of the hook's own
+  docstring claimed.
 - **The hook layer is qualified, not assumed.** Five new ledger rows carry **recall and
   false-positive rate** measured against seeded defects *and* clean controls — including a
   *grading-the-grader* row that stubs a guard hook to always-allow in a copied hook directory
@@ -94,17 +111,34 @@ claims were true, v2.6 asks whether the things that check them still work.
 ### Added — contracts and references
 
 - **Four laws close the last mile of `research-agent-laws.md`.**
-  **18 — a count is a computation, not a reading:** every number that reaches a decision-maker
-  is produced by a command whose output *is* the number, and is reported together with that
-  command; a figure taken off a scrolled buffer is a guess wearing a count's precision.
-  **19 — "done" is a state of the repository, not a sentence:** the standing gate for the
-  touched surface has been run and is green, the work is committed, and the commit is pushed —
-  and only then is it reported.
-  **20 — merges, rebases, and pulls start from a clean tree**, now mechanised by the guard
-  above.
-  **21 — delegated screens run under a written rubric, and waves are adjudicated whole:**
-  EXCLUDE as the default verdict, per-candidate evidence, a dispatcher spot-check, and verdicts
-  joined to candidates by id — early returns are *status*, not input.
+  **18 — a count is a computation, not a reading:** every number a decision or a reader rests
+  on is produced by a command whose output *is* the number, and is reported together with that
+  command; a figure taken off a scrolled buffer is a guess wearing a count's precision. Scoped
+  on purpose — it binds published and gating numbers, not every figure in conversation.
+  **19 — name the state you actually reached; never a later one:** *modified*, *verified*,
+  *committed*, *pushed*, and *integrated* are five different states, and claiming a later one
+  than you reached is the whole defect. Where a task ends belongs to its contract; only the
+  honesty of the report belongs to the law.
+  **20 — history operations normally start from a porcelain-clean repository**, and an
+  exception is an explicit override *reported as an exception* — mechanised by the guard above,
+  within the boundary that entry now states.
+  **21 — delegated screens run under a written rubric, and waves are adjudicated whole:** the
+  default verdict is a **declared decision, not a constant** — EXCLUDE where a false include is
+  the error you could still catch later, never on a recall-first sweep, and NEEDS-HUMAN where
+  neither error is recoverable — with per-candidate evidence, a re-check whose sampling method,
+  sample size, tolerated disagreement rate and escalation are fixed **before** the screen runs,
+  and verdicts joined to candidates by id. Early returns are *status*, not input.
+  **These wordings were corrected mid-release, and the correction leads.** Laws 19 and 21 were
+  drafted in this branch as *"done" is a state of the repository — committed and pushed, and
+  only then reported* and *EXCLUDE as the default verdict*, and an external referee falsified
+  both before the release shipped. Requiring every task to end pushed breaks a collaborator who
+  asked for a working-tree diff to review, a contributor without push rights, and anyone
+  offline — so the law now governs the honesty of the claim, not where the work stops.
+  EXCLUDE-by-default inverts on a recall-first screen: it silently drops relevant evidence, and
+  unlike a bad include, nothing downstream ever surfaces the loss. Law 20's flat *"start from a
+  clean tree"* was narrowed for a third referee finding, on what a pre-execution check can
+  establish at all. The wordings above are the ones that shipped; earlier drafts survive
+  nowhere but in this paragraph.
 - **`templates/executor-contract.md`** — the dispatchable contract for delegated work: the goal,
   the acceptance bar, exact paths, the gates the result must pass, the output contract, and the
   mechanisms the executor is allowed to refuse. State the bar; never the implementation.

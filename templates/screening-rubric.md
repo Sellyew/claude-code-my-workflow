@@ -31,13 +31,16 @@ default verdict declared above — which on a recall-first screen is *not* EXCLU
 
 | # | Criterion (must hold) | How it is checked | Verdict if it fails |
 |---|-----------------------|-------------------|---------------------|
-| C1 | [requirement] | [the field, file, page, or command that decides it] | EXCLUDE |
-| C2 | [requirement] | [how it is checked] | EXCLUDE |
-| C3 | [disqualifier stated positively] | [how it is checked] | EXCLUDE |
+| C1 | [requirement] | [the field, file, page, or command that decides it] | [the declared default] |
+| C2 | [requirement] | [how it is checked] | [the declared default] |
+| C3 | [disqualifier stated positively] | [how it is checked] | [the declared default] |
 
-**Exclusion is the default, not the failure case.** *"Might be relevant"*, *"looks promising"*,
-and *"could not check"* are exclusions — the first two because they cite nothing, the third
-because an unverified criterion has not held.
+**The default is the failure case — whichever default you declared above.** *"Might be relevant"*
+and *"looks promising"* take it, because they cite nothing. *"Could not check"* does not: a
+candidate failing **only** on a criterion the screener could not verify is a BORDERLINE and goes
+to the protocol below, on either kind of screen. An unverified criterion is an open question, not
+a decided one, and resolving it toward whichever side is tidier is what this rubric exists to
+stop.
 
 ---
 
@@ -48,7 +51,7 @@ Each candidate returns one row, and each verdict names **where** it came from:
 | Field | Requirement |
 |-------|-------------|
 | `id` | Stable identifier assigned by the dispatcher **before** the screen runs |
-| `verdict` | INCLUDE / EXCLUDE / BORDERLINE |
+| `verdict` | INCLUDE / EXCLUDE / BORDERLINE / NEEDS-HUMAN — the declared default must be one of these |
 | `failing_criterion` | The first criterion that failed (empty for INCLUDE) |
 | `evidence` | Locator plus quoted text — page, line, field name, or command output |
 
@@ -102,6 +105,10 @@ An unchecked screen is an opinion poll with citations.
 
 **Question.** Which publicly available datasets could support an independent re-analysis of a
 published result, using only what we can obtain and redistribute this term?
+
+**Screen type:** precision-first — a shortlist we will act on this term. **Default verdict:**
+EXCLUDE, which is why every cell in the last column below reads EXCLUDE. A recall-first sweep of
+the same literature would fill that column with its own declared default instead.
 
 **Criteria.**
 
