@@ -165,6 +165,14 @@ Two checks, by tool:
            the timeout bound is configurable via CLAUDE_GIT_STATUS_TIMEOUT
            (default 10s) so a genuinely slow worktree can be worked in.
 
+           THE BUDGET MUST FIT INSIDE THE REGISTRATION (r16). That 10s bound
+           shipped against a 5s `"timeout"` in .claude/settings.json, so on the
+           very worktree it was raised for the harness killed this hook before
+           it could write the deny — and a killed hook emits nothing, which is
+           what an ALLOW looks like. The registration is 20s now, the internal
+           bound is derived from it (`_HOOK_REGISTERED_TIMEOUT` minus margin),
+           and CLAUDE_GIT_STATUS_TIMEOUT is CLAMPED rather than honoured.
+
            AN UNRESOLVED REPOSITORY SELECTOR NOW DENIES (r13). If the invocation
            names a `-C <path>` that cannot be read as a repository — it does not
            exist, it holds an unexpanded `$var`, git cannot answer — the check
@@ -567,8 +575,6 @@ _SEG_TOKEN = re.compile(
       | (?P<word>(?:"[^"]*"|'[^']*'|\\.|[^\s"'|;&\n])+)""",
     re.VERBOSE,
 )
-_HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
-
 HARDCODED_PATH = re.compile(r"(/Users/[^/\s'\")]+|/home/[^/\s'\")]+|[A-Za-z]:\\\\Users\\\\[^\\\s'\"]+)")
 CODE_EXT = {".R", ".r", ".qmd", ".do", ".py", ".Rmd"}
 
@@ -589,23 +595,107 @@ def _unquote(w: str) -> str:
     return "".join(out)
 
 
+# THE OPENER SCAN IS QUOTE-AWARE AND HERESTRING-AWARE (r16). It used to be one
+# quote-blind regex — `<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1` — run over RAW
+# line text with `finditer`. Two ordinary spellings therefore opened a heredoc
+# that bash never opens, and every line after them (to the end of the command,
+# or to a line spelling the invented terminator) was DELETED before anything was
+# tokenised:
+#
+#   * a HERESTRING. To that regex `tr a-z A-Z <<< hello` is `<<` + `\s*` +
+#     `hello`, so `hello` became the terminator.
+#   * a `<<WORD` inside a QUOTED STRING. `echo '<<EOF'` and
+#     `echo "docs: use <<EOF"` are prose bash merely prints; both opened one.
+#
+# Measured at 7b8848d against a throwaway fixture repo whose porcelain was
+# ' M s.txt', line 2 of a two-line command carrying the real op: after
+# `tr a-z A-Z <<< hello` this hook went SILENT on `git reset --hard HEAD~1`,
+# `git clean -fd`, `git push --force origin main`, `git add -A` and a
+# dirty-tree `git merge main`, and the sibling guard went SILENT on
+# `rm -f .claude/hooks/git-guardrails.py` — every one of which DENIES when
+# line 1 is `echo hi`, and bash runs line 2 in all of them. `_strip_heredocs`
+# runs FIRST in both `git_deny_reason` and `dirty_tree_reason`, so this silenced
+# the unconditional deny list AND the clean-tree precondition at once. Dropping
+# REAL command text is a missed deny, the one direction a guard must not fail
+# in.
+#
+# So the line is WALKED, not pattern-matched: quote state is tracked (and
+# carried ACROSS lines, because a shell string may span them), `<<<` is consumed
+# whole so it can never be read as a `<<`, and a delimiter is taken only from an
+# opener found OUTSIDE quotes. An UNBALANCED quote leaves the rest of the
+# command in quote state, so no opener is found and NO text is dropped — that
+# fails toward scanning more, which is the safe direction here.
+#
+# Disclosed residual, unchanged by this fix: a `<<` in an arithmetic left-shift
+# whose right operand is an identifier (`$(( x << n ))`) still reads as an
+# opener and still drops the lines after it. Requiring the `<<` to sit in
+# redirection position would close it and would also stop recognising the
+# equally ordinary `cat<<EOF`, so it is disclosed rather than guessed at.
+#
+# THIS BLOCK IS DUPLICATED VERBATIM IN `root-of-trust-guard.py` (its copy names
+# the function `strip_heredocs`). Duplicated, not imported: that hook's import
+# of this one is best-effort and returns None on any failure, and a parser that
+# silently stops running is exactly what this defect was.
+_HEREDOC_DELIM = re.compile(
+    r"""-?[ \t]*(?: (?P<q>['"])(?P<qword>[A-Za-z_][A-Za-z0-9_]*)(?P=q)
+                  | \\?(?P<word>[A-Za-z_][A-Za-z0-9_]*) )""",
+    re.VERBOSE,
+)
+
+
+def _heredoc_opener(line: str, quote: str = "") -> "tuple[str | None, str]":
+    """The delimiter of the LAST heredoc this line OPENS (None if it opens
+    none), and the quote state the line ends in — fed back in for the next
+    line, so a string spanning lines stays quoted."""
+    delim = None
+    i, n = 0, len(line)
+    while i < n:
+        c = line[i]
+        if quote:
+            if c == "\\" and quote == '"' and i + 1 < n:
+                i += 2                      # only `"` honours a backslash
+                continue
+            if c == quote:
+                quote = ""
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            i += 2                          # an escaped char, `\<` included
+            continue
+        if c in "'\"":
+            quote = c
+            i += 1
+            continue
+        if line.startswith("<<<", i):
+            i += 3                          # HERESTRING: never an opener
+            continue
+        if line.startswith("<<", i):
+            m = _HEREDOC_DELIM.match(line, i + 2)
+            if m:
+                delim = m.group("qword") or m.group("word")
+                i = m.end()
+                continue
+            i += 2
+            continue
+        i += 1
+    return delim, quote
+
+
 def _strip_heredocs(cmd: str) -> str:
     """Drop heredoc BODIES so a `git pull` that merely appears inside one is
     prose, not a command — the same posture as root-of-trust-guard."""
     if "<<" not in cmd:
         return cmd
-    out, pending = [], None
+    out, pending, quote = [], None, ""
     for line in cmd.split("\n"):
         if pending is not None:
             if line.strip() == pending:
                 pending = None
-            continue
+            continue                        # a BODY line: not shell text
         out.append(line)
-        last = None
-        for last in _HEREDOC.finditer(line):
-            pass
-        if last:
-            pending = last.group(2)
+        delim, quote = _heredoc_opener(line, quote)
+        if delim:
+            pending = delim
     return "\n".join(out)
 
 
@@ -900,6 +990,41 @@ NOT_A_REPO = _NotARepo()
 _GIT_STATUS_CMD = ("git", "status", "--porcelain",
                    "--untracked-files=normal", "--ignore-submodules=none")
 
+# THE INVARIANT (r16), and it is not a style preference:
+#
+#     the internal budget must be STRICTLY LESS than this hook's REGISTERED
+#     timeout in .claude/settings.json, with margin for the rest of the hook's
+#     work — BECAUSE A KILLED HOOK IS INDISTINGUISHABLE FROM AN ALLOW.
+#
+# A PreToolUse hook says "deny" by writing a decision to stdout. The harness
+# kills it at its registered bound; a killed hook has written nothing, and
+# nothing is what an allow looks like. So a deny branch that cannot RETURN
+# inside the registration does not exist.
+#
+# That is what r15 shipped. `_STATUS_TIMEOUT_DEFAULT` was raised to 10 s so a
+# slow worktree would not wedge a session, while the registration stayed at the
+# 5 s it had been since before the branch. Measured at 7b8848d against a dirty
+# fixture repo with a `git` shim that sleeps 30: run with no harness bound the
+# hook took 10 s, exited 0, and emitted `"permissionDecision": "deny"`; run as
+# the harness runs it, `timeout -s KILL 5`, it took 5 s, exited 137, and wrote
+# ZERO BYTES. So on the exact case the r15 fix names — a large worktree on a
+# cold cache, a network filesystem — the history op was ALLOWED over
+# uncommitted work, and the deny message's own remedy (raise
+# CLAUDE_GIT_STATUS_TIMEOUT) moved the user FURTHER from a deny.
+#
+# Both numbers now derive from `_HOOK_REGISTERED_TIMEOUT`, which states what
+# .claude/settings.json registers, and `_status_timeout()` CLAMPS rather than
+# honours: a caller who asks for 600 s gets the ceiling, not a killed hook.
+# Battery case c54 fires this hook under the registered bound with a slow git
+# and requires the deny to still come out; c55 pins the two numbers against
+# settings.json itself, so raising one without the other goes red.
+#
+# At most ONE status is read per invocation — rule 0 refuses a history op that
+# is not a standalone simple command BEFORE the tree is read — so the worst
+# case really is one budget, not one per segment.
+_HOOK_REGISTERED_TIMEOUT = 20.0   # MUST equal .claude/settings.json's "timeout"
+_STATUS_TIMEOUT_MARGIN = 5.0      # json parse, tokenise, write the decision
+_STATUS_TIMEOUT_CEILING = _HOOK_REGISTERED_TIMEOUT - _STATUS_TIMEOUT_MARGIN
 _STATUS_TIMEOUT_DEFAULT = 10.0
 _STATUS_TIMEOUT_ENV = "CLAUDE_GIT_STATUS_TIMEOUT"
 
@@ -908,14 +1033,19 @@ def _status_timeout() -> float:
     """Seconds to wait for `git status`. Configurable because r15 made an
     UNREADABLE status a DENY: on a genuinely slow worktree the bound is the
     difference between a working guard and a blocked session, and 3 s (the old
-    hardcoded value) is reachable on a cold cache over a network filesystem."""
+    hardcoded value) is reachable on a cold cache over a network filesystem.
+
+    r16: CLAMPED to `_STATUS_TIMEOUT_CEILING`. A bound at or above the
+    registered timeout cannot produce a deny — the hook is killed first — so
+    honouring one would turn the escape hatch into a silent allow."""
+    v = _STATUS_TIMEOUT_DEFAULT
     try:
-        v = float(os.environ.get(_STATUS_TIMEOUT_ENV, ""))
-        if v > 0:
-            return v
+        env = float(os.environ.get(_STATUS_TIMEOUT_ENV, ""))
+        if env > 0:
+            v = env
     except (TypeError, ValueError):
         pass
-    return _STATUS_TIMEOUT_DEFAULT
+    return min(v, _STATUS_TIMEOUT_CEILING)
 
 
 def _within_git_repo(cwd: str | None) -> bool:
@@ -1218,7 +1348,10 @@ def dirty_tree_reason(cmd: str, event: dict) -> str | None:
                     f"unanswered question is not an allow. Check `git status` "
                     f"yourself, or raise the bound with "
                     f"{_STATUS_TIMEOUT_ENV}=<seconds> in the session "
-                    f"environment. "
+                    f"environment — capped at {_STATUS_TIMEOUT_CEILING:g}s, "
+                    f"because this hook is registered with a "
+                    f"{_HOOK_REGISTERED_TIMEOUT:g}s timeout and a hook killed "
+                    f"before it answers is read as an ALLOW. "
                     f"(Override: ALLOW_DIRTY_MERGE=1 in the session environment.)")
         # Rule 2b (r13): `--autostash` is git's own stash-operate-restore, but
         # `git stash` does not stash UNTRACKED files — the referee reproduced a

@@ -121,6 +121,15 @@ def n_laws():
     t = read(".claude/references/research-agent-laws.md")
     return len(re.findall(r'^\*\*(\d+)\.', t, re.M))
 
+def n_rungs():
+    # CLAUDE.md's "the seven rungs" is the same shape as the law count two
+    # bullets below it — an enumerable count of another file's headings — and it
+    # sat UNGATED in the very hunk where the law count was corrected 17 -> 21 and
+    # gated. A planted-lie probe confirmed it: "the ninety-nine rungs" left every
+    # gate at exit 0. Not hypothetical drift either: verification-ladder.md grew a
+    # whole section this release. Counted from the rung headings themselves.
+    return len(re.findall(r'^## Rung ', read(".claude/references/verification-ladder.md"), re.M))
+
 # English number words 0-99, so a spelled-out count ("Twelve cases",
 # "Twenty-two cases") is compared as a number like a digit claim.
 _ONES = {"zero":0,"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,
@@ -140,6 +149,28 @@ def words_to_int(tok):
         if a in _TENS and b in _ONES and _ONES[b] < 10:
             return _TENS[a] + _ONES[b]
     return None
+
+# The SAME token set words_to_int() parses, as a regex fragment — DERIVED from
+# _ONES/_TENS rather than hand-listed, so the pattern and the parser cannot drift
+# apart. That drift was a real, latent failure: the "backtest gates" row below
+# hard-coded `(one|two|...|ten|\d+)`, which stops at TEN while words_to_int has
+# handled 0-99 (hyphens included) all along. The suite went 8 -> 10 on this
+# branch, so the ELEVENTH gate was the trigger: a maintainer who correctly
+# rewrote every surface to "eleven gates" would have made the claim invisible to
+# the pattern, and an unmatched pattern on a REQUIRED surface is a RED gate (see
+# main()). Four surfaces with correct prose would have gone red at once, and the
+# cheapest way out of that red is to mark them OPT — "exactly how coverage
+# disappears quietly", per the note below. Executed 2026-08-23 against an 11-gate
+# copy: the old alternation produced four false NO CLAIM MATCHED failures; this
+# fragment produces none.
+#
+# Longest-first so `twenty-one` is tried before `twenty`. Kept a CLOSED set of
+# number words rather than the open `[A-Za-z]+` capture some rows use: an open
+# capture matches any word before the noun ("backtest gates"), which sets the
+# surface's found flag and can mask a genuine loss of coverage.
+_NUM = "(" + "|".join([r"\d+"] + sorted(
+    list(_ONES) + list(_TENS) + [f"{t}-{o}" for t in _TENS for o in _ONES if 0 < _ONES[o] < 10],
+    key=len, reverse=True)) + ")"
 
 def n_seven_pass():
     t = read(".claude/skills/seven-pass-review/SKILL.md")
@@ -174,7 +205,21 @@ def n_seven_pass():
 #     such a row can never go red and is not a gate
 # Demoting a REQUIRED surface to OPT therefore costs a diff with a written
 # reason in it — a reviewable act — instead of an invisible non-match.
+#
+# 2026-08-23, one dimension further in: `found` moved from per-ROW to per-SURFACE
+# and stopped there, so the SAME leak reappeared per INSTANCE. A surface that
+# states its claim at several sites — LEDGER.md carries the battery count at six,
+# README.md carries the gate count at two — could have ONE instance reworded and
+# stay green on its siblings, with the file then asserting two different numbers
+# for one measurement. Proven, not assumed: rewriting the FIRST "(131 cases,
+# exit 0)" in LEDGER.md to "(99 cases pass, exit 0)" left check-derived-counts,
+# check-surface-sync, check-ledger-coverage and check-staleness all at exit 0.
+# There is no way to detect an instance the pattern no longer matches, so the
+# expectation is DECLARED like everything else here: REQ(path, n) says this
+# surface must carry the claim at n sites AT LEAST. Below n is a failure; above
+# it is fine, so adding a site never goes red and losing one always does.
 OPT = namedtuple("OPT", "path why")
+REQ = namedtuple("REQ", "path n")
 
 # A third surface form: a SECTION of a file rather than the whole file. `label`
 # is what the log prints, `text` is the already-extracted view the pattern is
@@ -188,13 +233,20 @@ SEC = namedtuple("SEC", "label text")
 def _surface_path(s):
     if isinstance(s, SEC):
         return s.label
-    return s.path if isinstance(s, OPT) else s
+    return s.path if isinstance(s, (OPT, REQ)) else s
 
 def _surface_text(s):
     return s.text if isinstance(s, SEC) else read(_surface_path(s))
 
 def _surface_required(s):
     return not isinstance(s, OPT)
+
+def _surface_min(s):
+    """How many matching instances this surface must carry. 0 for OPT (scanned,
+    not required); the declared n for REQ; 1 for a bare path or a SEC."""
+    if isinstance(s, OPT): return 0
+    if isinstance(s, REQ): return s.n
+    return 1
 
 # Extracted once, so every release-inventory row below reads the SAME window.
 _CL_CURRENT = changelog_current_release()
@@ -238,10 +290,21 @@ CHECKS = [
     # exactly ONE site in it (the header), because the enumeration below the
     # header numbers its gates `1.`…`10.` rather than restating a total, and
     # `n_gates()` counts `^run "` lines, which the pattern cannot match.
-    ("backtest gates",        r'(?i)\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+) (?:gates|checkers)\b', ["README.md", "docs/index.html", OPT("CLAUDE.md", "names the gate suite, states no count"), "guide/workflow-guide.qmd", OPT(".claude/skills/vaccinate/evals/README.md", "refers to the suite by path, states no count"), ".claude/skills/commit/SKILL.md", ".github/CONTRIBUTING.md", "scripts/backtest.sh"], n_gates()),
+    # r13: the number alternation is `_NUM`, derived from words_to_int's own
+    # token table, not a hand-written list that stopped at TEN — see _NUM.
+    # r13: the three multi-instance surfaces declare HOW MANY sites they carry
+    # (README.md "ten gates" + "10 checkers"; docs/index.html twice; the guide
+    # three times), so rewording one of them is as loud as rewording the last.
+    ("backtest gates",        r'(?i)\b' + _NUM + r' (?:gates|checkers)\b', [REQ("README.md", 2), REQ("docs/index.html", 2), OPT("CLAUDE.md", "names the gate suite, states no count"), REQ("guide/workflow-guide.qmd", 3), OPT(".claude/skills/vaccinate/evals/README.md", "refers to the suite by path, states no count"), ".claude/skills/commit/SKILL.md", ".github/CONTRIBUTING.md", "scripts/backtest.sh"], n_gates()),
     # CLAUDE.md's law count was hand-edited 17 -> 21 and nothing recomputed it,
     # so "99 laws" would have left every gate green. Counted from the laws file.
     ("research-agent laws",   r'(\d+) laws\b',                   ["CLAUDE.md"], n_laws()),
+    # The count two bullets ABOVE the law count in the same CLAUDE.md paragraph,
+    # gated for the same reason and counted the same way — see n_rungs(). The
+    # guide states it once more; CHANGELOG.md:312 states it inside the FROZEN
+    # v2.5.0 section and is deliberately not a surface (see
+    # changelog_current_release() for why history is never dragged to today).
+    ("verification rungs",    r'(?i)\bthe ' + _NUM + r' rungs\b', ["CLAUDE.md", "guide/workflow-guide.qmd", "docs/workflow-guide.html"], n_rungs()),
     ("seven-pass lenses",     r'(\d+) forked subagents',         [".claude/skills/seven-pass-review/SKILL.md"], n_seven_pass()),
     # The hook-battery case count drifted twice (12→16→…) because prose was
     # edited in parallel with case additions. Anchored on the vignette's own
@@ -263,7 +326,9 @@ CHECKS = [
     # exists to prevent, sitting in the ledger: a maintainer re-qualifying the
     # guards runs the battery, sees a different N, and cannot tell whether a
     # case was added or whether the recall DENOMINATOR was never updated.
-    ("battery cases (ledger)", r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, exit 0',    ["quality_reports/qualification/LEDGER.md"], n_hook_battery_cases()),
+    # SIX sites, declared: the ledger states this denominator once per qualified
+    # guard plus the roll-up, and rewording any one of them used to be silent.
+    ("battery cases (ledger)", r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, exit 0',    [REQ("quality_reports/qualification/LEDGER.md", 6)], n_hook_battery_cases()),
     ("battery-named root-of-trust", r'`root-of-trust-guard\.py` \((\d+) cases named\)', ["quality_reports/qualification/LEDGER.md"], n_battery_named("a")),
     ("battery-named git-guardrails", r'`git-guardrails\.py` \((\d+) cases named\)',     ["quality_reports/qualification/LEDGER.md"], n_battery_named("bc")),
     ("battery-named claim-reconcile", r'`claim-reconcile\.py` \((\d+) cases named\)',   ["quality_reports/qualification/LEDGER.md"], n_battery_named("d")),
@@ -316,9 +381,10 @@ def main():
                        f"fail — promote at least one surface to REQUIRED")
         for s in surfaces:
             f = _surface_path(s)
-            found = False          # PER SURFACE, not per row (see OPT above)
+            need = _surface_min(s)   # PER INSTANCE, not per surface (see REQ above)
+            seen = 0
             for m in re.finditer(pat, _surface_text(s)):
-                found = True
+                seen += 1
                 g = m.group(1)
                 claimed = words_to_int(g)
                 if claimed is None: continue
@@ -326,22 +392,24 @@ def main():
                 print(f"  {label:<22} {f:<28} claims {claimed:>3}  actual {actual:>3}  {'ok' if ok else 'MISMATCH'}")
                 if not ok:
                     bad.append(f"{f}: claims {claimed} {label}, actual {actual}")
-            if found:
-                continue
-            if _surface_required(s):
-                # This surface is DECLARED to carry the claim. If the pattern now
-                # matches nothing here, the claim was reworded or deleted and this
-                # surface has left coverage — indistinguishable from a claim that
-                # is correct, and exactly how a count drifts unnoticed. Fail
-                # loudly, naming the file, even when a sibling surface still
-                # matches and the row therefore "looks" checked.
-                print(f"  {label:<22} {f:<28} {'NO CLAIM MATCHED':<18}  UNGATED")
-                bad.append(f"{f}: the {label} pattern matched nothing there — the claim "
-                           f"was reworded, so this surface is no longer checked "
-                           f"(restore the phrasing, update the pattern, or mark the "
-                           f"surface OPT with a reason)")
-            else:
+            if seen == 0 and not _surface_required(s):
                 print(f"  {label:<22} {f:<28} no claim (optional: {s.why})")
+            elif seen < need:
+                # This surface is DECLARED to carry the claim at `need` sites. If
+                # the pattern now matches fewer, a site was reworded or deleted
+                # and has left coverage — indistinguishable from a claim that is
+                # correct, and exactly how a count drifts unnoticed. Fail loudly,
+                # naming the file, even when a SIBLING SURFACE or a SIBLING
+                # INSTANCE still matches and the row therefore "looks" checked.
+                what = "NO CLAIM MATCHED" if seen == 0 else f"ONLY {seen}/{need} SITES"
+                print(f"  {label:<22} {f:<28} {what:<18}  UNGATED")
+                lost = (f"the {label} pattern matched nothing there"
+                        if seen == 0 else
+                        f"the {label} pattern matched {seen} site(s) there, {need} expected")
+                bad.append(f"{f}: {lost} — the claim "
+                           f"was reworded, so that site is no longer checked "
+                           f"(restore the phrasing, update the pattern, adjust the "
+                           f"declared site count, or mark the surface OPT with a reason)")
     # patterns are sequential-by-construction: 1..N with no gaps
     ids = sorted(int(x) for x in set(re.findall(r'^#{2,3} Pattern (\d+)', read("guide/workflow-guide.qmd"), re.M)))
     if ids and ids != list(range(1, len(ids) + 1)):

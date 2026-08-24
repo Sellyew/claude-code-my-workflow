@@ -622,6 +622,100 @@ expect_deny   "a54 r15: multiple -C COMPOSE — git -C .claude -C hooks clean -f
 fire root-of-trust-guard.py "$TMP/a55.json"
 expect_silent "a55 r15 control: a -C chain that composes its way back OUT of the protected tree (.claude then ../docs) stays allowed — the fold follows git rather than denying any -C chain that mentions .claude"
 
+# a56-a60 (r16): PARENT-DIRECTORY (`..`) SEGMENTS. normalize() collapsed `//`
+# and `/./` but not `/../`, and the segment walk then read the segments AS
+# WRITTEN — so a path that pivots through an UNPROTECTED real child of
+# `.claude/` and climbs back into a protected one was not recognised, while the
+# shell resolved it to exactly the gate-defining file. Measured at 7b8848d
+# against a throwaway fixture tree: `rm -f .claude/rules/../hooks/git-guardrails.py`
+# went SILENT and really deleted the guard; `echo x > .claude/rules/../settings.json`
+# went SILENT and really rewrote settings.json; both literal twins DENIED.
+# a59/a60 are the controls the fix must not buy its recall by breaking: an
+# ordinary `..` outside the root of trust, and a READ through the very spelling
+# a56 denies.
+cat > "$TMP/a56.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .claude/rules/../hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a57.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"echo disabled > .claude/rules/../settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a58.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .claude/agents/../settings.local.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a59.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f scripts/../docs/index.html"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a60.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"cat .claude/rules/../settings.json | head -20"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a56.json"
+expect_deny   "a56 r16: a path that pivots through an unprotected sibling and climbs back in (.claude/rules/../hooks/git-guardrails.py) is denied — the shell deletes the guard, and the raw segment walk saw 'rules' after '.claude' and went silent"
+fire root-of-trust-guard.py "$TMP/a57.json"
+expect_deny   "a57 r16: the same shape reaching settings.json (.claude/rules/../settings.json) is denied"
+fire root-of-trust-guard.py "$TMP/a58.json"
+expect_deny   "a58 r16: any real unprotected child works as the pivot (.claude/agents/../settings.local.json) — the class is the spelling, not the one directory"
+fire root-of-trust-guard.py "$TMP/a59.json"
+expect_silent 'a59 r16 control: an ORDINARY `..` outside the root of trust (scripts/../docs/index.html) stays allowed — resolving `..` did not become denying every path that carries one'
+fire root-of-trust-guard.py "$TMP/a60.json"
+expect_silent "a60 r16 control: a READ through the very spelling a57 denies stays allowed — 'every READ is untouched' survives the fix"
+
+# a61-a63 (r16): THE HEREDOC OPENER SCAN. `_HEREDOC` was a quote-blind regex run
+# over raw line text, so `<<` + a bareword matched a HERESTRING (`cmd <<< word`)
+# and a `<<WORD` sitting inside a QUOTED STRING. Either one made the scanner
+# treat every following line as a heredoc BODY and delete it before tokenising —
+# so the real command bash runs on line 2 was never seen. Measured at 7b8848d:
+# with line 1 = `tr a-z A-Z <<< hello` or `echo '<<EOF'`, the deleter and the
+# redirect on line 2 both went SILENT; with line 1 = `echo hi` both DENIED, and
+# bash runs line 2 in every case. a63 is the control in the other direction: a
+# REAL heredoc body is still prose and must still be dropped.
+A61_CMD='tr a-z A-Z <<< hello\nrm -f .claude/hooks/git-guardrails.py'
+A62_CMD='echo \"docs: use <<EOF\"\nprintf disabled > .claude/settings.json'
+A63_CMD='cat <<'"'"'EOF'"'"' > notes.md\nrm -f .claude/hooks/git-guardrails.py\nEOF'
+cat > "$TMP/a61.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$A61_CMD"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a62.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$A62_CMD"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a63.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$A63_CMD"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a61.json"
+expect_deny   "a61 r16: a HERESTRING on line 1 (tr a-z A-Z <<< hello) no longer swallows line 2 — the deletion of a hook is seen and denied"
+fire root-of-trust-guard.py "$TMP/a62.json"
+expect_deny   "a62 r16: a <<WORD inside a QUOTED string on line 1 no longer opens a heredoc — the redirect into settings.json on line 2 is seen and denied"
+fire root-of-trust-guard.py "$TMP/a63.json"
+expect_silent 'a63 r16 control: a REAL heredoc body is still dropped — a body that merely documents `rm .claude/hooks/x` is prose, not a command, and quote-awareness did not buy its recall by keeping every body'
+
+# a64 (r16): the hook's REGISTERED timeout. A PreToolUse guard says 'deny' by
+# writing a decision; the harness kills it at the timeout in .claude/settings.json
+# and a killed hook has written NOTHING, which is exactly what an allow looks
+# like. So the registration is pinned against the number the hook itself states.
+A64=""
+if ROT_DECL="$(grep -o '^_HOOK_REGISTERED_TIMEOUT = [0-9.]*' "$HOOKS/root-of-trust-guard.py" | head -1 | awk '{print $3}')" \
+   && [ -n "$ROT_DECL" ]; then
+    ROT_REG="$(python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+for gs in d["hooks"].get("PreToolUse",[]):
+    for h in gs["hooks"]:
+        if "root-of-trust-guard.py" in h.get("command",""):
+            print(h.get("timeout")); break
+' "$ROOT/.claude/settings.json" 2>/dev/null)"
+    if [ -z "$ROT_REG" ]; then
+        A64="ROOT-OF-TRUST-NOT-REGISTERED: no PreToolUse entry names the hook"
+    elif [ "$(python3 -c "print(float('$ROT_REG') == float('$ROT_DECL'))" 2>/dev/null)" = "True" ]; then
+        A64="registration-matches-the-declared-bound"
+    else
+        A64="REGISTRATION-DRIFT: settings.json registers ${ROT_REG}s, the hook declares ${ROT_DECL}s"
+    fi
+else
+    A64="NO-DECLARED-BOUND: root-of-trust-guard.py states no _HOOK_REGISTERED_TIMEOUT"
+fi
+verdict "$A64"
+expect_contains "a64 r16: root-of-trust-guard.py's registered timeout in .claude/settings.json equals the bound the hook itself declares — a deny branch that cannot RETURN inside the registration does not exist, because a killed hook emits nothing and nothing is what an ALLOW looks like" \
+                "registration-matches-the-declared-bound"
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"
@@ -748,6 +842,35 @@ fire git-guardrails.py "$TMP/b16.json"
 expect_deny   "b16 r12: the same for a continued force push (git push \\<newline>--force origin main)"
 fire git-guardrails.py "$TMP/b17.json"
 expect_silent "b17 r12 control: the continued SAFE spelling (git push \\<newline>--force-with-lease) stays allowed — splicing continuations did not buy recall by denying every multi-line push"
+
+# b18-b20 (r16): THE HEREDOC OPENER SCAN, the sibling of a61-a63. This hook
+# carried the SAME quote-blind `_HEREDOC` regex, and `_strip_heredocs` runs
+# FIRST in both `git_deny_reason` and `dirty_tree_reason` — so a herestring or a
+# quoted `<<WORD` on an earlier line deleted the rest of the command and
+# silenced the UNCONDITIONAL deny list as well as the clean-tree rule. Measured
+# at 7b8848d: with line 1 = `tr a-z A-Z <<< hello` or `echo '<<EOF'`, `git reset
+# --hard HEAD~1`, `git clean -fd`, `git push --force origin main` and `git add
+# -A` all went SILENT; every one of them DENIES when line 1 is `echo hi`, and
+# bash runs line 2 in each. b20 is the control: a REAL heredoc body carrying the
+# same text is prose and must stay allowed.
+B18_CMD='tr a-z A-Z <<< hello\ngit reset --hard HEAD~1'
+B19_CMD='echo '"'"'<<EOF'"'"'\ngit clean -fd'
+B20_CMD='cat <<'"'"'EOF'"'"' > runbook.md\ngit push --force origin main\nEOF'
+cat > "$TMP/b18.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$B18_CMD"}}
+EOF
+cat > "$TMP/b19.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$B19_CMD"}}
+EOF
+cat > "$TMP/b20.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$B20_CMD"}}
+EOF
+fire git-guardrails.py "$TMP/b18.json"
+expect_deny   "b18 r16: a HERESTRING on line 1 (tr a-z A-Z <<< hello) no longer swallows line 2 — git reset --hard is seen and denied"
+fire git-guardrails.py "$TMP/b19.json"
+expect_deny   "b19 r16: a <<WORD inside a QUOTED string on line 1 no longer opens a heredoc — git clean -fd on line 2 is seen and denied"
+fire git-guardrails.py "$TMP/b20.json"
+expect_silent 'b20 r16 control: a REAL heredoc body carrying `git push --force` is still dropped as prose — quote-awareness did not buy its recall by keeping every body'
 
 # ── (c) git-guardrails: the clean-tree precondition ────────────────────────
 # Needs a real repository to answer `git status --porcelain`, so build a
@@ -1438,6 +1561,125 @@ else
     no "c53 control: a directory that is not a repository stays allowed" \
        "the temp directory is inside a git repository, so the control cannot discriminate"
 fi
+
+# c54 (r16): the heredoc opener scan reaching the CLEAN-TREE rule, not just the
+# deny list (b18-b20). `_strip_heredocs` runs first in `dirty_tree_reason` too,
+# so a herestring on line 1 deleted the history op on line 2 and the merge over
+# uncommitted work went SILENT. Measured at 7b8848d on a dirty fixture repo.
+C54_CMD='tr a-z A-Z <<< hello\ngit merge feature-x'
+cat > "$TMP/c54.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"$C54_CMD"},"cwd":"$MC_DIRTY"}
+EOF
+
+# c55/c56 (r16): THE DENY MUST FIT INSIDE THE REGISTRATION. A PreToolUse hook
+# says "deny" by writing a decision to stdout; the harness kills it at the
+# `"timeout"` registered in .claude/settings.json, and a killed hook has written
+# NOTHING — which is exactly what an ALLOW looks like. r15 raised the internal
+# `git status` bound to 10 s so a slow worktree would not wedge a session, while
+# the registration stayed at 5 s, so on that very worktree the deny branch could
+# never run. Measured at 7b8848d against a dirty fixture with a `git` shim that
+# sleeps 30: unbounded, the hook took 10 s and emitted the deny; under
+# `timeout -s KILL 5`, it took 5 s, exited 137 and wrote ZERO BYTES.
+#
+# c51 above cannot see this — it shortens the internal bound with
+# CLAUDE_GIT_STATUS_TIMEOUT=1 and fires the hook with no harness bound at all.
+# c55 does the opposite: the internal bound is left at its shipped default and
+# the hook is run UNDER the registered one, killed at it like the harness would.
+# `timeout(1)` is not on a stock macOS, so the bound is enforced from python3,
+# which the battery already requires.
+cat > "$TMP/under_registration.py" <<'PYEOF'
+import subprocess, sys, time
+hook, event, budget = sys.argv[1], sys.argv[2], float(sys.argv[3])
+with open(event) as fh:
+    p = subprocess.Popen([sys.executable, hook], stdin=fh,
+                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                         text=True)
+    t0 = time.time()
+    try:
+        out, _ = p.communicate(timeout=budget)
+    except subprocess.TimeoutExpired:
+        p.kill(); p.communicate()
+        print("KILLED-AT-THE-REGISTERED-BOUND-%gs-NO-DECISION-WRITTEN" % budget)
+        raise SystemExit(0)
+el = time.time() - t0
+if '"permissionDecision": "deny"' in (out or ""):
+    print("deny-returned-within-the-registration (%.1fs of %gs)" % (el, budget))
+else:
+    print("NO-DENY-EMITTED in %.1fs: %r" % (el, (out or "")[:160]))
+PYEOF
+
+# A `git` that never answers inside the hook's own default bound, so the deny
+# branch is the one under test rather than the shim's exit code.
+SHIM_STALLED="$TMP/shim-stalled"; mkdir -p "$SHIM_STALLED"
+printf '#!/bin/sh\nsleep 60\nexit 0\n' > "$SHIM_STALLED/git"; chmod +x "$SHIM_STALLED/git"
+cat > "$TMP/c55.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git merge feature-x"},"cwd":"$MC_DIRTY"}
+EOF
+GG_REG="$(python3 -c '
+import json, sys
+for gs in json.load(open(sys.argv[1]))["hooks"].get("PreToolUse", []):
+    for h in gs["hooks"]:
+        if "git-guardrails.py" in h.get("command", ""):
+            print(h.get("timeout"))
+' "$ROOT/.claude/settings.json" 2>/dev/null | head -1)"
+
+if [ -n "$MC_DIRTY_STATUS" ]; then
+    fire git-guardrails.py "$TMP/c54.json"
+    expect_deny   "c54 r16: a HERESTRING on line 1 no longer swallows the history op on line 2 — the merge over a dirty tree is seen and denied. _strip_heredocs runs first in dirty_tree_reason too, so this silenced the clean-tree rule as well as the deny list"
+    if [ -n "$GG_REG" ]; then
+        OUT="$(env -u ALLOW_ROOT_OF_TRUST_WRITE -u ALLOW_DIRTY_MERGE -u CLAUDE_STRICT_PATHS \
+               -u CLAUDE_GIT_STATUS_TIMEOUT "${UNSET_GIT_ENV[@]}" PATH="$SHIM_STALLED:$PATH" \
+               python3 "$TMP/under_registration.py" "$HOOKS/git-guardrails.py" \
+               "$TMP/c55.json" "$GG_REG" 2>/dev/null)"
+        verdict "$OUT"
+    else
+        verdict "NO-REGISTRATION-FOUND: .claude/settings.json registers no timeout for git-guardrails.py"
+    fi
+    expect_contains "c55 r16: with a stalled git and the SHIPPED internal bound, git-guardrails.py still RETURNS a deny inside the timeout it is registered with. A hook killed before it writes a decision is indistinguishable from one that allowed, so a deny branch that cannot finish inside the registration does not exist" \
+                    "deny-returned-within-the-registration"
+else
+    no "c54 a herestring no longer hides a history op on a dirty tree" "the mc-dirty fixture did not come up dirty"
+    no "c55 the deny is returned inside the registered timeout" "the mc-dirty fixture did not come up dirty"
+fi
+
+# c56: the two numbers c55 depends on, pinned against each other and against
+# settings.json — so raising one without the other goes red here instead of
+# silently re-opening the hole. Also proves CLAUDE_GIT_STATUS_TIMEOUT is CLAMPED:
+# the deny message used to tell the user to raise it, which moved them further
+# from a deny, not closer.
+C56="$(python3 - "$HOOKS/git-guardrails.py" "$ROOT/.claude/settings.json" <<'PYEOF' 2>/dev/null
+import importlib.util, json, os, sys
+spec = importlib.util.spec_from_file_location("_gg_budget_probe", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+reg = None
+for gs in json.load(open(sys.argv[2]))["hooks"].get("PreToolUse", []):
+    for h in gs["hooks"]:
+        if "git-guardrails.py" in h.get("command", ""):
+            reg = float(h.get("timeout"))
+decl = getattr(mod, "_HOOK_REGISTERED_TIMEOUT", None)
+ceiling = getattr(mod, "_STATUS_TIMEOUT_CEILING", None)
+if decl is None or ceiling is None:
+    print("NO-DECLARED-BOUND: the hook states no _HOOK_REGISTERED_TIMEOUT/_STATUS_TIMEOUT_CEILING")
+elif reg is None:
+    print("NOT-REGISTERED: no PreToolUse entry names git-guardrails.py")
+elif reg != decl:
+    print("REGISTRATION-DRIFT: settings.json registers %gs, the hook declares %gs" % (reg, decl))
+elif not ceiling < reg:
+    print("BUDGET-NOT-UNDER-REGISTRATION: internal ceiling %gs, registration %gs" % (ceiling, reg))
+else:
+    os.environ["CLAUDE_GIT_STATUS_TIMEOUT"] = "600"
+    got = mod._status_timeout()
+    if got > ceiling:
+        print("ENV-NOT-CLAMPED: CLAUDE_GIT_STATUS_TIMEOUT=600 yielded %gs" % got)
+    else:
+        print("budget-strictly-under-the-registration (%gs < %gs; env 600 clamped to %gs)"
+              % (ceiling, reg, got))
+PYEOF
+)"
+verdict "$C56"
+expect_contains "c56 r16: git-guardrails.py's internal git-status budget is STRICTLY under the timeout it is registered with in .claude/settings.json, both numbers derive from one declared constant, and CLAUDE_GIT_STATUS_TIMEOUT is clamped rather than honoured — an escape hatch that pushes the bound past the registration is a silent allow, not a longer wait" \
+                "budget-strictly-under-the-registration"
 
 # ── (d) claim-reconcile ────────────────────────────────────────────────────
 # One synthetic passport, one claim: produced by an analysis script, shown in

@@ -38,8 +38,8 @@ independence. It is an honour system with a search tool.
 **Where this rule loads.** Fencing is a *dispatch-time* obligation, so the `paths:` above name
 the manuscripts, qualification ledger, passports and audit reports a fenced run is pointed at —
 the session that dispatches referees at `manuscript.tex` is the one that has to make the call.
-It deliberately does **not** claim every `SKILL.md`: a rule that binds 60 skills none of which
-implements it is an unenforced obligation, and `scripts/check-skill-integrity.py` (check 5) now
+It deliberately does **not** claim every `SKILL.md`: a rule that binds every skill, none of which
+implements it, is an unenforced obligation, and `scripts/check-skill-integrity.py` (check 5) now
 fails on exactly that shape. When a skill grows a real fencing step, add it to `paths:` **and**
 to that script's `RULE_KEYWORDS`, so the claim and the implementation are checked against each
 other rather than asserted.

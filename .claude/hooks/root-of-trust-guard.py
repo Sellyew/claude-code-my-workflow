@@ -285,6 +285,73 @@ def normalize(path: str) -> str:
     return p
 
 
+# --- PARENT-DIRECTORY (`..`) SEGMENTS (r16) --------------------------------
+#
+# `normalize()` collapsed `//` and `/./` but NOT `/../`, and the segment walk
+# below then read the segments AS WRITTEN. So an ordinary relative path that
+# climbs back into a protected directory through an UNPROTECTED sibling was not
+# recognised, while the shell resolved it to exactly the gate-defining file.
+# Measured at 7b8848d, event cwd = the project, guard verdict vs. what the
+# shell really does:
+#
+#     rm -f .claude/rules/../hooks/git-guardrails.py   SILENT -> file deleted
+#     echo x > .claude/rules/../settings.json          SILENT -> file rewritten
+#     rm -f .claude/agents/../settings.local.json      SILENT
+#
+# while the literal twins of all three DENIED. `..` was on NEITHER disclosed-
+# residual list, and like the r15 glob class it failed toward ALLOW. Any real
+# unprotected child of `.claude/` works as the pivot (rules, agents, skills,
+# references, state); `.claude/../.claude/hooks/x` already denied, because
+# there a second protected segment survives literally.
+#
+# RESOLUTION IS PURELY LEXICAL — no filesystem call, by the same choice the
+# glob comment above records: the verdict must not depend on what happens to
+# exist at hook time, and `> .claude/rules/../settings.jso?` names a file that
+# need not exist yet. `in_project()` is the one half that touches disk, and it
+# already realpaths the token, so the SCOPE half needs no change.
+#
+# BOTH SPELLINGS ARE TESTED, the token as written and the token `..` resolves
+# it to (`_spellings`). Resolving in place would be strictly weaker: lexical
+# and kernel resolution DIVERGE when a segment is a symlink (the kernel's `..`
+# is the physical parent of the link TARGET), so a token that literally names
+# `.claude/hooks` must keep being judged as naming it. The union can only add
+# denials, never remove one that stands today.
+def resolve_parents(path: str) -> str:
+    """Resolve `..` segments LEXICALLY, the way the shell prints a path.
+
+    A `..` pops the segment before it (`.claude/rules/..` -> `.claude`). Two
+    edge cases decide the rest:
+
+      * a LEADING `..`, or one that would climb above the start of a RELATIVE
+        token, has nothing to pop and is KEPT (`../.claude/hooks/x` stays
+        `../.claude/hooks/x`, which still names the protected directory);
+        under an ABSOLUTE token it is dropped, because POSIX defines `/..`
+        as `/`.
+      * a TRAILING `..` is an ordinary pop (`.claude/hooks/..` -> `.claude`,
+        which the walk below still recognises as the directory itself).
+    """
+    lead = "/" if path.startswith("/") else ""
+    out: list[str] = []
+    for seg in path.split("/"):
+        if seg in ("", "."):
+            continue
+        if seg != "..":
+            out.append(seg)
+        elif out and out[-1] != "..":
+            out.pop()
+        elif not lead:
+            out.append("..")     # climbs above the base: keep it as written
+    return lead + "/".join(out)
+
+
+def _spellings(path: str) -> list[str]:
+    """The path with separator noise collapsed, plus — when they differ — the
+    path its `..` segments resolve to. Both are walked; see the block above."""
+    written = normalize(path)
+    landed = resolve_parents(written)
+    return [written] if landed == written else [written, landed]
+
+
 # --- shell GLOBS and BRACE GROUPS (r15) ------------------------------------
 #
 # Until r15 the segment test below was a LITERAL string comparison, so one
@@ -389,15 +456,16 @@ def _segment_matches(seg: str, name: str) -> bool:
 
 
 def _matches_one(path: str) -> bool:
-    segs = [s for s in normalize(path).split("/") if s not in ("", ".")]
-    for i, s in enumerate(segs):
-        if _segment_matches(s, ".githooks"):
-            return True
-        if _segment_matches(s, ".claude"):
-            if i + 1 == len(segs):
-                return True  # the directory itself
-            if any(_segment_matches(segs[i + 1], n) for n in PROTECTED_UNDER_CLAUDE):
+    for spelling in _spellings(path):
+        segs = [s for s in spelling.split("/") if s not in ("", ".")]
+        for i, s in enumerate(segs):
+            if _segment_matches(s, ".githooks"):
                 return True
+            if _segment_matches(s, ".claude"):
+                if i + 1 == len(segs):
+                    return True  # the directory itself
+                if any(_segment_matches(segs[i + 1], n) for n in PROTECTED_UNDER_CLAUDE):
+                    return True
     return False
 
 
@@ -629,7 +697,88 @@ def join_continuations(cmd: str) -> str:
     return _LINE_CONT.sub(r"\1 ", cmd)
 
 
-_HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
+# THE OPENER SCAN IS QUOTE-AWARE AND HERESTRING-AWARE (r16). It used to be one
+# quote-blind regex — `<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1` — run over RAW
+# line text with `finditer`. Two ordinary spellings therefore opened a heredoc
+# that bash never opens, and every line after them (to the end of the command,
+# or to a line spelling the invented terminator) was DELETED before anything was
+# tokenised:
+#
+#   * a HERESTRING. To that regex `tr a-z A-Z <<< hello` is `<<` + `\s*` +
+#     `hello`, so `hello` became the terminator.
+#   * a `<<WORD` inside a QUOTED STRING. `echo '<<EOF'` and
+#     `echo "docs: use <<EOF"` are prose bash merely prints; both opened one.
+#
+# Measured at 7b8848d against throwaway fixture trees, line 2 of a two-line
+# command carrying the real op: after `tr a-z A-Z <<< hello` this guard went
+# SILENT on `rm -f .claude/hooks/git-guardrails.py` and on
+# `echo x > .claude/settings.json`, and the sibling hook went SILENT on
+# `git reset --hard HEAD~1`, `git clean -fd`, `git push --force origin main`,
+# `git add -A` and a dirty-tree `git merge` — every one of which DENIES when
+# line 1 is `echo hi`, and bash runs line 2 in all of them. Dropping REAL
+# command text is a missed deny, the one direction a guard must not fail in,
+# and this took the whole deny spine of both hooks with it.
+#
+# So the line is WALKED, not pattern-matched: quote state is tracked (and
+# carried ACROSS lines, because a shell string may span them), `<<<` is consumed
+# whole so it can never be read as a `<<`, and a delimiter is taken only from an
+# opener found OUTSIDE quotes. An UNBALANCED quote leaves the rest of the
+# command in quote state, so no opener is found and NO text is dropped — that
+# fails toward scanning more, which is the safe direction here.
+#
+# Disclosed residual, unchanged by this fix: a `<<` in an arithmetic left-shift
+# whose right operand is an identifier (`$(( x << n ))`) still reads as an
+# opener and still drops the lines after it. Requiring the `<<` to sit in
+# redirection position would close it and would also stop recognising the
+# equally ordinary `cat<<EOF`, so it is disclosed rather than guessed at.
+#
+# THIS BLOCK IS DUPLICATED VERBATIM IN `git-guardrails.py` (its copy names the
+# function `_strip_heredocs`). Duplicated, not imported: this hook's import of
+# the sibling is best-effort and returns None on any failure, and a parser that
+# silently stops running is exactly what this defect was.
+_HEREDOC_DELIM = re.compile(
+    r"""-?[ \t]*(?: (?P<q>['"])(?P<qword>[A-Za-z_][A-Za-z0-9_]*)(?P=q)
+                  | \\?(?P<word>[A-Za-z_][A-Za-z0-9_]*) )""",
+    re.VERBOSE,
+)
+
+
+def _heredoc_opener(line: str, quote: str = "") -> "tuple[str | None, str]":
+    """The delimiter of the LAST heredoc this line OPENS (None if it opens
+    none), and the quote state the line ends in — fed back in for the next
+    line, so a string spanning lines stays quoted."""
+    delim = None
+    i, n = 0, len(line)
+    while i < n:
+        c = line[i]
+        if quote:
+            if c == "\\" and quote == '"' and i + 1 < n:
+                i += 2                      # only `"` honours a backslash
+                continue
+            if c == quote:
+                quote = ""
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            i += 2                          # an escaped char, `\<` included
+            continue
+        if c in "'\"":
+            quote = c
+            i += 1
+            continue
+        if line.startswith("<<<", i):
+            i += 3                          # HERESTRING: never an opener
+            continue
+        if line.startswith("<<", i):
+            m = _HEREDOC_DELIM.match(line, i + 2)
+            if m:
+                delim = m.group("qword") or m.group("word")
+                i = m.end()
+                continue
+            i += 2
+            continue
+        i += 1
+    return delim, quote
 
 
 def strip_heredocs(cmd: str) -> str:
@@ -638,18 +787,16 @@ def strip_heredocs(cmd: str) -> str:
     `rm .claude/hooks/x` is prose, not a command, and must not trip a rule."""
     if "<<" not in cmd:
         return cmd
-    out, pending = [], None
+    out, pending, quote = [], None, ""
     for line in cmd.split("\n"):
         if pending is not None:
             if line.strip() == pending:
                 pending = None
-            continue
+            continue                        # a BODY line: not shell text
         out.append(line)
-        last = None
-        for last in _HEREDOC.finditer(line):
-            pass
-        if last:
-            pending = last.group(2)
+        delim, quote = _heredoc_opener(line, quote)
+        if delim:
+            pending = delim
     return "\n".join(out)
 
 
@@ -1181,6 +1328,23 @@ def wrapped_git_deny(raw: str, depth: int = 0) -> str | None:
 
 
 # --- hook ------------------------------------------------------------------
+#
+# THE SAME INVARIANT AS `git-guardrails.py` (r16): every branch that can DENY
+# must be able to RETURN inside this hook's registered timeout, because a hook
+# the harness kills has written nothing to stdout, and nothing is exactly what
+# an allow looks like. There is no way to distinguish the two from outside.
+#
+# This guard has no internal budget to fit, because it makes no subprocess call
+# and does not walk the tree: the pattern half is pure text (`fnmatch`, a brace
+# expansion bounded at `_BRACE_LIMIT`, a recursion bounded at depth 2), and the
+# only filesystem work is the metadata calls in `in_project()` / `_git_root()`
+# — `realpath`, `isdir`, `exists`. Those are microseconds on a local disk and
+# are the one thing here that a stalled network mount can hang, which is the
+# same class of slowness that produced the sibling's defect. So the
+# registration carries the headroom instead of an internal timeout, and it is
+# pinned to a stated number rather than left to drift.
+_HOOK_REGISTERED_TIMEOUT = 20.0   # MUST equal .claude/settings.json's "timeout"
+
 
 def deny(reason: str) -> None:
     json.dump({"hookSpecificOutput": {

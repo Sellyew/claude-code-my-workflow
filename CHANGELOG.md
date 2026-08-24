@@ -25,7 +25,7 @@ claims were true, v2.6 asks whether the things that check them still work.
   typo can no longer disable a hook silently while every gate stays green. The registered set
   is derived live from the gate runner, the session settings, and the commit entry point;
   grepping the ledger cannot know what actually runs.
-- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (131 cases, seconds to run)
+- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (146 cases, seconds to run)
   that re-fires every active guard hook's target failure on **every backtest run**: the deny
   cases, the clean controls that must stay silent, fail-open on a malformed event, and the
   documented escape hatches. Gate 9 proves a hook is *wired*; gate 10 proves it still *acts*.
@@ -142,9 +142,11 @@ claims were true, v2.6 asks whether the things that check them still work.
 - **`templates/executor-contract.md`** — the dispatchable contract for delegated work: the goal,
   the acceptance bar, exact paths, the gates the result must pass, the output contract, and the
   mechanisms the executor is allowed to refuse. State the bar; never the implementation.
-- **`templates/screening-rubric.md`** — the exclusion-default screening rubric, with the
-  adjudication table and the dispatcher spot-check that keep a delegated screen from drifting
-  into an opinion poll with citations.
+- **`templates/screening-rubric.md`** — the screening rubric whose **default verdict is a
+  declared decision, not a constant**: EXCLUDE on a precision-first shortlist, never on a
+  recall-first sweep, NEEDS-HUMAN where neither error is recoverable — with the adjudication
+  table and the dispatcher spot-check that keep a delegated screen from drifting into an
+  opinion poll with citations.
 - **`.claude/references/release-engineering.md`** — shipping research software as an artifact:
   user-facing message and silent-resolution censuses (census first, rewrite second), frozen
   feature matrices for ports and reimplementations, inherited tests claimed **by name and by

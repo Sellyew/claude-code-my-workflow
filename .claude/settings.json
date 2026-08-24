@@ -21,7 +21,7 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/git-guardrails.py",
-            "timeout": 5
+            "timeout": 20
           }
         ]
       },
@@ -31,7 +31,7 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/root-of-trust-guard.py",
-            "timeout": 5
+            "timeout": 20
           }
         ]
       }
