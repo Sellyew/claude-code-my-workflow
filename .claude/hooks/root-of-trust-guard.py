@@ -66,7 +66,12 @@ text match and says so in the message.
 
 Denied, when the target is a protected path:
 
-    - redirection            `> f`, `>> f`, `&> f`, `>| f`
+    - redirection            `> f`, `>> f`, `&> f`, `>| f`, `>& f` — the last
+                             is bash's csh-style redirect-both, identical in
+                             effect to `&> f` whenever f is not a file
+                             descriptor. FILE-DESCRIPTOR DUPLICATION is NOT a
+                             write and stays allowed: `>&2`, `1>&2`, `2>&1`,
+                             `>&-` name a descriptor, not a path
     - tee                    `... | tee f`
     - copy / link            cp, install, rsync, scp, ln (DESTINATION only —
                              copying a hook out is a read)
@@ -196,7 +201,13 @@ anywhere in it (r13 doc fix; `glob` is not even imported) — so the verdict nev
 depends on what happens to exist when the hook runs, and a pattern that would
 expand to nothing here is matched all the same. Before r15 every one of those
 spellings was ALLOWED while its literal twin was denied — a one-character edit
-flipped the verdict.
+flipped the verdict. The csh-style `>&<target>` redirection joined the caught
+set at r18, for the same reason and with the same measurement: it is `&>` by
+another name, it truncated `.claude/settings.json` in a throwaway fixture while
+`&>`/`>`/`>|` all denied, and it was missing from BOTH redirection surfaces —
+the tokenizer split it into `>` plus the SEPARATOR `&`, and the backstop's
+target class excludes `&`. Descriptor duplication (`>&2`, `1>&2`, `2>&1`, `>&-`)
+is excluded from it and stays allowed.
 
 WHAT IT DOES NOT CATCH — disclosed residual, in scope for a future audit as
 BOUNDARY, not as a defect:
@@ -585,13 +596,43 @@ def is_protected(token: str) -> bool:
 
 # --- command shape ---------------------------------------------------------
 
+# r18: `\d?>&` IS AN OPERATOR. It was absent from this alternation, so bash's
+# csh-style `>&<word>` — which redirects stdout AND stderr to <word> exactly
+# like `&><word>` whenever <word> is not a file descriptor — tokenised as `>`
+# followed by `&`. `&` is a SEPARATOR, so the segment ENDED there and the write
+# target became a bare word at the head of the NEXT segment, out of reach of the
+# `idx + 1` lookahead in `scan_segment`. Measured at e0c4cdb, event cwd = the
+# project, guard verdict vs. what bash really does:
+#
+#     echo CLOBBERED >& .claude/settings.json        ALLOW -> file is 'CLOBBERED'
+#     echo CLOBBERED >&.claude/settings.json         ALLOW -> file is 'CLOBBERED'
+#     echo CLOBBERED >& .claude/hooks/git-guardrails.py  ALLOW -> guard overwritten
+#
+# while `&>`, `>` and `>|` all DENIED the byte-equivalent write. Same class as
+# the r15 glob defect: one character took a protected path out of the guard's
+# sight while the shell wrote to exactly that file.
+#
+# FILE-DESCRIPTOR DUPLICATION IS NOT A WRITE. `>&2`, `1>&2`, `2>&1`, `>&-` name
+# a descriptor, not a path; `_is_fd_dup_target` excludes them below so the fix
+# does not start denying the most ordinary redirection in any shell script.
 _TOKEN = re.compile(
-    r"""(?P<op>&>>|&>|>\||\d?>>|\d?>|<<-?|<|\|\||\||&&|;|&|\n)
+    r"""(?P<op>&>>|&>|\d?>&|>\||\d?>>|\d?>|<<-?|<|\|\||\||&&|;|&|\n)
       | (?P<word>(?:"[^"]*"|'[^']*'|\\.|[^\s"'|;&<>\n])+)""",
     re.VERBOSE,
 )
 
 SEPARATORS = {"||", "|", "&&", ";", "&", "\n"}
+
+# The word after a `>&` that means a FILE DESCRIPTOR rather than a file: a bare
+# descriptor number (`>&2`, `2>&1`), the same with bash's move suffix (`2>&1-`),
+# or `-` to close it. Anything else is a path bash truncates.
+_FD_DUP_TARGET = re.compile(r"^(?:\d+-?|-)$")
+
+
+def _is_fd_dup_target(tok: str) -> bool:
+    """Does this `>&` target duplicate a descriptor instead of writing a file?"""
+    return bool(_FD_DUP_TARGET.match(tok))
+
 
 # Env-var prefixes (`FOO=bar cmd`) and wrappers that delegate to a real command.
 _ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
@@ -1142,8 +1183,17 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
     words = [t for k, t in seg if k == "word"]
 
     # 1. Output redirection — the target is the token right after the operator.
+    #    `>&` (r18) is included: it is `&>` spelled the csh way, and it writes
+    #    the FILE named after it unless that word is a descriptor.
     for idx, (kind, tok) in enumerate(seg):
-        if kind == "op" and (tok.endswith(">") or tok == ">|") and idx + 1 < len(seg):
+        if kind != "op" or idx + 1 >= len(seg):
+            continue
+        if tok.endswith(">&"):
+            k2, t2 = seg[idx + 1]
+            if k2 == "word" and not _is_fd_dup_target(t2) and is_protected(t2):
+                return t2, "output redirection (`>&` redirects both streams to the FILE)"
+            continue
+        if tok.endswith(">") or tok == ">|":
             k2, t2 = seg[idx + 1]
             if k2 == "word" and is_protected(t2):
                 return t2, "output redirection"
@@ -1237,7 +1287,11 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
 # redirect still is; and a redirect hidden in `bash -c '<payload>'` is handled
 # by the shell-`-c` UNWRAP path below, which re-scans the (unquoted) payload, so
 # the backstop no longer needs to see inside quotes at all.
-_REDIR = re.compile(r"(?:&>>|&>|>\||>>|>)\s*([^\s;|&<>()]+)")
+# r18: `\d?>&` is listed here too — and BEFORE the bare `>` alternative, or the
+# `>` would match first and the `&` would defeat the target class, which
+# excludes `&`. The tokenizer path above is the primary fix; this is the
+# backstop for a segmentation it mis-reads, and both must know the spelling.
+_REDIR = re.compile(r"(?:&>>|&>|\d?>&|>\||>>|>)\s*([^\s;|&<>()]+)")
 _QUOTED_SPAN = re.compile(r"'[^']*'|\"[^\"]*\"")
 
 
@@ -1272,8 +1326,11 @@ def scan(raw: str, depth: int = 0) -> tuple[str, str] | None:
                 if hit:
                     return hit
     for m in _REDIR.finditer(strip_quoted(cmd)):
-        if is_protected(m.group(1)):
-            return m.group(1), "output redirection"
+        target = m.group(1)
+        if _is_fd_dup_target(target):
+            continue                    # `>&2` / `2>&1` — a descriptor, not a path
+        if is_protected(target):
+            return target, "output redirection"
     return None
 
 

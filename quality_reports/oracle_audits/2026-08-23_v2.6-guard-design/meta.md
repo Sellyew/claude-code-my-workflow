@@ -2,8 +2,21 @@
 
 **Date:** 2026-08-23
 **Oracle:** GPT-5.6 Sol Pro (ChatGPT Pro, browser transport), Pro effort
-**Repository state reviewed:** branch `feat/v2.6-insight-incorporation`
-**Artifacts:** [`prompt.md`](prompt.md) — the question as asked · [`transcript.md`](transcript.md) — the answer as returned, unedited
+**Repository state reviewed:** commit `6b8fa14` on `feat/v2.6-insight-incorporation` (a pinned
+SHA, not the branch ref — the branch has advanced five commits since, partly *because* of this
+consult)
+**Conversation:** `https://chatgpt.com/c/6a8b746e-d9ac-83ea-bcd7-9ad89631c0e7`
+**Sent:** the prompt below plus exactly one attachment, `oracle-brief.md` (27 KB) — both hook
+module docstrings and the four new laws. **Not** the hook implementations: an earlier attempt
+attached 94 KB of source and never sent (see *Transport* below).
+**Artifacts:** [`prompt.md`](prompt.md) — the question as asked · [`transcript.md`](transcript.md) — the answer as returned, unedited · [`meta.json`](meta.json) — the same facts machine-readable
+
+> **A count in this file was wrong, and it is the count the release's argument rests on.**
+> An earlier draft said the referee's lead finding was unreachable by "thirteen" in-house rounds;
+> `prompt.md` said "eleven". Derived by command (`ls bank/audit-r*-truth.json`), **ten** rounds had
+> completed when the consult was sent, with an eleventh in flight. The prompt's figure counted the
+> one still running; this file's was simply wrong. The prompt is left as it was asked — it is the
+> record — and the corrected number is stated here.
 
 ## Why this file exists
 
@@ -17,10 +30,17 @@ branch caught that: the release mandated the archive and did not use it.
 
 ## Verdict returned
 
-**HOLD the merge**, with four required changes. Its lead finding was not reachable by the
-thirteen in-house review rounds that preceded it: the clean-tree guard read the tree at
-`PreToolUse`, before the shell command ran, so a command that dirtied the tree and *then* ran a
-history operation was allowed. Every internal round had tested chains in one direction only.
+**HOLD the merge**, with four required changes. Its lead finding was not reachable by the ten
+in-house review rounds that preceded it: the clean-tree guard read the tree at `PreToolUse`,
+before the shell command ran, so a command that dirtied the tree and *then* ran a history
+operation was allowed. Every internal round had tested chains in one direction only.
+
+**Bound the coverage before citing it.** `transcript.md` self-limits at the outset: *"The
+supplied record contains the hooks' module docstrings, not their executable source. I therefore
+adjudicate the stated design and guarantees."* So this consult is evidence about the **design and
+what it claims**, and is not evidence that the implementation matches either. Everything it found
+was reproduced against real git in a scratch repository before being accepted — none of it was
+taken on the referee's authority.
 
 ## Transport and reliability, recorded because it nearly produced a false report
 

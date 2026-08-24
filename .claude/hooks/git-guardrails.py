@@ -263,8 +263,11 @@ WHAT IT GUARANTEES — this much, and no more. For a history op this parser
 IDENTIFIES (rule 1), the op must first be a STANDALONE SIMPLE COMMAND (rule 0)
 or it is denied outright; then, if it carries no rule-2 escape token, the
 verdict is a LIVE `git status --porcelain` reading taken at hook time in the
-directory the invocation names. No feature of the command text substitutes for
-that reading: there is no model of the shell left to fool, so the ALLOW side
+directory the invocation names — resolved since r18 the way git's own `chdir()`
+resolves it, through the kernel, so a `-C` whose `..` follows a SYMLINK is read
+in the repository git will land in rather than the one the text spells out. No
+feature of the command text substitutes for that reading: there is no model of
+the shell left to fool, so the ALLOW side
 cannot be talked into existing by clever text — it can only be reached by a
 tree that is actually clean, or by the op never being identified in the first
 place.
@@ -1298,19 +1301,59 @@ def _resolve_dash_c(dash_c: list[str], default_cwd: str | None) -> str | None:
     measured on 2.50.1, is a left-to-right fold: an ABSOLUTE value replaces the
     accumulator, a RELATIVE one is appended to it, and an EMPTY one is a no-op
     ("If <path> is present but empty … the current working directory is left
-    unchanged"). That is exactly what this does, so the guard reads the
-    directory git will chdir into rather than a guess at which `-C` wins."""
+    unchanged").
+
+    r18: THE FOLD IS KERNEL-FAITHFUL, NOT LEXICAL. The left-to-right rule above
+    was right and the resolution under it was wrong: each step went through
+    `os.path.normpath`, which pops a `..` off the path as WRITTEN, while git
+    folds `-C` by `chdir()` and the kernel pops a `..` off the path RESOLVED —
+    the physical parent of a symlink's TARGET, not of the link. The two diverge
+    the moment a `..` follows a symlinked component, and this docstring's own
+    claim ("the directory git will chdir into") was false there. Measured at
+    e0c4cdb: from a CLEAN repo C holding a tracked symlink `link` -> D/sub,
+    where D is a second repository whose porcelain reads ' M sub/f.txt',
+    `git -C link/.. merge feature` resolved to C lexically and to D through the
+    kernel. The guard read C, said nothing, and real bash then fast-forwarded D
+    — leaving the uncommitted work sitting on top of merged history, which is
+    exactly what the clean-tree rule exists to refuse. `-C ./link/..`,
+    `-C link/../`, `-C link/../.`, the attached `-Clink/..` and the composed
+    `-C . -C link/..` all reached the same false ALLOW, while the byte-equivalent
+    `-C <D>` DENIED. So the verdict turned on whether the path was spelled
+    through the symlink.
+
+    WHY RESOLVING ON DISK IS ACCEPTABLE HERE, and what it costs. The sibling
+    hook (`root-of-trust-guard.py`) deliberately resolves paths LEXICALLY: it
+    judges paths that need not exist yet, so its verdict must not depend on what
+    happens to be on disk at hook time, and it handles this same divergence by
+    walking BOTH spellings and taking the union of denials. That option does not
+    exist here — this guard must pick ONE directory and read the tree in it, and
+    a union of two readings is not a tree state. But the objection does not
+    apply either: rule 3's whole verdict is already a live `git status` run IN
+    this directory, so this branch depends on the filesystem at hook time by
+    construction, and a `-C` naming a directory that does not exist cannot be a
+    merge git will perform. The cost is the ordinary TOCTOU one the module
+    docstring already discloses for concurrent writers: if the symlink is
+    repointed between the hook and the exec, the reading was of the old target.
+    `os.path.realpath` also falls back to a lexical fold for components that do
+    not exist — there the resolved directory is not a repository, and the
+    unresolvable-`-C` branch in `dirty_tree_reason` DENIES rather than allowing.
+
+    Returns None when the fold cannot be anchored or cannot be computed; the
+    caller must treat that as an unanswered question, never as the event cwd."""
     cur = default_cwd
     for raw in dash_c:
         if not raw:                          # `-C ""` — git leaves cwd alone
             continue
         p = os.path.expanduser(raw)
-        if os.path.isabs(p):
-            cur = os.path.normpath(p)        # absolute: replaces what came before
-            continue
-        if not cur:
-            return None                      # unanchored → caller degrades
-        cur = os.path.normpath(os.path.join(cur, p))
+        try:
+            if os.path.isabs(p):
+                cur = os.path.realpath(p)    # absolute: replaces what came before
+                continue
+            if not cur:
+                return None                  # unanchored → caller DENIES
+            cur = os.path.realpath(os.path.join(cur, p))
+        except OSError:
+            return None                      # unresolvable → caller DENIES
     return cur
 
 
@@ -1355,7 +1398,11 @@ def dirty_tree_reason(cmd: str, event: dict) -> str | None:
             continue
         # Rule 3: read the tree, live, in the directory THIS invocation names.
         cwd = _resolve_dash_c(dash_c, default_cwd)
-        status = read(cwd)
+        # r18: an invocation that CARRIES a `-C` the fold could not anchor or
+        # resolve must not fall through to `read(None)` — that reads the HOOK
+        # PROCESS's own directory, which is the r9 defect one dimension over.
+        # No reading is taken; the unresolvable-selector deny below is the answer.
+        status = None if (dash_c and cwd is None) else read(cwd)
         if dash_c and not isinstance(status, str):
             # r13 (referee finding 2): an explicit selector that cannot be
             # resolved used to fall back to the EVENT cwd and allow if THAT was

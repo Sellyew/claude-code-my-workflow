@@ -1419,7 +1419,7 @@ But a wired hook is not yet a working hook. A guard can keep its path, keep firi
 denying — an over-broad exception, a regex loosened during a debugging session, an early
 `return allow` left in. Gate 10, the hook battery, drives each active guard with synthetic events
 and requires it to still go red on the failure it was written for, and to stay green on the clean
-controls. 152 cases, and it finishes in seconds.
+controls. 169 cases, and it finishes in seconds.
 :::
 
 **Hook handler types.** The examples above use `command` hooks (shell scripts), but Claude Code supports five handler types:
