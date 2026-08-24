@@ -246,6 +246,21 @@ BOUNDARY, not as a defect:
     apply`, and a branch-switching `git checkout`/`git switch` with no
     pathspec — the second is one of the four ways, listed at the top, that the
     gate files get replaced without this hook seeing anything.
+  - a write ROUTED THROUGH A SYMLINK whose own name is not protected. The
+    pattern half is purely lexical — `_spellings()` walks the token as written
+    and the token its `..` segments resolve to LEXICALLY, and neither is the
+    path the kernel lands on — so a link named anything else that points at a
+    gate-defining directory is invisible to it. Measured 2026-08-24 in a
+    throwaway project fixture, with `linkhooks -> .claude/hooks` and
+    `linkdot -> .claude`: `rm -f linkhooks/git-guardrails.py`,
+    `rm -f linkdot/hooks/git-guardrails.py`, `rm -f .claude/linkin/…` (the link
+    inside `.claude` itself) and `echo X > linkdot/settings.json` were all
+    ALLOWED (silent), while the literal twin `rm -f .claude/hooks/…` DENIED.
+    Only the SCOPE half (`in_project`) resolves anything on disk, and it decides
+    which tree a path is in, never whether it is protected. Recorded here as an
+    uncovered class at r19; nothing in this file closes it, and the r16 `..`
+    walk deliberately does not try to (resolving in place would LOSE denials
+    that stand today — see the block above `resolve_parents`).
   - a `cd` EARLIER IN THE SAME COMMAND LINE. Relative tokens resolve against
     the tool call's cwd, not against a `cd` inside the command, so
     `cd /tmp/fixture && printf '{}' > .claude/settings.json` is scored against
@@ -260,6 +275,11 @@ BOUNDARY, not as a defect:
     an unlisted wrapper option that takes a SEPARATE value (assumed here to
     attach its value, which skips too LITTLE — a real command word is still
     scanned — rather than too much, so it fails toward catching the write).
+    A CASE-VARIED spelling of a LISTED wrapper counts as unknown here: r19
+    folded the WRITER-program names and the protected path segments, not the
+    scaffolding in front of them. Measured 2026-08-24 on a throwaway project
+    fixture, `nice rm -f .claude/hooks/git-guardrails.py` DENIED while
+    `NICE rm -f …` and `BASH -c 'rm -f …'` were ALLOWED (silent).
   - a GLOB whose expansion depends on a shell OPTION this scan does not model
     (r15, the residual left by the glob fix). A bare wildcard segment does not
     match a DOT-name because of an EXPLICIT rule in `_segment_matches` — a
@@ -779,10 +799,13 @@ _TARGET_DIR = re.compile(r"^--target-directory=(.+)$")
 # invent a DIFFERENT word, and a word the guard invented is a word that matches
 # nothing.
 #
-# Disclosed residual: the TOKENIZERS still read `'…'` as a span ending at the
-# next `'`, while inside `$'…'` a `\'` is an ESCAPED quote that does not end the
-# span. A `$'…\'…'` spelling can therefore still be split into words differently
-# from bash. The unquoting below is escape-aware; the tokenizer is not.
+# Disclosed residual, stated as the possibility it is rather than as a measured
+# hole: the TOKENIZERS still read `'…'` as a span ending at the next `'`, while
+# inside `$'…'` a `\'` is an ESCAPED quote that does not end the span, so a
+# `$'…\'…'` spelling could be split into words differently from bash. The
+# unquoting below is escape-aware; the tokenizer is not. No spelling in this
+# class has been shown to reach a false ALLOW — the one probed on 2026-08-24
+# still DENIED — so this is a known divergence, not a demonstrated bypass.
 #
 # THIS BLOCK AND THE FUNCTION BELOW ARE DUPLICATED VERBATIM IN
 # `git-guardrails.py` (its copy names the function `_unquote`), for the same
@@ -1342,8 +1365,13 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
 
     Residual, disclosed rather than half-closed: the WRAPPERS and SHELLS tables
     (`skip_wrappers`, `shell_c_payload`) are still matched case-sensitively, so
-    `NICE rm .claude/hooks/x` reaches this function with `NICE` as the command
-    word and is not scanned. That class predates r19 and is unchanged by it."""
+    a case-varied WRAPPER hides the writer behind it. Measured 2026-08-24 on a
+    throwaway project fixture: `nice rm -f .claude/hooks/git-guardrails.py`
+    DENIED, while `NICE rm -f .claude/hooks/git-guardrails.py` and
+    `BASH -c 'rm -f .claude/hooks/git-guardrails.py'` were ALLOWED (silent).
+    That class predates r19 and is unchanged by it — r19 folded the WRITER
+    name, not the scaffolding in front of it. It is listed in the module
+    docstring's residual enumeration."""
     words = [t for k, t in seg if k == "word"]
 
     # 1. Output redirection — the target is the token right after the operator.

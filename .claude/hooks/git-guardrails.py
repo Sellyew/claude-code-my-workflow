@@ -620,10 +620,13 @@ CODE_EXT = {".R", ".r", ".qmd", ".do", ".py", ".Rmd"}
 # invent a DIFFERENT word, and a word the guard invented is a word that matches
 # nothing.
 #
-# Disclosed residual: the TOKENIZERS still read `'…'` as a span ending at the
-# next `'`, while inside `$'…'` a `\'` is an ESCAPED quote that does not end the
-# span. A `$'…\'…'` spelling can therefore still be split into words differently
-# from bash. The unquoting below is escape-aware; the tokenizer is not.
+# Disclosed residual, stated as the possibility it is rather than as a measured
+# hole: the TOKENIZERS still read `'…'` as a span ending at the next `'`, while
+# inside `$'…'` a `\'` is an ESCAPED quote that does not end the span, so a
+# `$'…\'…'` spelling could be split into words differently from bash. The
+# unquoting below is escape-aware; the tokenizer is not. No spelling in this
+# class has been shown to reach a false ALLOW — the one probed on 2026-08-24
+# still DENIED — so this is a known divergence, not a demonstrated bypass.
 #
 # THIS BLOCK AND THE FUNCTION BELOW ARE DUPLICATED VERBATIM IN
 # `root-of-trust-guard.py` (its copy names the function `unquote`), for the same
@@ -1473,9 +1476,9 @@ def _resolve_dash_c(dash_c: list[str], default_cwd: str | None) -> str | None:
     which is what this divergence is about, is in NEITHER (r19 correction: this
     paragraph used to claim the sibling "handles this same divergence", and it
     does not — it models `..`, not a symlinked component, and only its project-
-    SCOPE half, `in_project`, touches the filesystem). That option does not
-    exist here either — this guard must pick ONE directory and read the tree in it, and
-    a union of two readings is not a tree state. But the objection does not
+    SCOPE half, `in_project`, touches the filesystem). Even the union it does
+    take is not available here — this guard must pick ONE directory and read the
+    tree in it, and a union of two readings is not a tree state. But the objection does not
     apply either: rule 3's whole verdict is already a live `git status` run IN
     this directory, so this branch depends on the filesystem at hook time by
     construction, and a `-C` naming a directory that does not exist cannot be a
