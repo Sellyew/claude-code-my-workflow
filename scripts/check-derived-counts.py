@@ -376,7 +376,18 @@ CHECKS = [
     # and the single-literal anchor silently stopped matching — the gate printed
     # "(no claim found)" and stayed green, which is why an unmatched pattern is
     # now a FAILURE (see main()).
-    ("hook battery cases",    r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, (?:about a second|seconds to run|and it finishes in seconds)', ["CHANGELOG.md", "guide/workflow-guide.qmd"], n_hook_battery_cases()),
+# r21 — THE CAPTURE IS CLOSED, NOT OPEN. These three rows used
+# `(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)`, which MATCHES any word. A site reworded to
+# something `words_to_int` cannot parse therefore still counted toward `seen`,
+# so the REQUIRED-surface check was satisfied, and then main() `continue`d
+# without comparing — the site left coverage silently, which is the exact
+# failure this file exists to prevent, one level up. Measured on a copy at
+# 0d16939: rewording one site per surface to "all cases" / "many cases" /
+# "hundreds of cases" left `check-derived-counts` at exit 0 every time. `_NUM`
+# is the closed alternation (digits, or the spelled numbers 0-99) the gate rows
+# above already use, so a real claim still matches and an unparseable one now
+# fails the REQUIRED-surface count instead of passing.
+    ("hook battery cases",    _NUM + r' cases, (?:about a second|seconds to run|and it finishes in seconds)', ["CHANGELOG.md", "guide/workflow-guide.qmd"], n_hook_battery_cases()),
     # The QUALIFICATION LEDGER states the same number in its own phrasing —
     # "(46 cases, exit 0)" in the Reproduction paragraph and "(46/46 cases, exit
     # 0)" in the grading-the-grader row — and until 2026-08-23 NEITHER was a
@@ -398,7 +409,7 @@ CHECKS = [
     # The recipe used to hard-code the battery size of the day; once the battery
     # grew it returned 0, and a maintainer following it would have concluded the
     # REQ was wrong and dropped eight gated sites out of coverage.)
-    ("battery cases (ledger)", r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, exit 0',    [REQ("quality_reports/qualification/LEDGER.md", 8)], n_hook_battery_cases()),
+    ("battery cases (ledger)", _NUM + r' cases, exit 0',    [REQ("quality_reports/qualification/LEDGER.md", 8)], n_hook_battery_cases()),
     # The claim these three read used to be phrased "(N cases named)" — the
     # cases a stubbed run NAMES — while the value is a SECTION TALLY. The
     # phrasing is now the quantity (2026-08-24); see n_battery_named() for the
@@ -411,7 +422,7 @@ CHECKS = [
     # could go stale the moment Pattern 20 landed — sequentiality still passes
     # on 1..20. Anchored on the vignette's own "is a reference shelf" tail, and
     # the count is spelled out, which words_to_int already handles.
-    ("workflow patterns",     r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) patterns is a reference shelf', ["guide/workflow-guide.qmd", "docs/workflow-guide.html"], n_patterns()),
+    ("workflow patterns",     r'(?i)' + _NUM + r' patterns is a reference shelf', ["guide/workflow-guide.qmd", "docs/workflow-guide.html"], n_patterns()),
     # --- the current release's inventory line (r10) ---------------------------
     # CHANGELOG.md's `**Inventory at release: N skills, N agents, N rules,
     # N hooks, N gates**` publishes five counts of this repository's own

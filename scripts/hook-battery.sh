@@ -1147,6 +1147,67 @@ expect_deny   "a111 r20 CONTROL, the r11 spelling this splicer exists for: a con
 fire root-of-trust-guard.py "$TMP/a112.json"
 expect_silent "a112 r20 CONTROL, the sharp one: a continuation followed by INDENTATION (rm -f .clau\\<newline>   de/hooks/…) stays allowed — bash removes only the backslash-newline, so this is still the two words '.clau' and 'de/hooks/…' and names nothing protected. A repair that glued the halves unconditionally would false-deny here"
 
+# a113-a122 (r21): THREE FIXES, and the first is a false ALLOW the r20 wave
+# introduced by composing its own two widenings in ONE DIRECTION ONLY. r20
+# taught the fast path's literal branch to read the SPLICED line and left the
+# `$'` branch and the glob branch reading the RAW one, so a `$` separated from
+# its quote by a backslash-newline carried no `$'` substring while its ANSI-C
+# escape hid the dot from the literal branch. Measured at 0d16939: ALLOW
+# (silent), and bash really deleted the guard file. The other two are
+# OVER-DENIALS, both PRE-EXISTING rather than new: a read-only dry run and a
+# one-operand `ln`/`rsync` whose operand is the SOURCE were refused, each
+# falsifying this guard's own "every READ is allowed" guarantee.
+A113Q="'"
+printf '%s' '{"tool_name":"Bash","tool_input":{"command":"rm -f $\\' > "$TMP/a113.json"
+printf '\\n%s\\\\x2eclaude/hooks/git-guardrails.py%s"},"cwd":"%s"}\n' "$A113Q" "$A113Q" "$ROOT" >> "$TMP/a113.json"
+cat > "$TMP/a114.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git clean -n .claude/hooks"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a115.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git clean --dry-run .claude/hooks"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a116.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git rm --dry-run .claude/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a117.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git clean -fd .claude/hooks"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a118.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git clean -nf .claude/hooks"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a119.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"ln -s .claude/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a120.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rsync .claude/hooks/"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a121.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"ln -s /tmp/x .claude/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a122.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x .claude/settings.json"},"cwd":"$ROOT"}
+EOF
+fire root-of-trust-guard.py "$TMP/a113.json"
+expect_deny   "a113 r21 THE COMPOSED-IN-ONE-DIRECTION CASE: an ANSI-C opener SPLIT from its quote by a continuation (rm -f \$<continuation>'\\x2eclaude/hooks/...') is denied — r20 spliced only the literal branch, so the \$' branch saw no opener and the escaped dot hid the literal; every trigger now reads the same spliced text"
+fire root-of-trust-guard.py "$TMP/a114.json"
+expect_silent "a114 r21 CONTROL: git clean -n on a protected path stays SILENT — a dry run writes nothing, and denying it contradicted this guard's own message that reads are untouched"
+fire root-of-trust-guard.py "$TMP/a115.json"
+expect_silent "a115 r21 CONTROL: the long spelling (git clean --dry-run) stays silent too"
+fire root-of-trust-guard.py "$TMP/a116.json"
+expect_silent "a116 r21 CONTROL: git rm --dry-run stays silent — git spells the flag the same way for clean, rm and mv"
+fire root-of-trust-guard.py "$TMP/a117.json"
+expect_deny   "a117 r21 CONTROL, the sharp one: the REAL writer (git clean -fd) still DENIES — the dry-run exemption did not disarm the rule it sits inside"
+fire root-of-trust-guard.py "$TMP/a118.json"
+expect_deny   "a118 r21 CONTROL: a BUNDLED short group containing n (git clean -nf) still DENIES — the exemption matches the exact tokens -n and --dry-run only, because -nf still writes"
+fire root-of-trust-guard.py "$TMP/a119.json"
+expect_silent "a119 r21 CONTROL: one-argument ln -s on a protected path stays SILENT — it creates ./git-guardrails.py POINTING AT the hook, so the protected path is the SOURCE and this is a read"
+fire root-of-trust-guard.py "$TMP/a120.json"
+expect_silent "a120 r21 CONTROL: one-argument rsync of a protected directory stays silent — with a single operand there is no destination on the command line"
+fire root-of-trust-guard.py "$TMP/a121.json"
+expect_deny   "a121 r21 CONTROL, the sharp one: the TWO-operand form writing INTO a protected path (ln -s /tmp/x .claude/hooks/...) still DENIES — requiring a second operand did not disarm the destination rule"
+fire root-of-trust-guard.py "$TMP/a122.json"
+expect_deny   "a122 r21 CONTROL: an ordinary two-operand cp INTO the root of trust still DENIES — the DEST_LAST branch is intact for every real write"
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"

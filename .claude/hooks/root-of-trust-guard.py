@@ -217,8 +217,10 @@ PROTECTED NAME joined the caught set at r20 — `.clau\de/…`, `.cl'aud'e/…`,
 The scan half always read these correctly; what silenced them was the literal
 substring test in front of it, for the third time (`_may_name_a_protected_path`
 has the measurements). The trigger is now taken on the line with `\`, `'` and
-`"` deleted as well as as written — those three are the whole set of characters
-that can sit inside a word without changing which file it names — and the
+`"` deleted as well as as written — those three are the whole set of QUOTING
+characters that can sit inside a word without changing which file it names (a
+variable or a substitution can too, and both are disclosed as residual below) —
+and the
 continuation splice was corrected to DELETE the backslash-newline the way the
 shell does rather than substitute a space for it.
 
@@ -327,10 +329,11 @@ BOUNDARY, not as a defect:
   - ANY SPELLING THAT PUTS A PROTECTED PATH SOMEWHERE THIS SCAN DOES NOT LOOK.
     The bullets above are the set known on 2026-08-24. They record where this
     scanner has been PROBED; they do not establish where it is complete, and
-    reading the list as a closed enumeration is the mistake. Five consecutive
+    reading the list as a closed enumeration is the mistake. Six consecutive
     rounds each turned up a spelling every earlier round had missed — globs
-    (r15), `..` segments (r16), `>&` (r18), the `$'…'` openers and case (r19),
-    quoting inside the protected NAME itself (r20) — and every one of them
+    (r15), `..` segments (r16), a shell COMMENT naming a heredoc (r17), `>&`
+    (r18), the `$'…'` openers and case (r19), quoting inside the protected NAME
+    itself (r20) — and every one of them
     failed toward ALLOW while its literal twin denied. Those are closed; the
     CLASS is not. Assume there are more, and that the next one also looks
     ordinary.
@@ -1397,6 +1400,8 @@ def git_write_target(args: list[str]) -> tuple[str, str] | None:
             k += 2                             # `-m <msg>` — a message, not a path
             continue
         if w.startswith("-") and w != "-":
+            if w in ("-n", "--dry-run"):
+                return None            # r21: writes nothing — see below
             k += 1
             continue
         operands.append(w)
@@ -1405,6 +1410,17 @@ def git_write_target(args: list[str]) -> tuple[str, str] | None:
         if is_protected(a):
             return a, f"`git {sub}`"
     return None
+# r21 — THE DRY RUN IS A READ, AND REFUSING IT CONTRADICTED THIS GUARD'S OWN
+# DENY MESSAGE. `git clean -n`, `git clean --dry-run`, `git rm -n` and
+# `git rm --dry-run` list what WOULD happen and change nothing, and git spells
+# the flag the same way for clean, rm and mv. Measured at 0d16939 on a project
+# fixture: all four DENIED while the message printed to the user said reads are
+# untouched — and the sibling guard's own deny text RECOMMENDS a dry run as the
+# safe way to look before acting, so the pair told the user to run a command
+# this one refused. The exemption is narrow on purpose: only the exact tokens
+# `-n` / `--dry-run`, never a bundled short group (`-nf` still writes), so
+# `git clean -fd` and every real writer are untouched. This was PRE-EXISTING,
+# not introduced by a recent wave — the pre-r20 hooks refuse it identically.
 
 
 def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
@@ -1479,7 +1495,16 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
                 return m.group(1), f"`{name}` target directory"
         if "-t" in flags and plain and is_protected(plain[0]):
             return plain[0], f"`{name}` target directory"
-        if plain and is_protected(plain[-1]):
+        # r21: a DESTINATION needs something to be the destination OF. With a
+        # single operand there is no destination on the command line, and for
+        # `ln`/`rsync` that operand is the SOURCE — `ln -s .claude/hooks/x`
+        # creates `./x` POINTING AT the hook, and `rsync .claude/hooks/` lists
+        # it. Both are reads. Measured at 0d16939: one-argument `ln -s`, `ln`
+        # and `rsync` on a protected path all DENIED, falsifying this branch's
+        # own "DESTINATION only" contract and the guard's "every READ is
+        # allowed" guarantee. Pre-existing, not a recent regression. The
+        # two-operand forms are untouched, which is every real write.
+        if len(plain) > 1 and is_protected(plain[-1]):
             return plain[-1], f"`{name}` destination"
 
     if key in INPLACE and any(is_inplace(f) for f in flags):
@@ -1752,8 +1777,10 @@ def deny(reason: str) -> None:
 # Bash's THREE quoting characters, and they are the complete set: the escape
 # `\`, the single quote, and the double quote. Every other quoting form bash
 # has is one of these with a `$` glued to the front (`$'…'`, `$"…"`), and that
-# `$` is tested for separately below. Nothing else in the language can sit
-# INSIDE a word without changing which file the word names.
+# `$` is tested for separately below. No other QUOTING construct can sit INSIDE
+# a word without changing which file the word names — a variable or a command
+# substitution can, and both are disclosed as residual in the module docstring
+# rather than claimed closed here.
 _QUOTING_NOISE = str.maketrans("", "", "'\"\\")
 
 
@@ -1844,13 +1871,25 @@ def _may_name_a_protected_path(cmd: str) -> bool:
     tokenisation of a string that the scan will then clear (`echo ".clau"`
     denoises to `echo .clau`, matches nothing, allowed); it cannot produce a
     false deny, because the deny is the scan's verdict on the real words."""
-    for text in (cmd, _denoise(join_continuations(cmd))):
+    # r21: SPLICE FIRST, THEN TEST EVERY TRIGGER ON THE SPLICED TEXT. The r20
+    # fix taught only the FIRST branch to read the spliced line and left the
+    # other two reading the raw one, which composed the two widenings in one
+    # direction only. A `$` separated from its quote by a backslash-newline
+    # therefore carried no `$'` substring for branch two, and its ANSI-C escape
+    # (`\x2e`) hid the dot from branch one, so the scan was never entered.
+    # Measured at 0d16939 on a throwaway project fixture: an `rm -f` whose
+    # argument was `$` + backslash-newline + `'\x2eclaude/hooks/…'` was
+    # ALLOW(silent) and really deleted the guard file, while both the literal
+    # spelling and the UNSPLIT `$'…'` spelling DENIED. One shared `spliced` is
+    # the whole fix; the asymmetry was the defect.
+    spliced = join_continuations(cmd)
+    for text in (cmd, spliced, _denoise(spliced)):
         low = text.lower()
         if ".claude" in low or ".githooks" in low:
             return True
-    if "$'" in cmd or '$"' in cmd:      # ANSI-C / locale quoting: see above
+    if "$'" in spliced or '$"' in spliced:   # ANSI-C / locale quoting: see above
         return True
-    return any(ch in cmd for ch in "*?[{")
+    return any(ch in spliced for ch in "*?[{")
 
 
 def main() -> int:

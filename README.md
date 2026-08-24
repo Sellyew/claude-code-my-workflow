@@ -361,7 +361,7 @@ Rules use path-scoped loading: **always-on** rules load every session; **path-sc
 | `passport-template.yaml` (v1.9.0) | Per-paper YAML passport for numeric-claim provenance (used by `/audit-reproducibility`) |
 | `response-to-referees.md` | R&R response document scaffold |
 | `executor-contract.md` (v2.6) | Dispatchable goal contract for a delegated task — goal, acceptance bar, exact paths, gates it must pass, output contract, and the mechanisms the executor may refuse |
-| `screening-rubric.md` (v2.6) | Exclusion-default screening rubric — written before the screen runs, with per-candidate evidence, an adjudication table, and a dispatcher spot-check |
+| `screening-rubric.md` (v2.6) | Screening rubric — written before the screen runs, with per-candidate evidence, an adjudication table, and a dispatcher spot-check |
 
 </details>
 

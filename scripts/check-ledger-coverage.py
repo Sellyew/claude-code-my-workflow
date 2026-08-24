@@ -158,6 +158,16 @@ def ledger_names(known):
             continue
         bucket = debt if section_debt else qualified
         for tok in (t.strip() for t in re.findall(r'`([^`]+)`', line)):
+            # r21: a checker NAME is one path and never contains whitespace. A row
+            # may legitimately backtick a COMMAND that happens to end in a known
+            # checker's basename — the r20 rows quote `rm -f .clau\de/hooks/…` and
+            # `rm -f .githook\s/pre-commit` as the measured bypass spellings — and
+            # before this guard both were read as qualification claims naming a file
+            # that does not exist, failing the gate on prose rather than on coverage.
+            # Splitting on whitespace is the whole fix: it cannot hide a real claim,
+            # because a real one has no space to split on.
+            if re.search(r'\s', tok):
+                continue
             if SCRIPT_TOKEN.match(tok) or os.path.basename(tok) in known:
                 bucket.setdefault(os.path.basename(tok), set()).add(tok)
     if not seen_debt:

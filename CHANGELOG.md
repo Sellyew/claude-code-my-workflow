@@ -25,7 +25,7 @@ claims were true, v2.6 asks whether the things that check them still work.
   typo can no longer disable a hook silently while every gate stays green. The registered set
   is derived live from the gate runner, the session settings, and the commit entry point;
   grepping the ledger cannot know what actually runs.
-- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (224 cases, seconds to run)
+- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (234 cases, seconds to run)
   that re-fires every active guard hook's target failure on **every backtest run**: the deny
   cases, the clean controls that must stay silent, fail-open on a malformed event, and the
   documented escape hatches. Gate 9 proves a hook is *wired*; gate 10 proves it still *acts*.
@@ -251,10 +251,9 @@ written down, and the shell accepts a sixth that neither had. Both were found by
 command, not by reading the code — and the second is the concrete cost of the open debt this
 release records, that nothing gates a docstring against the code it describes.
 
-**And the rounds measured something about themselves worth more than any single fix.** Every
-round from the guards' first hardening onward found at least one *new* class of spelling that
-reaches the same file — among them a comment that merely mentions a heredoc, a shell glob, a path
-folded through a symlink, a redirection operator missing from the list, ANSI-C `$'…'` quoting that
+**And the rounds measured something about themselves worth more than any single fix.** Six consecutive rounds each found at least one *new* class of spelling that
+reaches the same file — among them a comment that merely mentions a heredoc, a shell glob, a
+redirection operator missing from the list, ANSI-C `$'…'` quoting that
 survives unquoting as a stray `$`, an uppercase command word that a case-insensitive filesystem
 resolves to the same binary, and a quote sitting inside the protected directory's own name. Each
 fix was correct and each was followed by another class. That is not bad luck; it is a
@@ -314,7 +313,10 @@ plainly what it got wrong:
 **Qualification.** Every gate carries a row in `quality_reports/qualification/LEDGER.md` with the
 defect classes seeded, recall, false-positive rate against a clean control, and a reproduction
 command. The hook battery is itself graded: stubbing each guard to always-allow must turn it red,
-and the per-guard failing-case counts are gated against the battery's own source. Each fix in
+and the per-guard **section tallies** are recomputed from the battery's own source by a
+gate. The stub OUTCOMES are recorded as dated measurements carrying their reproduction
+command, not gated — which guard *decides* a case is a runtime property, and the two
+guards share a deny list by import, so no static read of the test file recovers it. Each fix in
 this release was qualified in both directions — reverted in a copy to confirm its own cases go
 red, and run against the clean control to confirm no others do.
 
