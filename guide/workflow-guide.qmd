@@ -3,7 +3,7 @@ title: "My Claude Code Setup"
 subtitle: "A Comprehensive Guide to AI-Assisted Academic Workflows: Slides, Papers, Analysis, and Beyond"
 author: "Pedro H. C. Sant'Anna"
 date: "2026-08-24"
-version: "2.6.0"
+version: "2.5.1"
 date-modified: last-modified
 format:
   html:
@@ -1948,7 +1948,7 @@ from. Telling an agent to "review this independently" while it can `grep` for th
 honour system with a search tool attached.
 
 [`review-fencing.md`](https://github.com/pedrohcgs/claude-code-my-workflow/blob/main/.claude/rules/review-fencing.md)
-(v2.6, path-scoped to agent and skill definitions) states the rule as a question to ask before
+(v2.5.1, path-scoped to agent and skill definitions) states the rule as a question to ask before
 dispatch: what would this reviewer's *environment* reveal if it looked — and then remove that,
 rather than instructing it not to look. In practice that means a copy of the artifact placed
 outside the checkout under a neutral filename (`artifact-a.tex`, not
@@ -2377,7 +2377,7 @@ The [Template README for Social Science Replication Packages](https://social-sci
 
 The **Table/Figure Mapping** row is exactly what `passport.yaml` (v1.9.0) machine-encodes: each numeric claim → script + line + output file + tolerance + verified-on timestamp. The Data Editor's template asks for the *spreadsheet-style* version; the passport is the *programmatic* version. They're complementary — generate the AEA spreadsheet from the passport when you submit.
 
-The passport carries one field the AEA mapping does not ask for, and it is the one that protects the deposit from going quietly out of date: `appears_in` (v2.6) declares **every** artifact that displays a number, not only the exhibit that generates it. Displays are compared pairwise at the coarser `display_precision`, a declared display that cannot be located resolves to FAIL rather than being skipped, and `STALE` now fires when any declared display is edited after the last verification — not only when the script or its output changes. A deposit whose tables regenerate while a slide, a poster, or an abstract still quotes the previous revision passes the vertical mapping and fails the horizontal one, which is the correct outcome.
+The passport carries one field the AEA mapping does not ask for, and it is the one that protects the deposit from going quietly out of date: `appears_in` (v2.5.1) declares **every** artifact that displays a number, not only the exhibit that generates it. Displays are compared pairwise at the coarser `display_precision`, a declared display that cannot be located resolves to FAIL rather than being skipped, and `STALE` now fires when any declared display is edited after the last verification — not only when the script or its output changes. A deposit whose tables regenerate while a slide, a poster, or an abstract still quotes the previous revision passes the vertical mapping and fails the horizontal one, which is the correct outcome.
 
 #### Which data license? Five questions, in order
 
@@ -3365,9 +3365,9 @@ Claude Code supports **plugins** --- bundled collections of skills, agents, hook
 | Summary–Body Parity | `summary-parity.md` | `CHANGELOG.md`, `README.md`, `.qmd`, skill/rule/agent `.md` |
 | Post-Flight Verification | `post-flight-verification.md` | skills that generate factual claims (`/lit-review`, `/research-ideation`, `/respond-to-referees`, `/review-paper`, `/interview-me`) |
 | Model Routing | `model-routing.md` | `.claude/agents/**/*.md`, `.claude/skills/**/SKILL.md` — 70/20/10 architect/editor split, per-agent `model:` field guidance (v1.9.0) |
-| Review Fencing | `review-fencing.md` | `.claude/agents/**/*.md`, `.claude/skills/**/SKILL.md` — reviewer independence as a property of the *environment*: neutral copy outside the checkout, prior verdicts withheld, own reading before prior findings, positive controls fenced from committed answer keys (v2.6) |
+| Review Fencing | `review-fencing.md` | `.claude/agents/**/*.md`, `.claude/skills/**/SKILL.md` — reviewer independence as a property of the *environment*: neutral copy outside the checkout, prior verdicts withheld, own reading before prior findings, positive controls fenced from committed answer keys (v2.5.1) |
 | Stata Code Conventions | `stata-code-conventions.md` | `**/*.do`, `scripts/stata/**` — header scaffold, numbered pipeline, esttab tables, clustering discipline, AEA compliance (v1.9.0) |
-| Simulation Conventions | `simulation-conventions.md` | `**/*simulation*.R`, `**/*_sim.R`, `explorations/**` — Monte Carlo discipline: DGP/estimand, L'Ecuyer seeding, Monte Carlo SE, coverage-vs-truth, raw-result storage (v1.10.0); **assumption-regime discipline** — a per-script header naming the estimand, the maintained assumptions, the single one being relaxed, and how correct specification was verified, plus the in-/out-of-assumption firewall and relax-exactly-one over a severity grid (v2.6) |
+| Simulation Conventions | `simulation-conventions.md` | `**/*simulation*.R`, `**/*_sim.R`, `explorations/**` — Monte Carlo discipline: DGP/estimand, L'Ecuyer seeding, Monte Carlo SE, coverage-vs-truth, raw-result storage (v1.10.0); **assumption-regime discipline** — a per-script header naming the estimand, the maintained assumptions, the single one being relaxed, and how correct specification was verified, plus the in-/out-of-assumption firewall and relax-exactly-one over a severity grid (v2.5.1) |
 | R Package Conventions | `r-package-conventions.md` | `R/**`, `tests/**`, `DESCRIPTION`, `NAMESPACE`, `man/**` — package-source standards: no `library()` in `R/`, roxygen NAMESPACE, Imports/Suggests, testthat 3e, CRAN policy (v1.10.0) |
 | Confidential Data | `confidential-data.md` | restricted/confidential data paths — no raw confidential data in git, disclosure-avoidance discipline, used by `/disclosure-check` / `/replication-package` / `/data-management-plan` (v2.0) |
 

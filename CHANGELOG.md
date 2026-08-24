@@ -6,14 +6,14 @@ If you have forked this template, see the **Upgrading** section at the bottom fo
 
 ---
 
-## v2.6.0 — 2026-08-24
+## v2.5.1 — 2026-08-24
 
 An **enforcement release.** Disciplines that had been working conventions in the owner's
 research repositories become mechanisms here: the qualification ledger stops being a document
 and becomes a build dependency, the guard hooks stop being trusted and start being re-tested on
 every run, and reviewer independence stops being an instruction to the reviewer and becomes a
 property of the environment it is dispatched into. Where v2.5 asked whether the template's
-claims were true, v2.6 asks whether the things that check them still work.
+claims were true, v2.5.1 asks whether the things that check them still work.
 
 ### Added — enforcement
 
@@ -284,7 +284,7 @@ Every internal round had tested chains in one direction only. The release was pa
 full usability cost while the guarantee it advertised did not hold in the direction that
 mattered. Its findings were reproduced against real git before being accepted, and every one is
 answered — including several where the right response was to *delete* a claim rather than soften it. The consult is
-archived at `quality_reports/oracle_audits/2026-08-23_v2.6-guard-design/` with the prompt as
+archived at `quality_reports/oracle_audits/2026-08-23_v2.5.1-guard-design/` with the prompt as
 asked, the answer unedited, and a bound on its coverage stated by the referee itself: it read the
 guards' documented design, not their source, so it is evidence about what the design claims and
 not about whether the code matches.

@@ -337,7 +337,7 @@ Rules use path-scoped loading: **always-on** rules load every session; **path-sc
 | `post-flight-verification` (v1.7.0) | Skills generating factual claims | Chain-of-Verification protocol with forked verifier |
 | `summary-parity` (v1.8.x) | `CHANGELOG.md`, `README.md`, `.qmd`, skill/rule/agent `.md` | Anti-whack-a-mole: re-verify summaries against their bodies |
 | `model-routing` (v1.9.0) | `.claude/agents/**/*.md`, `.claude/skills/**/SKILL.md` | 70/20/10 architect/editor split (Haiku/Sonnet/Opus) |
-| `review-fencing` (v2.6) | `.claude/agents/**/*.md`, `.claude/skills/**/SKILL.md` | Reviewer independence is a property of the environment — neutral copy outside the checkout, prior verdicts excluded, own reading first, positive controls fenced from committed answer keys |
+| `review-fencing` (v2.5.1) | `.claude/agents/**/*.md`, `.claude/skills/**/SKILL.md` | Reviewer independence is a property of the environment — neutral copy outside the checkout, prior verdicts excluded, own reading first, positive controls fenced from committed answer keys |
 | `stata-code-conventions` (v1.9.0) | `**/*.do`, `scripts/stata/**` | Stata header scaffold, numbered pipeline, esttab, clustering discipline, AEA compliance |
 | `simulation-conventions` (v1.10.0) | `**/*simulation*.R`, `**/*_sim.R`, `explorations/**` | Monte Carlo discipline: DGP/estimand, L'Ecuyer seeding, Monte Carlo SE, coverage-vs-truth, raw-result storage |
 | `r-package-conventions` (v1.10.0) | `R/**`, `tests/**`, `DESCRIPTION`, `NAMESPACE`, `man/**` | R package-source standards: no `library()` in `R/`, roxygen NAMESPACE, Imports/Suggests, testthat 3e, CRAN policy |
@@ -360,8 +360,8 @@ Rules use path-scoped loading: **always-on** rules load every session; **path-sc
 | `preregistration-template.md` (v1.8.0) | Preregistration document scaffold (OSF / AsPredicted / AEA RCT) |
 | `passport-template.yaml` (v1.9.0) | Per-paper YAML passport for numeric-claim provenance (used by `/audit-reproducibility`) |
 | `response-to-referees.md` | R&R response document scaffold |
-| `executor-contract.md` (v2.6) | Dispatchable goal contract for a delegated task — goal, acceptance bar, exact paths, gates it must pass, output contract, and the mechanisms the executor may refuse |
-| `screening-rubric.md` (v2.6) | Screening rubric — written before the screen runs, with per-candidate evidence, an adjudication table, and a dispatcher spot-check |
+| `executor-contract.md` (v2.5.1) | Dispatchable goal contract for a delegated task — goal, acceptance bar, exact paths, gates it must pass, output contract, and the mechanisms the executor may refuse |
+| `screening-rubric.md` (v2.5.1) | Screening rubric — written before the screen runs, with per-candidate evidence, an adjudication table, and a dispatcher spot-check |
 
 </details>
 
@@ -433,7 +433,7 @@ See the [guide's ecosystem section](https://psantanna.com/claude-code-my-workflo
 
 - **What's new:** see [CHANGELOG.md](CHANGELOG.md). We follow loose semver — breaking changes get major bumps so you can decide when to pull updates.
 - **How to contribute:** see [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md). PRs welcome for generalizable improvements; fork-specific work stays in your fork.
-- **Pin to a version:** `git checkout $(git describe --tags --abbrev=0)` pins the newest tag (v2.6.0 at this writing — see [CHANGELOG.md](CHANGELOG.md)).
+- **Pin to a version:** `git checkout $(git describe --tags --abbrev=0)` pins the newest tag (v2.5.1 at this writing — see [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 

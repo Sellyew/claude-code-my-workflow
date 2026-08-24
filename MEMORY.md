@@ -189,7 +189,7 @@ The key insight: each enforces independence differently — role tension, depend
 
 [LEARN:governance] **Methodological content in the owner's own field ships only with the owner's CURRENT sign-off.** A skill was vetoed despite earlier commits recording sign-off: **a sign-off attaches to the content it reviewed, not to the surface's name** — after substantial edits or promotion into a public template it is void until renewed, however well the surface evals. Scope widened twice (2026-08-22/23): all prescriptive empirical-practice content, then causal methods generally. Taxonomy and conditional package pointers ship; prescriptions do not. Dated rulings: [`meta-governance.md`](.claude/rules/meta-governance.md).
 
-## v2.6 Cycle Lessons (2026-08-23)
+## v2.5.1 Cycle Lessons (2026-08-23)
 
 [LEARN:audit] **Gate every number you publish — including in the release that adds the rule.** A release stating *a count is a computation, not a reading* shipped three counts of its own test battery: one agent wrote the prose while another was still adding cases. **Sequence the change and its count — never parallelize them — and make the count derived**, so a checker recomputing it from source turns silent drift into a red gate.
 

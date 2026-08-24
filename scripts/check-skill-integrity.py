@@ -480,7 +480,7 @@ def check_rule_skill_parity() -> list[tuple[str, str, str]]:
 # shipped with `.claude/skills/**/SKILL.md` in its `paths:` and no entry here is
 # passed by OMISSION — the loudest possible way for a rule-vs-implementation gate
 # to be green while nothing is checked. That is what happened to
-# review-fencing.md in v2.6: it claimed all 60 SKILL.md files, was implemented by
+# review-fencing.md in v2.5.1: it claimed all 60 SKILL.md files, was implemented by
 # zero of them, and this script said "all checks pass".
 #
 # So the registry itself is now checked: a rule that scopes itself to skill files
