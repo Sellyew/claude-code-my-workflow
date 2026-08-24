@@ -2,7 +2,7 @@
 title: "My Claude Code Setup"
 subtitle: "A Comprehensive Guide to AI-Assisted Academic Workflows: Slides, Papers, Analysis, and Beyond"
 author: "Pedro H. C. Sant'Anna"
-date: "2026-08-23"
+date: "2026-08-24"
 version: "2.6.0"
 date-modified: last-modified
 format:
@@ -2912,7 +2912,7 @@ These are external to this template --- invoke directly, no installation needed.
 
 ## Community Adoption {#sec-community}
 
-Research groups across multiple disciplines have forked and adapted this workflow for their own projects — **15+ at the March 2026 survey**, with the fork network growing steadily since:
+Research groups across multiple disciplines have forked and adapted this workflow for their own projects — **15+ research groups at the March 2026 survey**; the repository has since passed **2,900 forks** and 1,500 stars (GitHub, 2026-08-24). A fork is not a research group — the survey figure and the fork count measure different things, and only the first was checked by hand:
 
 - **Economics** --- China innovation policy, mental health and layoffs, AIGC and stock prices, capital/labor shares in healthcare
 - **Energy** --- Nepal and global energy economics, PV module reliability

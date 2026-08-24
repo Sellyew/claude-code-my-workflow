@@ -415,7 +415,7 @@ This infrastructure was extracted from **Econ 730: Causal Panel Data** at Emory 
 
 ## Community & Extensions
 
-Research groups across economics, energy, political science, and engineering have forked and adapted this workflow — **15+ at the March 2026 survey**, with the fork network growing steadily since (live count on GitHub). The infrastructure (orchestrator, hooks, quality gates) transfers without modification.
+Research groups across economics, energy, political science, and engineering have forked and adapted this workflow — **15+ research groups at the March 2026 survey**; the repository has since passed **2,900 forks** and 1,500 stars (GitHub, 2026-08-24 — a fork is not a research group, so read the survey figure and the fork count as different things). The infrastructure (orchestrator, hooks, quality gates) transfers without modification.
 
 **Extended workflows:**
 
@@ -433,7 +433,7 @@ See the [guide's ecosystem section](https://psantanna.com/claude-code-my-workflo
 
 - **What's new:** see [CHANGELOG.md](CHANGELOG.md). We follow loose semver — breaking changes get major bumps so you can decide when to pull updates.
 - **How to contribute:** see [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md). PRs welcome for generalizable improvements; fork-specific work stays in your fork.
-- **Pin to a version:** `git checkout $(git describe --tags --abbrev=0)` pins the newest tag (v2.5.0 at this writing — see [CHANGELOG.md](CHANGELOG.md)).
+- **Pin to a version:** `git checkout $(git describe --tags --abbrev=0)` pins the newest tag (v2.6.0 at this writing — see [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
