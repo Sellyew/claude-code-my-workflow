@@ -6,7 +6,7 @@ If you have forked this template, see the **Upgrading** section at the bottom fo
 
 ---
 
-## v2.6.0 — 2026-08-23
+## v2.6.0 — 2026-08-24
 
 An **enforcement release.** Disciplines that had been working conventions in the owner's
 research repositories become mechanisms here: the qualification ledger stops being a document
