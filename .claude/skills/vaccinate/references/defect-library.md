@@ -12,7 +12,7 @@ Each entry: what to change, and **what a competent checker should say**.
 | # | Seed | Expected detection |
 |---|---|---|
 | A1 | Flip a sign in a treatment-effect assembly | estimate changes sign; a reconciliation or fixture check fails |
-| A2 | Off-by-one in the event-time window (`-1` as reference vs `0`) | event-study plot shifts; pre-period coefficient moves |
+| A2 | Off-by-one in a lag window (`t-1` as the first lag vs `t`) | the fitted series shifts one period; the first-lag coefficient moves |
 | A3 | Cluster at the wrong level (unit instead of treatment-assignment) | SEs shrink materially; clustering assertion fails |
 | A4 | Drop rows silently in a merge (`inner` where `left` was intended) | N falls; a post-merge count assertion fails |
 | A5 | Remove `set.seed()` / `set seed` | results stop reproducing bit-for-bit |
@@ -33,7 +33,7 @@ Each entry: what to change, and **what a competent checker should say**.
 | M5 | State a pointwise result as uniform | overclaim: headline exceeds what is proved |
 | M6 | Change N in the abstract but not in the table | cross-artifact consistency fails |
 | M7 | Drop a required assumption from a theorem statement while keeping the proof | proof gap: conclusion no longer follows |
-| M8 | Swap conditional for unconditional parallel trends in prose | domain review flags assumption mismatch |
+| M8 | Swap an assumption's conditional form for its unconditional form in a measurement-model writeup | domain review flags assumption mismatch |
 
 ## Replication packages
 

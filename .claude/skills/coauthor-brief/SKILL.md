@@ -55,6 +55,10 @@ Read-only collection. Skip any source that doesn't apply (R-only, Stata-only, no
 
 Use the template below. Keep it tight (~1–2 screens). Concrete `path:line` pointers beat prose.
 
+**Label every status statement `measured` or `inferred`.** *Measured* means a command was run and what you are reporting is its output — **name the command**. *Inferred* means you believe it from reading the code, the diff, or a run from some earlier day. Both belong in a brief; mixing them silently does not, because the reader cannot tell which claims they can build on without re-checking. Write `replication-ready (measured: Rscript scripts/R/00_run_all.R — 0 FAIL)`, not `replication-ready`.
+
+**Disposition delegated work item by item.** Anything handed to a co-author, an RA, or an agent gets its own line and its own state — done (with the evidence) / in progress / blocked (on what) / not started. *"Mostly done"* is not a disposition: it hands the reader the job of finding the missing piece, which is precisely the job the brief exists to do.
+
 ```markdown
 ---
 date: YYYY-MM-DD
@@ -67,16 +71,23 @@ branch: [current branch]
 
 ## What changed since [since-point]
 [3–8 bullets, grouped by area. Each: what changed + why it matters to a reader, not raw commit subjects.]
-- **Analysis:** re-estimated the event-study with not-yet-treated controls (Callaway–Sant'Anna); main ATT now −1.19 — see `scripts/R/03_analyze.R:147`.
+- **Analysis:** re-ran the main specification on the de-duplicated sample (533 fanned-out rows dropped); headline estimate now −1.19 — see `scripts/R/03_analyze.R:147`.
 - **Manuscript:** Table 2 + §4.2 rewritten to match; Figure 3 regenerated.
 - **Slides:** untouched.
 
 ## Current state of each artifact
-| Artifact | Path | State | Notes |
+| Artifact | Path | State | Evidence (measured / inferred) |
 |---|---|---|---|
-| Manuscript | `manuscript.tex` | drafting §5 | robustness section is a stub |
-| Analysis | `scripts/R/` | replication-ready | passport: 11 PASS, 1 EXPLAINED, 0 FAIL |
-| Slides | `Slides/` | current | matches latest results |
+| Manuscript | `manuscript.tex` | drafting §5 | inferred — §5 read, not compiled since the Table 2 rewrite |
+| Analysis | `scripts/R/` | replication-ready | measured: `Rscript scripts/R/00_run_all.R`, passport 11 PASS / 1 EXPLAINED / 0 FAIL |
+| Slides | `Slides/` | current | measured: `git log --since=<point> -- Slides/` returns nothing |
+
+## Delegated work — one line per item
+[Everything handed to a co-author, an RA, or an agent, dispositioned individually. No roll-ups.]
+| Item | Owner | State | Evidence / blocker |
+|---|---|---|---|
+| Re-run Table 3 with the new sample filter | [name] | done | measured: output diff vs `_outputs/tab3_prev.csv`, 2 cells moved |
+| Appendix B proof of Lemma 2 | [name] | blocked | waiting on the boundedness condition in Q1 below |
 
 ## Open questions / decisions needed
 [Things the co-author should weigh in on. Mark Q1, Q2…; flag which block progress.]

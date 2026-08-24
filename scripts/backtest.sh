@@ -2,7 +2,7 @@
 # backtest.sh — prove the whole repo is internally consistent and currently true.
 #
 # Run this after ANY change. It is the difference between a maintained repo and
-# one that merely looks maintained. Eight gates:
+# one that merely looks maintained. Ten gates:
 #
 #   1. surface-sync        counts + enumerative tables match what is on disk
 #   2. skill-integrity     frontmatter <-> body tool parity, anchors, flag parity
@@ -15,6 +15,13 @@
 #   7. repo-hygiene       no scratch-as-main, no root clutter, archives documented
 #   8. derived-counts     enumerable claims (journals, patterns, phases, snippets)
 #                         verified against their own source of truth
+#   9. ledger-coverage    the qualification ledger and the checks that actually run
+#                         agree in BOTH directions, and every hook in settings.json
+#                         is wired to a file that exists (a mistyped path there
+#                         disables a hook in silence)
+#  10. hook-battery       the active guard hooks are driven with synthetic events
+#                         and must still go red on the failure each one targets —
+#                         gate 9 proves a hook is wired, this proves it still acts
 #   +  findings-validator  smoke test, so a review run cannot fail at the last step
 #
 # Every gate runs to completion even if an earlier one fails — you get the whole
@@ -49,6 +56,8 @@ run "spec-conformance"   python3 "$DIR/check-spec-conformance.py"
 run "staleness"          python3 "$DIR/check-staleness.py"
 run "repo-hygiene"       python3 "$DIR/check-repo-hygiene.py"
 run "derived-counts"     python3 "$DIR/check-derived-counts.py"
+run "ledger-coverage"    python3 "$DIR/check-ledger-coverage.py"
+run "hook-battery"       bash "$DIR/hook-battery.sh"
 
 echo ""
 echo "── findings-validator smoke test ──"

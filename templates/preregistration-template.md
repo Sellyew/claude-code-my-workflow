@@ -186,7 +186,7 @@ source-spec: <path>
 - **Resulting N (and ICC if clustered):** <…>
 
 ## Pre-Analysis Plan (MAY — attach as PDF)
-- **Estimator:** <ANCOVA / DiD / cluster-robust OLS>
+- **Estimator:** <ANCOVA / panel FE / cluster-robust OLS>
 - **Specifications:** numbered, with controls listed
 - **Multiple testing:** <correction or family-wise rule>
 - **Heterogeneity analyses:** <pre-specified subgroups>

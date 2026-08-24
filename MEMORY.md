@@ -1,11 +1,9 @@
 # Project Memory
 
 Corrections and learned facts that persist across sessions.
-When a mistake is corrected, append a `[LEARN:category]` entry below.
+When a mistake is corrected, append a `[LEARN:category]` entry below; most recent at bottom.
 
 ---
-
-<!-- Append new entries below. Most recent at bottom. -->
 
 ## Workflow Patterns
 
@@ -93,9 +91,9 @@ When a mistake is corrected, append a `[LEARN:category]` entry below.
 
 ## Claim-vs-Reality Framing
 
-[LEARN:framing] ~~The "orchestrator" is a **pattern**, not a runtime.~~ **SUPERSEDED by v2.0.0 (2026-06-09)**, which rewrote `orchestrator-protocol.md` from pattern into a real runtime (fan-out → reduce → judge + hallucination gate → loop-until-dry). What still holds: there is **no daemon and no post-plan-approval trigger** — the loop is always user- or skill-initiated, and that is a documented non-goal. Docs claiming "orchestrator activates automatically after plan approval" remain wrong. *(Retired 2026-08-21 during the v2.5 stale-recommendation audit.)*
+[LEARN:framing] **The orchestrator became a real runtime in v2.0.0 (2026-06-09)** (fan-out → reduce → judge + hallucination gate → loop-until-dry), superseding its earlier "pattern, not a runtime" framing, retired 2026-08-21. What holds regardless: there is **no daemon and no post-plan-approval trigger** — the loop is always user- or skill-initiated, a documented non-goal. Any doc claiming it "activates automatically after plan approval" is wrong.
 
-[LEARN:framing] ~~"Quality gates" is overselling when the only enforcement is inside `/commit`.~~ **SUPERSEDED by v2.0.0**, which shipped a real git pre-commit hook (`.githooks/pre-commit` via `./scripts/install-hooks.sh`) running surface-sync + quality on every commit. What still holds: the gate is only live **after the user runs `install-hooks.sh`**, and `SKIP_QUALITY_GATE=1` / `--no-verify` bypass it — so docs must say "enforced once installed", not "always enforced". *(Retired 2026-08-21 during the v2.5 stale-recommendation audit.)*
+[LEARN:framing] **A gate is only as enforced as its installation.** v2.0.0 replaced the "quality gates" claim (then enforced only inside `/commit`) with a real pre-commit hook — but it is live only **after the user runs `./scripts/install-hooks.sh`**, and `SKIP_QUALITY_GATE=1` / `--no-verify` bypass it. Docs must say "enforced once installed", never "always enforced". *(v2.0.0; retired the older framing 2026-08-21.)*
 
 [LEARN:framing] Cross-artifact review is **pattern-based detection**, not universal auto-invocation. If the manuscript has no `\input{scripts/...}` signals, no cross-artifact work happens even without `--no-cross-artifact`. Document detection signals explicitly.
 
@@ -109,19 +107,19 @@ When a mistake is corrected, append a `[LEARN:category]` entry below.
 
 ## Verification Architecture (three complementary patterns)
 
-[LEARN:pattern] Verification in this repo now operates at three architectural levels, each addressing a different failure mode. Do NOT collapse them — they are complementary, not redundant:
+[LEARN:pattern] Verification here operates at three architectural levels, each addressing a different failure mode. Do NOT collapse them — they are complementary, not redundant:
 
-1. **Critic-fixer loop** (`/qa-quarto`, `/review-paper --adversarial`) — **two agents, serial** — one reads the artifact and flags issues, the other applies fixes; loop until APPROVED. Best for **presentation + structural** bugs (Beamer↔Quarto parity, manuscript completeness). Agents see the full artifact; adversarial tension comes from role assignment.
+1. **Critic-fixer loop** (`/qa-quarto`, `/review-paper --adversarial`) — **two agents, serial** — one flags issues, the other applies fixes; loop until APPROVED. Best for **presentation + structural** bugs (Beamer↔Quarto parity, manuscript completeness). Both see the full artifact; the tension comes from role assignment.
 
-2. **Cross-artifact review** (`/review-paper` + `/review-r` + `/audit-reproducibility`) — **horizontal dependency traversal** — a manuscript's claims depend on scripts' outputs, so the manuscript reviewer spawns script reviewers and reproducibility checkers alongside the paper review. Best for **paper ↔ code consistency** (ATTs, coefficients, N match the outputs that produced them).
+2. **Cross-artifact review** (`/review-paper` + `/review-r` + `/audit-reproducibility`) — **horizontal dependency traversal** — a manuscript's claims depend on scripts' outputs, so the paper reviewer spawns script reviewers and reproducibility checkers alongside it. Best for **paper ↔ code consistency** (ATTs, coefficients, N match the outputs that produced them).
 
 3. **Post-Flight Verification / CoVe** (`/verify-claims` + `claim-verifier` agent, v1.7.0) — **single agent, fresh-context fork** — the verifier has never seen the draft; it answers verification questions from the source material alone, using `context: fork` to architecturally enforce independence. Best for **factual hallucination** (fabricated citations, wrong dataset fields, misattributed findings). Adapted from Dhuliawala et al. 2023 ([arXiv:2309.11495](https://arxiv.org/abs/2309.11495)).
 
-The key insight: each pattern enforces independence differently. Critic-fixer uses role tension; cross-artifact uses dependency graph traversal; CoVe uses context isolation. A skill that needs all three (e.g., `/review-paper --peer`) invokes them at different phases.
+The key insight: each enforces independence differently — role tension, dependency-graph traversal, context isolation. A skill needing all three (e.g. `/review-paper --peer`) invokes them at different phases.
 
-[LEARN:pattern] Post-Flight Reports (v1.7.0) are the output-side twin of Pre-Flight Reports (v1.6.0). Pre-Flight proves inputs were read; Post-Flight proves claims hold. Both use structured output blocks, fail-closed fallbacks, and explicit opt-outs. Together with summary-parity (v1.6.1), they form the **discipline-pattern trilogy**: input discipline + framing discipline + output discipline. When designing a new skill that generates text, ask: does it need all three?
+[LEARN:pattern] Post-Flight Reports (v1.7.0) are the output-side twin of Pre-Flight Reports (v1.6.0). Pre-Flight proves inputs were read, Post-Flight proves claims hold, and both use structured output blocks, fail-closed fallbacks, and explicit opt-outs. With summary-parity (v1.6.1) they form the **discipline-pattern trilogy** — input, framing, output discipline. Ask of a new text-generating skill: does it need all three?
 
-[LEARN:audit] Skill frontmatter `allowed-tools` must cover every tool the skill body invokes, but this is easy to miss — the body reads as English ("spawn the verifier via Task" — the tool was renamed `Agent` in 2026; the lesson is unchanged) while the frontmatter reads as a bureaucratic array. Caught on PR #92 when Codex + Copilot both flagged 4 skills that promised `Task` in the body but had no `Task` in `allowed-tools`. Runtime failure mode: tool-permission error, or silent bypass of the promised protocol. Deep-audit Agent 3 now includes this check explicitly. Sibling check: if rule X's `paths:` includes skill Y, confirm skill Y actually implements rule X's protocol (rule-vs-implementation drift is the same class of bug at a different layer).
+[LEARN:audit] **Skill frontmatter `allowed-tools` must cover every tool the body invokes** — easy to miss, because the body reads as English ("spawn the verifier via Agent") while the frontmatter reads as a bureaucratic array. Four skills promised a tool in prose their `allowed-tools` omitted (PR #92, flagged by two external reviewers); the runtime failure is a permission error or a silent bypass. Sibling check: if rule X's `paths:` names skill Y, confirm Y actually implements X — rule-vs-implementation drift is the same bug one layer up.
 
 [LEARN:audit] Deterministic bug classes (field exists, anchor resolves, count matches disk) belong in mechanical scripts — agent attention drifts, scripts don't. Reserve audit agents for judgment calls. `check-skill-integrity.py` ships the mechanical batch; `audit-pet-peeves.md` catalogues the judgment classes.
 
@@ -133,7 +131,7 @@ The key insight: each pattern enforces independence differently. Critic-fixer us
 
 [LEARN:scheduling] `CronCreate` is session-only in practice — it dies with the REPL (hit 2026-04-16 via a rate-limit termination). Work that must survive session death uses **Routines** (cloud-side). CronCreate is fine for short polling inside a live session, not "run this in an hour".
 
-[LEARN:hooks] PreCompact hooks now support blocking via the modern protocol (exit 0 + `{"decision":"block","reason":"..."}` on stdout). `.claude/hooks/pre-compact.py` gained an opt-in DRAFT-plan guard (env var `CLAUDE_PRECOMPACT_BLOCK_ON_DRAFT=1`): blocks compaction once when an active plan is still marked DRAFT, so the user has a chance to approve the plan before losing mid-plan context. Default off — users who prefer the old save-and-continue behavior get no change. Fires at most once per plan to avoid lock-out loops.
+[LEARN:hooks] PreCompact hooks can BLOCK (modern protocol), which is how `pre-compact.py` can hold compaction while a plan is still DRAFT. Any such block must be opt-in, must fire at most once, and must fail open — a guard that can wedge a session is worse than the context it saves.
 
 ## v1.8.0 Cycle Lessons (2026-04-27)
 
@@ -146,7 +144,6 @@ The key insight: each pattern enforces independence differently. Critic-fixer us
 [LEARN:audit] **Surface-sync checks counts and MARKED tables** (`<!-- surface-sync-table: ... -->`, since v2.0) — tables without the marker are invisible to it (the guide appendix shipped 58 of 60 rows in v2.5 until a semantic sweep caught it). New skill/agent: add the row AND confirm the table is marker-covered or hand-checked.
 
 [LEARN:pattern] **`disable-model-invocation: true` is load-bearing-write discipline.** Set it on skills writing persistent files the user must intend (lecture .tex, SKILL.md, preregistration); not on transient-report skills. It only blocks model auto-trigger; `/skill-name` still works. (Codified in `templates/skill-template.md`.)
-
 
 ## v1.9.0 Cycle Lessons (2026-05-20)
 
@@ -170,7 +167,6 @@ The key insight: each pattern enforces independence differently. Critic-fixer us
 
 [LEARN:workflow] **Surface-sync must check enumerative tables, not just counts.** Count assertions catch "N skills" drift but not missing table rows (the v1.5.0 agent trio was absent from README for 3 releases; the guide appendix shipped 58 of 60 rows in v2.5 until a semantic sweep caught it). Every skill/agent addition: update count assertions AND the guide appendix AND the README table.
 
-
 ## v2.5 Cycle Lessons (2026-08-21)
 
 [LEARN:process] **Plan mode is not optional on a vague, multi-hour ask.** A vague "update our workflow" session with no plan mode, no spec, no `AskUserQuestion` paid the documented 30-50% rework: north star, guide plan, version scheme, and phase framing all rewritten mid-flight — each fixable by a 5-question spec in one turn. **Trigger: vague ask, multiple readings, >1 hour or >3 files → spec first, via `AskUserQuestion`.**
@@ -185,14 +181,16 @@ The key insight: each pattern enforces independence differently. Critic-fixer us
 
 [LEARN:audit] **Tool-name drift silently disarms hooks and gates.** When `Task` became `Agent`, 33 skills still declared `Task`, a `Bash|Task` hook matcher stopped firing, and the integrity checker certified the dead contract green. **Migrate tool names by registering both matchers, and source checker tool lists from the current reference, never hard-coded.**
 
-[LEARN:safety] **Scrub attributions before promoting a global skill into a public repo.** A promotion candidate carried an unpublished paper's title + authors in `description:`. **Deny-list scan over publishable surfaces in pre-commit + CI, fail-closed, term list gitignored — before the port begins.**
+[LEARN:safety] **Promoting a global skill into a public repo is a higher-blast-radius edit than it looks.** A candidate carried an unpublished paper's title and authors in its `description:` — and that field is a shared contract governing model auto-invocation machine-wide, so a global `~/.claude/skills/` edit has *wider* reach than a project one. **Scrub attributions with a fail-closed deny-list scan over publishable surfaces (pre-commit + CI, term list gitignored) before the port begins, and edit `description:` under `blast-radius`.**
 
-[LEARN:process] **A skill's `description:` is a shared contract — edit under `blast-radius`.** It governs model auto-invocation machine-wide; global `~/.claude/skills/` edits are higher blast radius than project edits, not lower.
-
-[LEARN:audit] **Improving a surface can silently remove it from gate coverage.** A landing-page rewrite changed the count phrasing; gates stayed green because the page was no longer *matched* — a gate that matches nothing reports nothing. **After editing a checked surface, seed a defect and confirm it is still seen; a falling assertion count is the investigate signal.**
-
-[LEARN:audit] **Qualify in both directions, always.** Detection-only tuning over-fires; false-alarm-only tuning goes blind (a compound-pattern gap let a bare count phrase through). Ship checker changes only after seeded drifts AND legitimate-prose controls. Detection without a false-alarm control is half a measurement.
+[LEARN:audit] **A gate you did not re-qualify is a gate you may no longer have.** It goes quiet two ways: editing a *checked surface* can drop it out of coverage (a rewrite changed the count phrasing, gates stayed green because nothing matched — a gate that matches nothing reports nothing), and tuning a *checker* one way blinds the other. **After editing either, re-seed both directions: a planted defect must still be caught AND legitimate prose must still pass. A falling assertion count is the investigate signal.**
 
 [LEARN:process] **Verify the branch actually changed before committing.** A `git checkout -b` bundled with a hook-blocked command never ran; ten commits landed on `main`. **A blocked hook fails the WHOLE call — anything bundled with it silently did not happen. After any branch op, echo `git rev-parse --abbrev-ref HEAD` and read it.**
 
-[LEARN:governance] **Methodological content in the owner's own field ships only with the owner's CURRENT sign-off.** The `/did-event-study` skill was vetoed and removed on 2026-08-22 by the owner — the field's leading expert — despite June-2026 commits recording an earlier sign-off. The lesson: a sign-off attaches to the content it reviewed, not to the skill's name; after substantial edits, refreshes, or promotion into a public template, the vetting is void until renewed. For any surface that prescribes methodology the owner is professionally identified with, the gate is an explicit, dated owner approval of the current text — and absent that, the surface does not ship, however well it evals. Generalized 2026-08-22: ALL prescriptive empirical-practice content is under the same gate, and session-time enforcement hooks are capped by owner ruling (speed/UX cost).
+[LEARN:governance] **Methodological content in the owner's own field ships only with the owner's CURRENT sign-off.** A skill was vetoed despite earlier commits recording sign-off: **a sign-off attaches to the content it reviewed, not to the surface's name** — after substantial edits or promotion into a public template it is void until renewed, however well the surface evals. Scope widened twice (2026-08-22/23): all prescriptive empirical-practice content, then causal methods generally. Taxonomy and conditional package pointers ship; prescriptions do not. Dated rulings: [`meta-governance.md`](.claude/rules/meta-governance.md).
+
+## v2.6 Cycle Lessons (2026-08-23)
+
+[LEARN:audit] **Gate every number you publish — including in the release that adds the rule.** A release stating *a count is a computation, not a reading* shipped three counts of its own test battery: one agent wrote the prose while another was still adding cases. **Sequence the change and its count — never parallelize them — and make the count derived**, so a checker recomputing it from source turns silent drift into a red gate.
+
+[LEARN:safety] **When a check keeps leaking, stop patching cases — stop predicting.** A clean-tree guard tried to infer from a chained command whether the tree would still be dirty by the merge. Enumerating safe forms leaked; deny-on-doubt leaked less but still leaked, because each round found one more unmodelled dimension — flags, subcommands, segments, redirection, substitution — then a semantic one: `git stash` does not stash untracked files, so a correctly-parsed *this cleans the tree* was false. Deleting the prediction was necessary and not sufficient: a reading taken before execution proves only that the tree was clean when the command was *authorized*, and a referee chained a write ahead of the op on a clean tree. The class closed only once the op was also required to be a **standalone simple command** — nothing left on the line that could write in between. **Predicting an effect you could measure is itself the defect — and a measurement taken before the effect is not a measurement of it.**

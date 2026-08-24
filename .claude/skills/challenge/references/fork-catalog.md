@@ -21,23 +21,9 @@ different route). Estimand forks are reported separately — averaging over them
 | Missing data | complete case · imputation · indicator | `estimate` |
 
 
-## Regression discontinuity
-
-Bandwidth (MSE-optimal · half · double) · polynomial order (local linear · quadratic) · kernel
-(triangular · uniform) · donut radius · covariate adjustment. Bandwidth and polynomial are
-`estimate`; a donut is `estimand` at the margin.
-
-## Instrumental variables
-
-Instrument set (each alone · all — **`estimand`**: different instruments identify different compliers, hence different LATEs) · included controls · weak-instrument-robust vs conventional
-inference · sample restrictions defining compliers. Complier-defining restrictions are
-**`estimand`** — the LATE changes.
-
-## Panel / TWFE
-
-Fixed-effect structure (unit · unit+time · unit+region×time) · lag structure · dynamic vs
-static · standard-error method. FE structure is often `estimand` when it changes the
-identifying comparison.
+> **Design-specific fork sections are deliberately absent** for the causal-identification
+> designs (unvetted-methods veto): populate them from your field's canonical sources after
+> vetting.
 
 ## Survey / experimental
 

@@ -72,6 +72,7 @@ may refuse.
 measuring that the shipped code already met the bar; and a "faithful summary" written without a
 ground-truth check was found by a hostile judge — holding the verbatim source — to contain four
 unfaithful statements. **Executors need room to refuse; reviewers need the ground truth in hand.**
+→ [`templates/executor-contract.md`](../../templates/executor-contract.md) — this law in dispatchable form.
 
 **8. The economy: expensive models plan and judge; cheap executors run gates.**
 Decomposition, adjudication, delicate prose, and irreversible calls stay with the strongest
@@ -164,6 +165,125 @@ Exactly one place states each fact. Governance scaffolding stays out of the rele
 
 ---
 
+## The last mile
+
+**18. A count is a computation, not a reading.**
+Every number that reaches a decision-maker is **produced by a command whose output is the
+number** — `wc -l`, a script's final summary line, a query returning the total — and it is
+reported *with* the command that derived it. A figure taken off a scrolled terminal, a truncated
+tool result, or a recollection of how many rows went past is not a count; it is a guess wearing
+a count's precision.
+*Incident:* an agent reported **10** failing claim-rows when the artifact held **25** — the
+console had truncated, and what got summarized was what was visible; the number was walked back
+twice in one session. The artifact existed and was correct. The failure was reading it by eye.
+*Practice:* the template mechanises the documentation half —
+[`scripts/check-derived-counts.py`](../../scripts/check-derived-counts.py) recomputes each
+enumerable claim in the docs from its own source of truth — but the law is wider than any
+checker.
+*Scope, because the wide reading is worse than the law:* this binds numbers a **decision or a
+reader rests on** — anything published, anything that gates a choice, anything another person
+will cite. It is **not** a demand that every figure in conversation arrive with a command
+attached; an external referee's fair objection is that a rule read that broadly produces
+ceremonial `wc -l` invocations that prove nothing and train you to ignore them. If the number
+merely orients you and being wrong costs a re-read, say it and move on. If being wrong would
+propagate, derive it.
+
+**19. Name the state you actually reached; never a later one.**
+"Done" collapses five different states into one word, and the word is usually wrong. Report the
+one that exists:
+
+| State | What is true |
+|---|---|
+| **modified** | the requested changes exist in the working tree |
+| **verified** | the named gates have been **run** and passed |
+| **committed** | a commit hash exists |
+| **pushed** | a named remote ref contains that commit |
+| **integrated** | the intended target — a branch, a release, a deployed page — contains it |
+
+Claiming a later state than the one reached is the whole defect: *"implemented, the gate should
+pass"* is a hypothesis with a completion notice attached, and a gate left for the pre-commit hook
+to discover is a gate you did not run. Hooks catch exceptions; they are not the workflow.
+*Incident:* a deliverable reached the turn boundary with its render verification never run; only
+the Stop hook blocked the report, at the cost of an unplanned round-trip. The hook worked — and
+that it *had* to work is the defect this law removes.
+*Where the task ends is the task's business, not this law's.* An earlier draft required every task
+to end **pushed**; an external referee pointed out that this breaks a collaborator who asked for
+a working-tree diff to review, a contributor without push rights, and anyone offline — the
+completion state belongs to the contract, and only the honesty of the report belongs here. Where
+committing needs explicit sign-off ([`/commit`](../skills/commit/SKILL.md)), a delegated task ends
+**verified** and handed back with evidence; the commit is its own authorized step.
+→ [`.claude/rules/progress-reports.md`](../rules/progress-reports.md).
+
+**20. History operations normally start from a porcelain-clean repository; an exception is an
+explicit override, reported as an exception.**
+`git status --porcelain` **first**. If it prints anything, commit it or stash it under a label
+that says what it is, then merge. The argument is not that git reliably destroys dirty work — it
+often refuses to touch conflicting local changes — it is that integrating over uncommitted work
+**destroys attribution and reviewability**, and makes accidental co-staging during conflict
+resolution far more likely. Afterwards nothing distinguishes what you chose from what was
+already sitting there.
+*Incident:* a fast-forward merge attempted over a dirty **shared** worktree failed
+mid-operation and forced an improvised stash-and-restore with manual branch preservation —
+recovery that a five-second porcelain check would have made unnecessary. On a shared tree the
+dirt may not even be yours.
+*Three things this law must not let you believe*, all of which cost a review round to establish:
+plain `git stash push -m …` does **not** stash untracked files (use `-u` when `??` entries are
+what you meant to park); `--autostash` is **not** a general clean-tree operation for the same
+reason; and a pre-execution check can only ever establish that the tree was clean **when the
+command was authorized**, unless compound forms are refused outright.
+*Mechanised:* [`.claude/hooks/git-guardrails.py`](../hooks/git-guardrails.py) refuses the
+operation while the tree is dirty, and accepts a history op only as a standalone command — so a
+chain that dirties the tree before the op cannot slip through the gap between decision and
+execution. The hatch is `ALLOW_DIRTY_MERGE=1`: deliberately an explicit act, and one worth saying
+out loud when you use it.
+
+---
+
+## Screens and waves
+
+**21. Delegated screens run under a written rubric; waves are adjudicated whole.**
+A screening agent gets its rubric **in writing before it runs**: the inclusion and exclusion
+criteria, **a stated default verdict**, and the requirement that every candidate come back
+with its own evidence rather than a bare verdict.
+
+**Which default is a decision, not a constant.** The incident below produced a screen that
+drifted lenient, so *that* screen wanted EXCLUDE-by-default — the cost of a false include was
+a corpus re-screened by hand. Invert the costs and the answer inverts: on a **recall-first**
+screen — a literature sweep, a hunt for prior art, anything where the question is *what might
+we be missing* — excluding by default silently drops relevant evidence, and unlike a bad
+include, **nothing downstream ever surfaces it.** An external referee flagged exactly this as
+the way a rule of thumb becomes a research-quality defect. So: name the default in the rubric,
+and name it by asking which error you could still catch later. Where neither error is
+recoverable, the honest default is a third verdict — NEEDS-HUMAN — not a coin weighted toward
+tidiness.
+
+The dispatcher then **re-checks a sample** against that same rubric — a screen nobody re-checked
+is an opinion poll with citations. "Spot-check" is not enough of an instruction to be falsifiable:
+confirming three obvious includes proves nothing while a fifth of the exclusions are wrong, and
+that is the shape a lenient screen actually takes. So state the protocol before the screen runs —
+**how the sample is drawn (random or stratified, never hand-picked), that exclusions and
+borderlines are deliberately oversampled, the sample size, the disagreement rate you will accept,
+and what happens when it is exceeded.** Without those five, the re-check cannot fail, and a check
+that cannot fail is worse than none (law 5).
+
+A wave of parallel agents is adjudicated **once, whole**: early returns are *status*, not input,
+and verdicts join to candidates **by id**, never by a model-authored string (law 1's silent join
+is this same defect one layer down). One exception, and it is not anchoring: early evidence may
+trigger a **protocol-level stop** — if the first returns reveal that the rubric was ambiguous, the
+inputs were corrupted, or every worker misread the same criterion, halt the wave. Refusing to
+look at early *verdicts* is the rule; refusing to notice the run is broken is just waste.
+*Incident:* a delegated screen with no written rubric came back too lenient, and the whole
+corpus had to be re-screened by hand under stricter criteria — the missing rubric cost the
+entire screen, twice. The same telemetry is blunt about waves: the sessions with a whole-wave
+adjudication pass went well; the fan-out whose first return was accepted at face value had to
+be redone.
+*Practice:* write the rubric from [`templates/screening-rubric.md`](../../templates/screening-rubric.md)
+and the dispatch from [`templates/executor-contract.md`](../../templates/executor-contract.md).
+→ [`.claude/rules/orchestrator-protocol.md`](../rules/orchestrator-protocol.md) — the screening
+fan-out as a runtime primitive.
+
+---
+
 ## The reporting stance that makes all of it credible
 
 Prespecify the menu, then **print the cells that go against you with the same prominence as the
@@ -176,3 +296,4 @@ favourite consolation.
 
 - [`verification-ladder.md`](verification-ladder.md) · [`provenance-and-ground-truth.md`](provenance-and-ground-truth.md) · [`external-oracle-process.md`](external-oracle-process.md)
 - [`.claude/rules/repo-hygiene.md`](../rules/repo-hygiene.md) — scratch must not become main
+- [`templates/executor-contract.md`](../../templates/executor-contract.md) · [`templates/screening-rubric.md`](../../templates/screening-rubric.md) — the dispatch and screening contracts (laws 7, 21)

@@ -19,6 +19,8 @@ Grep for every call site, import, and downstream reference — including tests, 
 
 If a consumer lives in another repo, another language, or a generated artifact, write it down now; you will not remember at verification time.
 
+**A consumer in another repo pins this one by commit SHA.** Its verification receipt records the *revision* it was built against — not a branch, not a version string, both of which keep moving under it. So **a change here that moves a number the downstream reports is not finished when this repo goes green**: before/after evidence for what moved, regeneration of the downstream artifact, and the re-pin all belong to the *same round* as the change — [`release-engineering.md`](../../references/release-engineering.md) §6 has the ordering within it. A downstream left pinned to the old SHA is an honest, inspectable state; one pointed at a moving reference silently inherits a number nobody re-verified.
+
 ## 2. Name the contract you are about to change
 
 Ask explicitly what downstream code is entitled to assume:
@@ -63,8 +65,10 @@ If the interface genuinely changed, say so where consumers will look: a NEWS/CHA
 5. Diff previously-reported outputs; explain any movement.
 6. Seed a defect to prove the check can fail.
 7. Record the contract change where consumers will see it.
+8. Re-pin every cross-repo consumer to the new SHA — regenerated and re-verified in this round, not the next one.
 
 ## Cross-references
 
 - [`verification-ladder.md`](../../references/verification-ladder.md) — rung 2 (wiring)
 - [`provenance-and-ground-truth.md`](../../references/provenance-and-ground-truth.md) — never re-bless a baseline in the commit that moves it
+- [`release-engineering.md`](../../references/release-engineering.md) — pinning downstream consumers by SHA, and what a number-moving change owes them in the same round

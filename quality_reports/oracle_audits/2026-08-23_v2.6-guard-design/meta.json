@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-23",
+  "topic": "v2.6.0 guard design and doctrine",
+  "oracle": {
+    "model": "GPT-5.6 Sol Pro",
+    "effort": "Pro",
+    "transport": "browser (ChatGPT Pro)",
+    "cli": "oracle 0.16.0"
+  },
+  "repository_state": {
+    "branch": "feat/v2.6-insight-incorporation",
+    "commit": "6b8fa14",
+    "note": "pinned SHA, not the branch ref; the branch has advanced since, partly because of this consult"
+  },
+  "conversation_url": "https://chatgpt.com/c/6a8b746e-d9ac-83ea-bcd7-9ad89631c0e7",
+  "prompt_file": "prompt.md",
+  "transcript_file": "transcript.md",
+  "files_sent": [
+    {
+      "name": "oracle-brief.md",
+      "bytes": 27743,
+      "contents": "module docstrings of .claude/hooks/git-guardrails.py and .claude/hooks/root-of-trust-guard.py, plus laws 18-21 of .claude/references/research-agent-laws.md"
+    }
+  ],
+  "files_deliberately_not_sent": [
+    ".claude/hooks/git-guardrails.py (implementation)",
+    ".claude/hooks/root-of-trust-guard.py (implementation)"
+  ],
+  "coverage_bound": "The referee states in transcript.md that it adjudicated the stated design and guarantees, not the executable source. This consult is evidence about the design and its claims; it is not evidence that the implementation matches them.",
+  "verdict": "HOLD the merge, with four required changes",
+  "attempts": [
+    {
+      "n": 1,
+      "outcome": "FAILED — exited 0 having sent nothing",
+      "payload_bytes": 94000,
+      "cause": "payload cliff; the send never completed",
+      "misdiagnosed_as": "an invalid --browser-thinking-time value"
+    },
+    {
+      "n": 2,
+      "outcome": "FAILED — exited 0 having sent nothing",
+      "payload_bytes": 94000,
+      "cause": "same payload cliff",
+      "misdiagnosed_as": "hidden-window mode (the run was visible; the skill's stated cause was wrong)"
+    },
+    {
+      "n": 3,
+      "outcome": "SENT; model thought 28 minutes; CLI capture timed out at 40 minutes; answer recovered with `oracle session <name> --harvest`",
+      "payload_bytes": 27743,
+      "lesson": "a capture timeout is not an absent answer; exit code 0 is not evidence of a send"
+    }
+  ],
+  "adjudication": "Every finding reproduced against real git before acceptance. Adopted, deferred and withdrawn items are recorded in the v2.6.0 entry of CHANGELOG.md. Two recommendations deliberately not taken: the trusted-wrapper design (its own cheaper fallback adopted instead), and closing the cross-hook seam for history operations (recorded in the qualification ledger rather than half-built)."
+}

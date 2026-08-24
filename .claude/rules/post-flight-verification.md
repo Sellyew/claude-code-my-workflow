@@ -46,7 +46,7 @@ From the draft, identify every assertion of the form:
 
 Skip:
 - **Opinions** ("this is a promising direction") — not verifiable
-- **Suggestions** ("the user could try IV with instrument Z") — forward-looking
+- **Suggestions** ("the user could try a log specification") — forward-looking
 - **Definitions Claude introduces itself** ("let τ denote the treatment effect")
 
 ### Step 3 — Generate verification questions
@@ -55,8 +55,8 @@ For each extracted claim, write one specific, answerable question whose answer c
 
 | Bad question | Good question |
 |-------------|--------------|
-| "Is Callaway and Sant'Anna (2021) about DiD?" | "In Callaway and Sant'Anna (2021), *J. Econometrics*, what is the exact estimator name in Section 4?" |
-| "Does the estimator require parallel trends?" | "Does Callaway and Sant'Anna (2021) Section 4 Assumption 2 use unconditional or conditional parallel trends?" |
+| "Is Author (2021) about calibration?" | "In Author (2021), what is the exact estimator name given in Section 4?" |
+| "Does the estimator need a regularity condition?" | "Does Author (2021) Section 4 Assumption 2 require a monotone response, or merely a continuous one?" |
 
 ### Step 4 — Answer in fresh context, then reconcile
 
@@ -107,6 +107,7 @@ Every skill that applies this rule must include a structured Post-Flight block i
 ## Cross-references
 
 - `.claude/agents/claim-verifier.md` — the forked verifier.
+- `.claude/rules/review-fencing.md` — the environment side of the same discipline: a forked context does not fence the checkout the reviewer stands in.
 - `.claude/skills/verify-claims/SKILL.md` — user-facing wrapper for ad-hoc verification of any text.
 - `.claude/rules/content-invariants.md` — Pre-Flight (input side).
 - `.claude/rules/cross-artifact-review.md` — pattern-based; Post-Flight is draft-based.

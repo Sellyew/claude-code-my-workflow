@@ -2,6 +2,31 @@
 
 **The review-fix loop is a real runtime contract, expressed with the primitive every Claude Code session has: the `Agent` subagents.** Skills fan out to forked reviewers, reduce their *structured* findings ([`orchestration-schemas.md`](../references/orchestration-schemas.md)) through a deterministic gate, judge with a hallucination guard, and loop until dry. What is *not* automatic is the **trigger**: nothing launches this loop on its own — the user (or a skill invocation) starts it. That boundary is deliberate (see "What is NOT automatic").
 
+## Proportionality — match the process to the stakes
+
+**Read this before the machinery below.** Everything that follows is a heavyweight apparatus, and
+the fastest way to make it worthless is to point it at everything. An external referee reviewing
+this template put the objection plainly: it *"treats too many exploratory and collaborative states
+like release engineering."* The predicted failure is not careful partial compliance — it is
+perfunctory artifacts, vocabulary games that route around a definition, hatches set globally, or
+the whole template abandoned for exploratory work. The recommendation is adopted here as the
+runtime's own doctrine:
+
+| Surface | Appropriate posture |
+|---|---|
+| Destructive git operations; changes to the controls themselves | hard gate, or explicit external authorization |
+| Claims entering a public paper, a release, or a handoff | reproducible provenance and named verification |
+| Promoting a default; a preregistered evaluation | prespecified pass / fail / escalation rules, written first |
+| Exploratory analysis and interim collaboration | exact status reporting, **minimal ceremony** |
+| High-recall discovery screens | ambiguity retained, not resolved by a default verdict |
+
+Two readings of that table carry the weight. **Exact status reporting is the one thing never cut**
+— naming the state you actually reached ([`research-agent-laws.md`](../references/research-agent-laws.md)
+law 19) costs nothing and is what makes a light-touch exploratory run trustworthy at all. And **a
+surface moves up the table the moment its output does**: an exploratory run whose number is about
+to enter a paper is no longer exploratory, and it acquires the row above it *before* the number is
+quoted, not after.
+
 ## The loop (the contract)
 
 ```
@@ -30,13 +55,13 @@ Skill invoked (with a RUN_CONFIG)
 
 ## The runtime primitives
 
-These four primitives are the runtime. Every fan-out skill is a composition of them; none should re-describe them in prose — they reference this section and [`orchestration-schemas.md`](../references/orchestration-schemas.md).
+These primitives are the runtime. Every fan-out skill is a composition of them; none should re-describe them in prose — they reference this section and [`orchestration-schemas.md`](../references/orchestration-schemas.md).
 
 ### 1. Fan-out
 
 Spawn the reviewers **in parallel in a single message** — N `Agent` calls, each `context: fork` so the main thread stays clean and each reviewer gets full budget for its lens. `Agent` subagents are the **portable primitive**: they exist in every Claude Code install, so the template depends on them, not on the session-gated Workflow tool. *(Where the Workflow tool is available — e.g. an `ultracode`/dynamic-workflow session — a skill may use it for the same fan-out→reduce→judge shape; treat that as an optional accelerator, never a requirement.)*
 
-Which agent fills which lens, at which model tier, is in [`agent-fleet.md`](../references/agent-fleet.md).
+Which agent fills which lens, at which model tier, is in [`agent-fleet.md`](../references/agent-fleet.md). When a lens's judgment could be contaminated by what the reviewer can see — the prior verdict, the revision markers, the author's own summary — fence the environment it runs in: [`review-fencing.md`](review-fencing.md).
 
 ### 2. Reduce (typed, not eyeballed)
 
@@ -78,6 +103,18 @@ each finding. Only `verdict: "confirmed"` ships. A finding the verifier cannot g
 **dropped**, not downgraded to a warning. Apply the per-lens evidence burdens and the
 "does NOT count" filters in [`orchestration-schemas.md` §7](../references/orchestration-schemas.md)
 *before* verification, so known false alarms never reach the judge.
+
+### 6. Screening fan-outs
+
+A **screen** — triage a candidate set down to the few worth real work — is a fan-out whose output is *verdicts* rather than findings, and it fails in the opposite direction from a review: not by inventing a defect, but by quietly including everything. So the screen is contracted before it launches.
+
+- **Written rubric, before launch.** Criteria on disk, from [`templates/screening-rubric.md`](../../templates/screening-rubric.md). A rubric invented per candidate is the screener's taste applied N times.
+- **The default verdict is declared, and it is a decision.** On a precision-first screen (a shortlist you will act on) EXCLUDE is the right default: a candidate is out unless cited evidence puts it in. On a **recall-first** screen — a literature sweep, prior-art search, anything asking *what are we missing* — that default silently drops relevant evidence and nothing downstream ever surfaces the loss, so the default belongs the other way or on a third verdict. Choose by asking **which error you could still catch later**, write the choice into the rubric, and send anything genuinely undecidable to **NEEDS-HUMAN** rather than resolving it toward whichever side is tidier.
+- **Per-candidate evidence.** Each verdict names the field, line, or passage that decided it. A bare verdict is re-screened, not recorded.
+- **Dispatcher spot-check.** Re-screen a sample by hand against the same rubric before acting on the wave; disagreement invalidates the wave rather than the one candidate.
+- **Whole-wave adjudication.** Early returns are **status, not input** — nothing is decided until every agent has returned and the wave is reconciled in one pass, joining verdicts to candidates by `id`.
+
+→ [`research-agent-laws.md`](../references/research-agent-laws.md) law 21; the dispatch side is [`templates/executor-contract.md`](../../templates/executor-contract.md).
 
 ### RUN_CONFIG: collect interactivity *before* launch
 

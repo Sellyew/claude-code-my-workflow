@@ -71,10 +71,10 @@ Generate structured research questions, testable hypotheses, and empirical strat
 **Hypothesis:** [Testable prediction]
 
 **Identification Strategy:**
-- **Method:** [e.g., Difference-in-Differences]
+- **Method:** [the identification approach you would defend in a seminar]
 - **Treatment:** [What varies and when]
 - **Control group:** [Comparison units]
-- **Key assumption:** [e.g., Parallel trends]
+- **Key assumption:** [the assumption the method's validity rests on, stated so it can be attacked]
 
 **Data Requirements:**
 - [Dataset 1 — what it provides]

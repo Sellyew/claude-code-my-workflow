@@ -42,6 +42,33 @@ When creating or modifying content, ask:
 - Personal preferences (90/100 quality gate for this project)
 - API keys, credentials, local workarounds
 
+### "Does it prescribe a method the owner has not vetted?"
+
+> **Owner ruling, 2026-08-23.** The v2.5 veto on unvetted difference-in-differences content is
+> **extended to empirical causal methods generally** — regression discontinuity, synthetic
+> control, instrumental variables, event studies, and matching-as-identification. Nothing in
+> this repository — skill, rule, agent, reference, or template — tells a user *how to use* one
+> of those methods until the owner vets the text. The reason, in the owner's words: avoid
+> making strong claims on guidelines without vetting, and the owner is not ready to vet now.
+
+**Still ships** (none of these is a prescription):
+
+- **Neutral taxonomy** — method names as category lists (paper types, discipline cards, journal profiles).
+- **Journal- and field-content descriptions** — what a venue publishes, not what you should run.
+- **Conditional canonical-package pointers** — "if the paper's own design calls for that package, drive it, and never reimplement the estimator."
+- **Citations to the owner's published work.**
+- **Explicit decline-to-judge stances** — "whether the identification strategy is sound is a `/review-paper` question."
+- **Historical records** — CHANGELOG entries and backlogs are never edited. A `MEMORY.md` lesson may be *extended* with a dated addendum, and may be **compressed or merged** to hold the file's size cap, provided the lesson, its incident evidence, and its date survive the edit; what must never happen is a lesson quietly losing what it was paid for.
+
+**Does not ship without a current sign-off:** which diagnostics or tests to run, which
+assumptions to verify, which estimator, specification, or tuning parameter to choose, referee
+and editor personas demanding method-specific artifacts, and catalogue sections enumerating
+method-specific forks or sensitivity statistics. Where such a section was removed, a one-line
+note says so in its place — the absence should be visible, not mysterious.
+
+The gate is the owner's **current, dated sign-off on the current text**. A sign-off attaches to
+the content it reviewed, not to the surface's name.
+
 ---
 
 ## Memory Management: Two-Tier System

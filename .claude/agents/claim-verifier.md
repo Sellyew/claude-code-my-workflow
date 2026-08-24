@@ -26,26 +26,34 @@ The calling skill hands you a structured block like:
 
 ```yaml
 source_material:
-  - path: master_supporting_docs/callaway_santanna_2021.pdf
-  - url: https://doi.org/10.1016/j.jeconom.2020.12.001
-  - search: "Callaway Sant'Anna 2021 event study"
+  - path: master_supporting_docs/author_2021_method.pdf
+  - url: https://doi.org/<DOI of the cited paper>
+  - search: "Author 2021 bias-corrected calibration estimator"
 
 claims:
   - id: C1
-    text: "Callaway and Sant'Anna (2021) propose a doubly robust estimator for staggered DiD."
-    source_hint: "from master_supporting_docs/callaway_santanna_2021.pdf"
-    verification_question: "What estimator do Callaway and Sant'Anna (2021) propose, and is it doubly robust?"
+    text: "Author (2021) proposes a bias-corrected estimator for the calibration constant."
+    source_hint: "from master_supporting_docs/author_2021_method.pdf"
+    verification_question: "What estimator does Author (2021) propose, and is it bias-corrected?"
 
   - id: C2
-    text: "The method requires conditional parallel trends."
+    text: "The method requires a monotone instrument response."
     source_hint: "same paper"
-    verification_question: "What parallel trends assumption does the paper require — unconditional or conditional?"
+    verification_question: "Which regularity condition does the paper require — monotone response, or merely continuous?"
     author_alternative: ""        # OPTIONAL. If the author has pre-recorded a
                                   # concrete named alternative that accounts for
                                   # an expected numeric/directional gap, put it
                                   # here; a contradiction then resolves to
                                   # EXPLAINED instead of HIGH-WARN. Blank = none.
 ```
+
+**Reproduce-a-pinned-number tasks: the dispatcher fences first.** When a verification question
+asks you to *re-derive* a value rather than look one up — a positive control, a replication
+check, a baseline fingerprint — the caller must first confirm the pinned value is not readable
+from where you stand. A committed expected value is an answer key, and a claim confirmed by
+reading it back is `grep`, not verification. If you find the pinned value already recorded in a
+tracked artifact instead of deriving it from the source, say so and return `cannot-verify` with
+that reason rather than reporting a match. See `.claude/rules/review-fencing.md`.
 
 ### Step 2: Answer each question independently
 
@@ -126,5 +134,6 @@ Be conservative on HIGH-WARN. It blocks `/commit`. False positives erode the gat
 ## Cross-references
 
 - `.claude/rules/post-flight-verification.md` — the protocol callers follow.
+- `.claude/rules/review-fencing.md` — independence as a property of the environment; the dispatcher's duty to fence a pinned value before a reproduce-a-pinned-number task.
 - `.claude/skills/verify-claims/SKILL.md` — user-facing wrapper.
 - MEMORY.md `[LEARN:pattern]` — why CoVe (Dhuliawala et al. 2023) is architecturally different from critic-fixer.

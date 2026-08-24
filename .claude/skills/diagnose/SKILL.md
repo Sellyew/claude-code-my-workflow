@@ -115,28 +115,28 @@ With `--no-fix`, stop after the root cause is named and report it for the user t
 
 ## Worked example
 
-A staggered-DiD `ATT` jumped from `−0.043` to `−0.071` after a data refresh; nothing in the spec changed.
+A demand-forecasting model's held-out `MAE` jumped from `0.043` to `0.071` after a data refresh; nothing in the spec changed.
 
 ```r
 # Phase 1 — reproduce: set.seed(1); same script, same number every run. Red is stable.
 
-# Phase 2 — MWE: one cohort, two periods still shows the jump.
-#           Strip to: read panel -> merge covariates -> feols(). Bug survives the merge step.
+# Phase 2 — MWE: one region, two horizons still shows the jump.
+#           Strip to: read panel -> merge features -> lm(). Bug survives the merge step.
 
 # Phase 4 — instrument: row counts before/after each step
-nrow(panel)                         # 12,400  (expected)
-nrow(merge(panel, covars, by="id")) # 12,933  <-- inflated! a many-to-many merge
+nrow(panel)                          # 12,400  (expected)
+nrow(merge(panel, feats, by="id"))   # 12,933  <-- inflated! a many-to-many merge
 
-# Root cause: the refresh left duplicate covars rows for a subset of ids; the
-# join fans those ids out, 12,400 -> 12,933 (+533 rows), re-weighting the ATT
+# Root cause: the refresh left duplicate feats rows for a subset of ids; the
+# join fans those ids out, 12,400 -> 12,933 (+533 rows), re-weighting the MAE
 # toward the duplicated units.
 
 # Phase 5 — minimal fix at the root (dedup the key), NOT a downstream row filter:
-covars <- covars[!duplicated(covars$id), ]
-# re-run: ATT back to -0.043 within tolerance; full pipeline re-checked, no other number moved.
+feats <- feats[!duplicated(feats$id), ]
+# re-run: MAE back to 0.043 within tolerance; full pipeline re-checked, no other number moved.
 
 # Prevention (Joins & shape guard):
-stopifnot(nrow(merge(panel, covars, by = "id")) == nrow(panel))
+stopifnot(nrow(merge(panel, feats, by = "id")) == nrow(panel))
 ```
 
 ## Output / report format

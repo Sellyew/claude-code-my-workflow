@@ -52,6 +52,11 @@ Before writing any R code:
 
 ## Phase 3: Verify Match
 
+Verification runs in two directions. **Vertically**, each claim is checked against the output
+that produced it, under the tolerances below. **Horizontally**, each claim is checked against
+every *other* artifact that displays the same number — see [The horizontal check](#the-horizontal-check).
+A value can clear every vertical check and still be a month out of date on a slide.
+
 ### Tolerance Thresholds
 
 | Type | Tolerance | Rationale |
@@ -139,7 +144,14 @@ paper:
 claims:
   - id: C1                                        # stable identifier (used in cross-references)
     claim: "ATT = -1.632 (SE 0.584, N=4291)"     # exact text or paraphrase from manuscript
-    location: "manuscript.tex:Table 2, Col 3"     # where it appears in the paper
+    location: "manuscript.tex:Table 2, Col 3"     # primary display (kept; source of truth for the paper)
+    appears_in:                                   # EVERY artifact that displays this number
+      - path: manuscript.tex                      #   file a reader sees it in
+        locator: "Table 2, Col 3"                 #   where inside that file
+        display_precision: 3                      #   decimals SHOWN here (0 = integer)
+      - path: Slides/Lecture04_Results.tex
+        locator: "frame 'Main result', highlight box"
+        display_precision: 2                      #   coarser → this pair compares at 2
     source_file: scripts/R/03_analyze.R           # script that produced the value
     source_line: 147                              # nearest line in the script
     output_file: scripts/R/_outputs/main_model.rds # where the value lives on disk
@@ -164,18 +176,54 @@ claims:
       the script."
 ```
 
+### The horizontal check
+
+The fields above verify a claim **vertically** — the number in the paper against the output that
+produced it. That leaves untouched the failure a multi-artifact project produces most reliably:
+the analysis is rerun, the manuscript table is regenerated from the new output, and the slide
+deck, the supplement, or the poster quoting the same number is **not**. Every vertical check
+still passes. Two artifacts on disk now disagree about one quantity, and the one an audience
+sees is the stale one.
+
+`appears_in` closes that gap by making the second and third display of a number *declared*
+rather than remembered. Per claim:
+
+1. **Locate every declared display.** Open each `appears_in[].path` and read the value at its
+   `locator`.
+2. **Compare pairwise at the coarser precision.** Two displays agree when they are equal after
+   both are rounded to the **smaller** of their two `display_precision` values. A deck showing
+   `0.34` where the paper shows `0.342` agrees; a deck showing `0.29` does not. The coarser side
+   governs because a rounding difference is a display choice and a value difference is a defect
+   — the rule separates them without anyone having to argue the case.
+3. **A display that cannot be found is a FAIL, never a skip.** If a declared `path` is missing,
+   or no value matches at its `locator`, the claim resolves to FAIL. A locator that has quietly
+   stopped matching is precisely the state in which a stale number hides; resolving it to
+   "skipped" would silence the check exactly when it should be loudest.
+
+The `tolerance:` block governs the **vertical** comparison only — including its
+`display_rounding`, which describes the *reported value's* own precision, where
+`display_precision` describes one artifact's rendering of it. Two displays of one number are not
+two measurements, they are two copies, so the horizontal comparison admits no tolerance beyond
+the rounding in step 2, and no `notes` entry downgrades a horizontal disagreement to EXPLAINED. If the deck genuinely shows a *different* specification, it is a
+different claim and gets its own passport entry.
+
+A claim with no `appears_in` list is read as declaring its `location:` alone: vertical checks
+run as before, and the audit reports it as horizontally unchecked rather than horizontally
+clean. Passports written before this field existed keep working unchanged.
+
 ### `status` semantics
 
-- **PASS** — last audit confirmed the claim within tolerance.
-- **FAIL** — last audit detected a discrepancy outside tolerance **and** no concrete named alternative is recorded in `notes`. Blocks `/commit` for the affected files unless explicit override.
+- **PASS** — last audit confirmed the claim within tolerance, and every declared display agrees at the coarser precision.
+- **FAIL** — last audit detected a discrepancy outside tolerance **and** no concrete named alternative is recorded in `notes`; or two declared displays disagree; or an `appears_in` entry could not be located in its file. Blocks `/commit` for the affected files unless explicit override.
 - **EXPLAINED** — outside tolerance, **but** `notes` records a *specific named alternative specification* that accounts for the gap (defensible alternative, paper-corrected, or code-corrected). Surfaced in the audit report and meant to flow into a response-to-referees; does **not** block. The hard floor holds: an UNMATCHED claim or a note without a named alternative stays FAIL — `/audit-reproducibility` never downgrades on a blank or vague note.
-- **STALE** — the underlying `source_file` or `output_file` was modified after `last_verified_on`. Re-run `/audit-reproducibility` to refresh.
+- **STALE** — the underlying `source_file` or `output_file`, **or any `appears_in` path**, was modified after `last_verified_on`. Re-run `/audit-reproducibility` to refresh. A touched display is as much a reason to re-check as a touched script: it is the edit that puts two artifacts out of step.
 - **UNVERIFIED** — the claim was added to the manuscript but never run through `/audit-reproducibility`. Should not appear in a submission-ready passport.
 
 ### Integration
 
 - **`/audit-reproducibility`** reads the passport at start, writes back after every claim audit. Failed claims are reported with their `id` and `location` so the author can find them in the manuscript instantly.
 - **`/commit`** reads the passport when a diff touches both `manuscript.tex` (or .qmd) and any `source_file` listed. If the passport contains any FAIL or STALE for a claim whose `source_file` is in the diff, `/commit` halts (advisory by default; gate-refuse if `--strict-passport` is set in `.claude/settings.json`). **EXPLAINED claims do not halt** — the author has already recorded a defensible named alternative.
+- **`.claude/hooks/claim-reconcile.py`** (PostToolUse) watches both links and nudges. Writing a tracked `source_file` / `output_file` names the claims whose number may have moved; writing a file declared in `appears_in` names the claims whose *other* displays were **not** edited and may now disagree (a claim with a single declared display has no sibling, so it stays quiet). The hook counts declarations by path — it never reads a value. It marks the moment two artifacts can fall out of step; the comparison itself, vertical and horizontal, runs in `/audit-reproducibility`.
 - **`/review-paper`** (default mode + `--peer`) appends a summary section to its report when the passport exists: `claims: N total, PASS: A, FAIL: B, EXPLAINED: E, STALE: C, UNVERIFIED: D`. Editors and referees know whether numeric claims have been independently verified at draft time — and EXPLAINED rows tell them which contested numbers already carry a documented justification.
 
 ### Inspiration
@@ -186,6 +234,7 @@ The pattern is borrowed from [Imbad0202/academic-research-skills](https://github
 
 - **Do not auto-populate** the passport at `/audit-reproducibility` time without showing the user the inferred mapping. Source-line inference is best-effort; the author confirms.
 - **Do not promote UNVERIFIED claims to PASS** without running the actual numeric audit. The passport is a verified-state artifact; bypassing the verification defeats the purpose.
+- **Do not reconcile a horizontal disagreement by hand-editing whichever display looks wrong.** Two displays that disagree tell you nothing about *which* is right. Re-derive both from the output the claim points at, then re-check. Typing the paper's value into the deck turns the check green while leaving open the possibility that the paper was the stale side.
 - **Do not use the passport as a substitute for `/verify-claims`.** The passport handles numeric claims with code provenance; `/verify-claims` handles citation and named-entity claims with literature provenance. Both run.
 
 ## Auto memory is an un-logged context input

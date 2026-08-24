@@ -46,8 +46,11 @@ Read, in this order:
 4. **Git state** — `git log --oneline -20`, `git status -s`, `git branch --show-current`. Capture: current branch, last 5 subjects, uncommitted file count.
 5. **Working files** — `git diff --stat HEAD` to see which files changed in this session (skip if branch is freshly cut; just say "no in-session edits").
 6. **Active TODOs** — if a TodoWrite list is in flight in this session, capture the in-progress + next-pending items.
+7. **In-flight background work** — anything this session started and did *not* wait for: a long-running compute job, a scheduled routine (`.claude/references/scheduled-routines.md`), a queued render or compile, an external review still out with a referee or another model. For each, record four things: what is running, where its artifacts land, the command that checks on it, and the verdict that ends it.
 
 If any of these reads fails (file missing), record "(none on disk)" rather than fabricating content.
+
+**A checkpoint that omits a running job orphans it.** The next session sees no trace of the work, the artifacts land in a directory nobody is watching, and the job is either re-launched from scratch or quietly abandoned half-finished — both expensive, both invisible.
 
 ### PHASE 2 — Write the checkpoint
 
@@ -75,6 +78,14 @@ status: in_progress | paused | ready-to-merge
 - `.claude/skills/checkpoint/SKILL.md:42` — body draft, needs trigger-phrase tightening
 - `quality_reports/plans/[slug].md:135` — verification section to refresh after impl
 - `CHANGELOG.md` — Unreleased section, v1.8.0 entry not yet drafted
+
+## In flight
+[Jobs still running that this session did not wait for. One row each; write "(none)" if nothing is running — an empty section reads as an oversight.]
+
+| What is running | Artifacts land in | Check with | Ends when |
+|---|---|---|---|
+| overnight parameter sweep | `scripts/R/_outputs/sweep/` | `ls scripts/R/_outputs/sweep \| wc -l` | 500 result files, no `errors.log` |
+| external referee consult | `quality_reports/oracle_audits/2026-04-27_lemma3/` | `oracle session lemma3-r1 --render` | transcript archived + adjudicated |
 
 ## Recent decisions
 [2–5 bullet points of *why* we did what we did this session. Things that wouldn't be obvious from the diff. Skip if none — do not pad.]
@@ -128,6 +139,7 @@ If memory candidates were proposed, summarise which (if any) the user accepted.
 - `.claude/rules/session-logging.md` — narrative companion. **Do not duplicate** — the checkpoint references the latest session log by path; it does not re-tell the session story.
 - `.claude/rules/plan-first-workflow.md` — checkpoint reads the active plan; if no plan exists, recommend the user enter plan mode before invoking `/checkpoint`.
 - `templates/decision-record.md` — for *why we chose A over B*, not for *where we are*.
+- `.claude/references/scheduled-routines.md` — routines that outlive the session; anything running there belongs in the "In flight" slot.
 - `.claude/hooks/pre-compact.py` — when `CLAUDE_PRECOMPACT_BLOCK_ON_DRAFT=1` is set, the PreCompact hook will block compaction once per DRAFT plan. `/checkpoint` is the right thing to run when that block fires.
 
 ## Examples
