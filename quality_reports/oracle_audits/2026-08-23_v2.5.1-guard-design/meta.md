@@ -1,8 +1,8 @@
-# External oracle consult — v2.6.0 guard design and doctrine
+# External oracle consult — v2.5.1 guard design and doctrine
 
 **Date:** 2026-08-23
 **Oracle:** GPT-5.6 Sol Pro (ChatGPT Pro, browser transport), Pro effort
-**Repository state reviewed:** commit `6b8fa14` on `feat/v2.6-insight-incorporation` (a pinned
+**Repository state reviewed:** commit `6b8fa14` on `feat/v2.5.1-insight-incorporation` (a pinned
 SHA, not the branch ref; the branch has advanced since, partly *because* of this consult)
 **Conversation:** `https://chatgpt.com/c/6a8b746e-d9ac-83ea-bcd7-9ad89631c0e7`
 **Sent:** the prompt below plus exactly one attachment, `oracle-brief.md` (27 KB) — both hook
@@ -62,7 +62,7 @@ for 28 minutes; the answer existed and was recovered with `oracle session <name>
 
 Every finding was reproduced against real git in a scratch repository before being accepted;
 none was taken on the referee's authority. What was adopted, what was deferred, and what was
-withdrawn as a result is recorded in the `v2.6.0` entry of `CHANGELOG.md`. Two of its
+withdrawn as a result is recorded in the `v2.5.1` entry of `CHANGELOG.md`. Two of its
 recommendations were deliberately **not** taken: the trusted-wrapper design (its own cheaper
 fallback was adopted instead), and closing the cross-hook seam for history operations (recorded
 in the ledger rather than half-built).

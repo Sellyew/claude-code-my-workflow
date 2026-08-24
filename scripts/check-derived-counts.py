@@ -371,7 +371,7 @@ CHECKS = [
     # edited in parallel with case additions. Anchored on the vignette's own
     # ", about a second" tail so it matches ONLY the battery claim (not generic
     # "cases"), and counted from the battery's own expect_ call sites.
-    # Tail alternatives, not one literal: the phrasing was reworded during v2.6
+    # Tail alternatives, not one literal: the phrasing was reworded during v2.5.1
     # (the runtime claim "about a second" stopped being true as the battery grew)
     # and the single-literal anchor silently stopped matching — the gate printed
     # "(no claim found)" and stayed green, which is why an unmatched pattern is
