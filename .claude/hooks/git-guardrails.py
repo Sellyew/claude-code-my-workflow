@@ -582,11 +582,126 @@ HARDCODED_PATH = re.compile(r"(/Users/[^/\s'\")]+|/home/[^/\s'\")]+|[A-Za-z]:\\\
 CODE_EXT = {".R", ".r", ".qmd", ".do", ".py", ".Rmd"}
 
 
+# ANSI-C QUOTING (`$'…'`) AND LOCALE TRANSLATION (`$"…"`) — r19.
+#
+# The unquoting walk handled `'…'`, `"…"` and backslash escapes, and nothing
+# else. Bash has two more quote openers, and both put a `$` IMMEDIATELY in
+# front of the quote: `$'…'` (ANSI-C, escapes decoded) and `$"…"` (locale
+# translation, which with no message catalogue is the double-quoted string
+# itself). The `$` fell through to the walk's ordinary-character branch, so it
+# SURVIVED into the unquoted word: `$'--hard'` unquoted to `$--hard`, which is
+# not `--hard`, and every whole-word comparison downstream missed. Bash
+# executes the byte-identical bare spelling.
+#
+# Measured 2026-08-24 against the shipped hooks with synthetic PreToolUse
+# events, in a throwaway fixture repository whose porcelain read ' M f.txt' and
+# a throwaway project fixture holding `.claude/settings.json` and
+# `.claude/hooks/`:
+#
+#   git reset --hard HEAD                      DENY   (control)
+#   git reset $'--hard' HEAD                   ALLOW (silent)
+#   git $'merge' other                         ALLOW (silent)  <- the clean-tree
+#   git clean $'-fd'                           ALLOW (silent)      check too
+#   git reset $"--hard" HEAD                   ALLOW (silent)
+#   echo X > .claude/settings.json             DENY   (control)
+#   echo X > $'.claude/settings.json'          ALLOW (silent)
+#   echo X > $".claude/settings.json"          ALLOW (silent)
+#   rm -f $'.claude/hooks/git-guardrails.py'   ALLOW (silent)
+#
+# Like the r10 quoting hole this is ORDINARY SHELL, not an evasion, and it
+# silenced the deny list and the clean-tree precondition at once.
+#
+# THE RULE: a `$` immediately before a quote opener is QUOTING SYNTAX, not part
+# of the word. `$'…'` additionally has its ANSI-C escapes decoded, because bash
+# decodes them before the word ever reaches the command — `$'\x2d\x2dhard'` IS
+# `--hard` to git, and a guard that compares whole words has to see the same
+# word. An escape this decoder does NOT recognise keeps BOTH its characters,
+# exactly as bash does for an unrecognised escape: dropping the backslash would
+# invent a DIFFERENT word, and a word the guard invented is a word that matches
+# nothing.
+#
+# Disclosed residual: the TOKENIZERS still read `'…'` as a span ending at the
+# next `'`, while inside `$'…'` a `\'` is an ESCAPED quote that does not end the
+# span. A `$'…\'…'` spelling can therefore still be split into words differently
+# from bash. The unquoting below is escape-aware; the tokenizer is not.
+#
+# THIS BLOCK AND THE FUNCTION BELOW ARE DUPLICATED VERBATIM IN
+# `root-of-trust-guard.py` (its copy names the function `unquote`), for the same
+# reason the heredoc walker is: that hook's import of this one is best-effort
+# and returns None on any failure, and a parser that silently stops running is
+# exactly what this defect was.
+_ANSI_C_SIMPLE = {"a": "\a", "b": "\b", "e": "\x1b", "E": "\x1b", "f": "\f",
+                  "n": "\n", "r": "\r", "t": "\t", "v": "\v",
+                  "\\": "\\", "'": "'", '"': '"', "?": "?"}
+_ANSI_C_HEX = {"x": 2, "u": 4, "U": 8}
+_HEXDIGITS = "0123456789abcdefABCDEF"
+
+
+def _ansi_c(body: str) -> str:
+    """Decode the ANSI-C escapes bash processes inside `$'…'`.
+
+    An UNRECOGNISED escape keeps its backslash AND its character, which is what
+    bash does with one — the failure direction matters here, because a word this
+    function invents matches no rule at all."""
+    out, i, n = [], 0, len(body)
+    while i < n:
+        c = body[i]
+        if c != "\\" or i + 1 >= n:
+            out.append(c); i += 1; continue
+        e = body[i + 1]
+        if e in _ANSI_C_SIMPLE:
+            out.append(_ANSI_C_SIMPLE[e]); i += 2; continue
+        if e in _ANSI_C_HEX:                        # \xHH \uHHHH \UHHHHHHHH
+            j, stop = i + 2, i + 2 + _ANSI_C_HEX[e]
+            while j < n and j < stop and body[j] in _HEXDIGITS:
+                j += 1
+            if j > i + 2:
+                try:
+                    out.append(chr(int(body[i + 2:j], 16))); i = j; continue
+                except (ValueError, OverflowError):
+                    pass
+            out.append(c); out.append(e); i += 2; continue
+        if e in "01234567":                         # \nnn, up to three octal
+            j = i + 1
+            while j < n and j < i + 4 and body[j] in "01234567":
+                j += 1
+            try:
+                out.append(chr(int(body[i + 1:j], 8) & 0xFF)); i = j; continue
+            except (ValueError, OverflowError):
+                pass
+        if e == "c" and i + 2 < n:                  # \cX — a control character
+            x = body[i + 2]
+            if x.isalpha() and x.isascii():
+                out.append(chr(ord(x.upper()) ^ 0x40)); i += 3; continue
+        out.append(c); out.append(e); i += 2        # unrecognised: keep both
+    return "".join(out)
+
+
 def _unquote(w: str) -> str:
     out, i = [], 0
     while i < len(w):
         c = w[i]
-        if c in "\"'":
+        if c == "$" and i + 1 < len(w) and w[i + 1] in "\"'":
+            q = w[i + 1]                    # `$'…'` / `$"…"`: `$` is SYNTAX
+            if q == "'":
+                j, esc = i + 2, False       # inside `$'…'` a `\'` does not close
+                while j < len(w):
+                    if esc:
+                        esc = False
+                    elif w[j] == "\\":
+                        esc = True
+                    elif w[j] == "'":
+                        break
+                    j += 1
+                if j >= len(w):
+                    out.append(_ansi_c(w[i + 2:])); break
+                out.append(_ansi_c(w[i + 2:j])); i = j + 1
+                continue
+            j = w.find(q, i + 2)
+            if j == -1:
+                out.append(w[i + 2:]); break
+            out.append(w[i + 2:j]); i = j + 1
+        elif c in "\"'":
             j = w.find(c, i + 1)
             if j == -1:
                 out.append(w[i + 1:]); break
@@ -906,10 +1021,29 @@ def _git_segment(words: list[str]) -> tuple[str | None, list[str], int, list[str
     that an UNQUOTED mention of a history op or a destructive op in another
     command now denies. A mention that survives quoting is a single WORD and is
     still silent, which is what the rule-1 control (c17) and the deny-list
-    control (b13) pin."""
+    control (b13) pin.
+
+    r19 — THE COMMAND WORD IS MATCHED CASE-INSENSITIVELY, UNCONDITIONALLY. This
+    test was `== "git"`, and on a case-insensitive filesystem — APFS, the macOS
+    default, and HFS+ before it — the uppercase spelling really runs git:
+    `command -v GIT` resolves to /usr/bin/GIT here. Measured 2026-08-24 against
+    a throwaway fixture repository whose porcelain read ' M f.txt',
+    `GIT reset --hard HEAD` and `Git merge other` were ALLOWED (silent) while
+    their lowercase twins DENIED. The fold is UNCONDITIONAL rather than probed
+    from the filesystem, by the same ruling the r15 glob fix made: the verdict
+    must not depend on what happens to exist at hook time. The cost is a false
+    DENY on a case-SENSITIVE filesystem for a program genuinely named `GIT` that
+    is not git — err toward denying, which is this file's standing direction.
+
+    The SUBCOMMAND is deliberately NOT folded. git itself rejects a
+    case-varied subcommand: measured on git 2.50.1 (Apple Git-155),
+    `git STATUS --porcelain` and `git Status --porcelain` both exit 128
+    ("fatal: cannot handle STATUS as a builtin") while `git status` exits 0. A
+    spelling git refuses to run cannot reach the tree, so folding it would buy
+    no coverage and would only add false denies."""
     words, i = _strip_shell_head(words)
     while i < len(words):
-        if os.path.basename(words[i]) == "git":
+        if os.path.basename(words[i]).lower() == "git":
             j, dash_c, selectors = _walk_git_globals(words, i + 1)
             if j < len(words):
                 return words[j], dash_c, j, words, selectors
@@ -1316,17 +1450,31 @@ def _resolve_dash_c(dash_c: list[str], default_cwd: str | None) -> str | None:
     kernel. The guard read C, said nothing, and real bash then fast-forwarded D
     — leaving the uncommitted work sitting on top of merged history, which is
     exactly what the clean-tree rule exists to refuse. `-C ./link/..`,
-    `-C link/../`, `-C link/../.`, the attached `-Clink/..` and the composed
-    `-C . -C link/..` all reached the same false ALLOW, while the byte-equivalent
-    `-C <D>` DENIED. So the verdict turned on whether the path was spelled
-    through the symlink.
+    `-C link/../`, `-C link/../.` and the composed `-C . -C link/..` all reached
+    the same false ALLOW, while the byte-equivalent `-C <D>` DENIED. So the
+    verdict turned on whether the path was spelled through the symlink.
+
+    CORRECTED at r19: this enumeration also listed the ATTACHED `-Clink/..`, and
+    it could never have reached that false ALLOW, because git does not accept an
+    attached `-C<path>` at all. Measured on the same git this file's other
+    numbers come from (2.50.1, Apple Git-155): `git -C . status --porcelain`
+    exits 0, `git -C. status --porcelain` exits 129 with "unknown option: -C.".
+    Counting it inflated the demonstrated recall class by one spelling.
+    `_walk_git_globals` still parses the attached form and battery case c60 still
+    pins that it is denied — as a DEFENSIVE CONTROL over a spelling git itself
+    rejects, not as a reproduction of the defect.
 
     WHY RESOLVING ON DISK IS ACCEPTABLE HERE, and what it costs. The sibling
     hook (`root-of-trust-guard.py`) deliberately resolves paths LEXICALLY: it
     judges paths that need not exist yet, so its verdict must not depend on what
-    happens to be on disk at hook time, and it handles this same divergence by
-    walking BOTH spellings and taking the union of denials. That option does not
-    exist here — this guard must pick ONE directory and read the tree in it, and
+    happens to be on disk at hook time. Its `_spellings()` walks TWO spellings
+    and takes the union of denials — but they are the token AS WRITTEN and the
+    token its `..` segments resolve to LEXICALLY. The KERNEL-resolved spelling,
+    which is what this divergence is about, is in NEITHER (r19 correction: this
+    paragraph used to claim the sibling "handles this same divergence", and it
+    does not — it models `..`, not a symlinked component, and only its project-
+    SCOPE half, `in_project`, touches the filesystem). That option does not
+    exist here either — this guard must pick ONE directory and read the tree in it, and
     a union of two readings is not a tree state. But the objection does not
     apply either: rule 3's whole verdict is already a live `git status` run IN
     this directory, so this branch depends on the filesystem at hook time by

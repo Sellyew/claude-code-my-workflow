@@ -92,8 +92,11 @@ criterion's wording, then re-screen the affected candidates.
 
 Before acting on the wave, re-screen a sample **by hand** against this rubric:
 
-- **Sample size:** [max(3, 10 % of candidates)], drawn across verdicts — at least one INCLUDE,
-  one EXCLUDE, and one BORDERLINE.
+- **Sample size:** [max(3, 10 % of candidates)], drawn at random within verdicts and **never
+  hand-picked** — at least one INCLUDE, one EXCLUDE, and one BORDERLINE, with EXCLUDE and
+  BORDERLINE deliberately **oversampled** relative to their share of the wave (at least half the
+  sample). A lenient screen fails by excluding things it should have kept, so confirming a
+  handful of obvious INCLUDEs proves nothing about the errors you are looking for.
 - **Disagreement on any sampled candidate invalidates the wave.** Repair the rubric and re-run;
   do not patch the individual verdict and keep the rest.
 
@@ -130,7 +133,9 @@ the same literature would fill that column with its own declared default instead
 | `c-033` | University repository copy | BORDERLINE | C3 | Deposit page shows no licence; question that would settle it: does the deposit record carry a licence field? | agent-2 |
 
 **Spot-check.** Three candidates re-screened by hand (`c-014`, `c-021`, `c-033`); all three
-verdicts reproduced from the cited locators.
+verdicts reproduced from the cited locators. Two of the three are an EXCLUDE and a BORDERLINE,
+drawn that way on purpose: the INCLUDEs are the ones a later reader will check anyway, and a
+dropped candidate is the error nothing downstream ever surfaces.
 
 ---
 

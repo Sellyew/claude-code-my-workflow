@@ -3,8 +3,7 @@
 **Date:** 2026-08-23
 **Oracle:** GPT-5.6 Sol Pro (ChatGPT Pro, browser transport), Pro effort
 **Repository state reviewed:** commit `6b8fa14` on `feat/v2.6-insight-incorporation` (a pinned
-SHA, not the branch ref — the branch has advanced five commits since, partly *because* of this
-consult)
+SHA, not the branch ref; the branch has advanced since, partly *because* of this consult)
 **Conversation:** `https://chatgpt.com/c/6a8b746e-d9ac-83ea-bcd7-9ad89631c0e7`
 **Sent:** the prompt below plus exactly one attachment, `oracle-brief.md` (27 KB) — both hook
 module docstrings and the four new laws. **Not** the hook implementations: an earlier attempt

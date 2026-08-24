@@ -91,7 +91,7 @@ When a mistake is corrected, append a `[LEARN:category]` entry below; most recen
 
 ## Claim-vs-Reality Framing
 
-[LEARN:framing] **The orchestrator became a real runtime in v2.0.0** (fan-out → reduce → judge + hallucination gate → loop-until-dry), superseding its earlier "pattern, not a runtime" framing. What holds regardless: there is **no daemon and no post-plan-approval trigger** — the loop is always user- or skill-initiated, a documented non-goal. Any doc claiming it "activates automatically after plan approval" is wrong.
+[LEARN:framing] **The orchestrator became a real runtime in v2.0.0 (2026-06-09)** (fan-out → reduce → judge + hallucination gate → loop-until-dry), superseding its earlier "pattern, not a runtime" framing, retired 2026-08-21. What holds regardless: there is **no daemon and no post-plan-approval trigger** — the loop is always user- or skill-initiated, a documented non-goal. Any doc claiming it "activates automatically after plan approval" is wrong.
 
 [LEARN:framing] **A gate is only as enforced as its installation.** v2.0.0 replaced the "quality gates" claim (then enforced only inside `/commit`) with a real pre-commit hook — but it is live only **after the user runs `./scripts/install-hooks.sh`**, and `SKIP_QUALITY_GATE=1` / `--no-verify` bypass it. Docs must say "enforced once installed", never "always enforced". *(v2.0.0; retired the older framing 2026-08-21.)*
 

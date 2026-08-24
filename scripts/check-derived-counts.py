@@ -327,8 +327,10 @@ CHECKS = [
     ("research-agent laws",   r'(\d+) laws\b',                   ["CLAUDE.md"], n_laws()),
     # The count two bullets ABOVE the law count in the same CLAUDE.md paragraph,
     # gated for the same reason and counted the same way — see n_rungs(). The
-    # guide states it once more; CHANGELOG.md:312 states it inside the FROZEN
-    # v2.5.0 section and is deliberately not a surface (see
+    # guide states it once more; CHANGELOG.md states it inside the FROZEN
+    # v2.5.0 section (the `verification-ladder.md` bullet — named, not given as
+    # a line number, because that pointer had already drifted once) and is
+    # deliberately not a surface (see
     # changelog_current_release() for why history is never dragged to today).
     ("verification rungs",    r'(?i)\bthe ' + _NUM + r' rungs\b', ["CLAUDE.md", "guide/workflow-guide.qmd", "docs/workflow-guide.html"], n_rungs()),
     ("seven-pass lenses",     r'(\d+) forked subagents',         [".claude/skills/seven-pass-review/SKILL.md"], n_seven_pass()),
@@ -358,7 +360,11 @@ CHECKS = [
     # number was declared as SIX while the file carried SEVEN until 2026-08-24 —
     # the drift that made REQ exact rather than a floor (see the REQ comment
     # above). Recompute it, do not guess it:
-    #   grep -o '152 cases, exit 0' quality_reports/qualification/LEDGER.md | wc -l
+    #   grep -oE '[0-9]+ cases, exit 0' quality_reports/qualification/LEDGER.md | wc -l
+    # (count-agnostic ON PURPOSE — the same shape this row's own regex matches.
+    # The recipe used to hard-code the battery size of the day; once the battery
+    # grew it returned 0, and a maintainer following it would have concluded the
+    # REQ was wrong and dropped eight gated sites out of coverage.)
     ("battery cases (ledger)", r'(\d+|[A-Za-z]+(?:-[A-Za-z]+)?) cases, exit 0',    [REQ("quality_reports/qualification/LEDGER.md", 8)], n_hook_battery_cases()),
     ("battery-named root-of-trust", r'`root-of-trust-guard\.py` \((\d+) cases named\)', ["quality_reports/qualification/LEDGER.md"], n_battery_named("a")),
     ("battery-named git-guardrails", r'`git-guardrails\.py` \((\d+) cases named\)',     ["quality_reports/qualification/LEDGER.md"], n_battery_named("bc")),

@@ -66,12 +66,16 @@ text match and says so in the message.
 
 Denied, when the target is a protected path:
 
-    - redirection            `> f`, `>> f`, `&> f`, `>| f`, `>& f` — the last
-                             is bash's csh-style redirect-both, identical in
-                             effect to `&> f` whenever f is not a file
-                             descriptor. FILE-DESCRIPTOR DUPLICATION is NOT a
-                             write and stays allowed: `>&2`, `1>&2`, `2>&1`,
-                             `>&-` name a descriptor, not a path
+    - redirection            `> f`, `>> f`, `&> f`, `&>> f`, `>| f`, `>& f` —
+                             `&>>` is bash's APPEND-both form and `>&` its
+                             csh-style redirect-both, identical in effect to
+                             `&> f` whenever f is not a file descriptor. Both
+                             are carried by `_TOKEN` and by the `_REDIR`
+                             backstop; this list omitted `&>>` until r19, so it
+                             under-reported what the regexes already caught.
+                             FILE-DESCRIPTOR DUPLICATION is NOT a write and
+                             stays allowed: `>&2`, `1>&2`, `2>&1`, `>&-` name a
+                             descriptor, not a path
     - tee                    `... | tee f`
     - copy / link            cp, install, rsync, scp, ln (DESTINATION only —
                              copying a hook out is a read)
@@ -218,6 +222,18 @@ BOUNDARY, not as a defect:
   - a protected path fed to a deleter through a PIPE — `... | xargs rm`,
     `... | xargs -0 truncate` — where the path never appears as a literal
     argument on a command line this scanner sees.
+  - a protected path produced by a COMMAND SUBSTITUTION rather than written as
+    a literal — `echo X > $(echo .claude/settings.json)`, and the same write
+    spelled with backticks, both measured ALLOWED (silent) on 2026-08-24 in a
+    throwaway project fixture while the literal spelling DENIED. The
+    substitution's OUTPUT is the path, and this scan reads command TEXT, so the
+    token it sees is `$(echo` — a word naming nothing protected. Neither the
+    tokenizer path nor the `_REDIR` backstop has a literal to test. This is
+    disclosed rather than
+    half-built: recursing into a substitution would mean predicting what an
+    arbitrary command prints, which is the shell simulation `git-guardrails.py`
+    tore out at r8 for making the guard's own complexity the leak. The sibling
+    hook already discloses the same class for its history ops.
   - a git write whose target is NOT a literal path operand — `git apply <patch>`
     (the paths live inside the patch), `git reset --hard`, `git merge`,
     `git checkout <branch>` with no pathspec. These rewrite the tree from
@@ -302,7 +318,21 @@ _SLASHES = re.compile(r"/{2,}")
 
 def normalize(path: str) -> str:
     """Collapse separator noise so `.claude//hooks` and `.claude/./hooks`
-    match the same rule as `.claude/hooks`. Case-sensitive by design."""
+    match the same rule as `.claude/hooks`.
+
+    r19 — CASE IS FOLDED, and this docstring used to say the opposite
+    ("Case-sensitive by design"), which was false the moment the repository sat
+    on a case-insensitive filesystem. It does: APFS is the macOS default (HFS+
+    before it), so `.CLAUDE/settings.json` and `.claude/settings.json` are ONE
+    file. Measured 2026-08-24 against the shipped guard on a throwaway project
+    fixture, `echo X > .CLAUDE/settings.json` was ALLOWED (silent) while its
+    lowercase twin DENIED. The comparison itself lives in `_segment_matches`;
+    this function only collapses separators. The fold is UNCONDITIONAL — no
+    probe of the filesystem — by the same ruling the r15 glob fix made: the
+    verdict must not depend on what happens to exist at hook time. Its cost is a
+    false DENY on a case-SENSITIVE filesystem for a directory literally spelled
+    `.CLAUDE` that is not the root of trust. That is the direction this guard
+    errs in on purpose."""
     p = _SLASHES.sub("/", path)
     while "/./" in p:
         p = p.replace("/./", "/")
@@ -468,15 +498,22 @@ def _glob_literal(seg: str) -> str:
 def _segment_matches(seg: str, name: str) -> bool:
     """Does this path SEGMENT spell a protected NAME — literally, or as a glob
     the shell could expand to it? A segment with no literal character of its
-    own matches only a NON-dot name: see the dotfile rule above."""
-    if seg == name:
+    own matches only a NON-dot name: see the dotfile rule above.
+
+    r19 — THE COMPARISON IS CASE-INSENSITIVE, UNCONDITIONALLY. See `normalize`
+    for the measurement and for why the fold is not conditioned on a filesystem
+    probe. `fnmatchcase` is kept rather than `fnmatch` (which would defer to
+    `os.path.normcase`, an identity function on POSIX): both sides are lowered
+    here, so the fold is this file's own rule and not the platform's."""
+    seg_l, name_l = seg.lower(), name.lower()
+    if seg_l == name_l:
         return True
     if not _GLOB_META.search(seg):
         return False
-    if name.startswith(".") and not _glob_literal(seg):
+    if name_l.startswith(".") and not _glob_literal(seg_l):
         return False
     try:
-        return fnmatch.fnmatchcase(name, seg)
+        return fnmatch.fnmatchcase(name_l, seg_l)
     except Exception:
         return False
 
@@ -704,23 +741,134 @@ _SHORT_INPLACE = re.compile(r"^-[A-Za-z]*i")
 _TARGET_DIR = re.compile(r"^--target-directory=(.+)$")
 
 
-def unquote(word: str) -> str:
+# ANSI-C QUOTING (`$'…'`) AND LOCALE TRANSLATION (`$"…"`) — r19.
+#
+# The unquoting walk handled `'…'`, `"…"` and backslash escapes, and nothing
+# else. Bash has two more quote openers, and both put a `$` IMMEDIATELY in
+# front of the quote: `$'…'` (ANSI-C, escapes decoded) and `$"…"` (locale
+# translation, which with no message catalogue is the double-quoted string
+# itself). The `$` fell through to the walk's ordinary-character branch, so it
+# SURVIVED into the unquoted word: `$'--hard'` unquoted to `$--hard`, which is
+# not `--hard`, and every whole-word comparison downstream missed. Bash
+# executes the byte-identical bare spelling.
+#
+# Measured 2026-08-24 against the shipped hooks with synthetic PreToolUse
+# events, in a throwaway fixture repository whose porcelain read ' M f.txt' and
+# a throwaway project fixture holding `.claude/settings.json` and
+# `.claude/hooks/`:
+#
+#   git reset --hard HEAD                      DENY   (control)
+#   git reset $'--hard' HEAD                   ALLOW (silent)
+#   git $'merge' other                         ALLOW (silent)  <- the clean-tree
+#   git clean $'-fd'                           ALLOW (silent)      check too
+#   git reset $"--hard" HEAD                   ALLOW (silent)
+#   echo X > .claude/settings.json             DENY   (control)
+#   echo X > $'.claude/settings.json'          ALLOW (silent)
+#   echo X > $".claude/settings.json"          ALLOW (silent)
+#   rm -f $'.claude/hooks/git-guardrails.py'   ALLOW (silent)
+#
+# Like the r10 quoting hole this is ORDINARY SHELL, not an evasion, and it
+# silenced the deny list and the clean-tree precondition at once.
+#
+# THE RULE: a `$` immediately before a quote opener is QUOTING SYNTAX, not part
+# of the word. `$'…'` additionally has its ANSI-C escapes decoded, because bash
+# decodes them before the word ever reaches the command — `$'\x2d\x2dhard'` IS
+# `--hard` to git, and a guard that compares whole words has to see the same
+# word. An escape this decoder does NOT recognise keeps BOTH its characters,
+# exactly as bash does for an unrecognised escape: dropping the backslash would
+# invent a DIFFERENT word, and a word the guard invented is a word that matches
+# nothing.
+#
+# Disclosed residual: the TOKENIZERS still read `'…'` as a span ending at the
+# next `'`, while inside `$'…'` a `\'` is an ESCAPED quote that does not end the
+# span. A `$'…\'…'` spelling can therefore still be split into words differently
+# from bash. The unquoting below is escape-aware; the tokenizer is not.
+#
+# THIS BLOCK AND THE FUNCTION BELOW ARE DUPLICATED VERBATIM IN
+# `git-guardrails.py` (its copy names the function `_unquote`), for the same
+# reason the heredoc walker is: this hook's import of that one is best-effort
+# and returns None on any failure, and a parser that silently stops running is
+# exactly what this defect was.
+_ANSI_C_SIMPLE = {"a": "\a", "b": "\b", "e": "\x1b", "E": "\x1b", "f": "\f",
+                  "n": "\n", "r": "\r", "t": "\t", "v": "\v",
+                  "\\": "\\", "'": "'", '"': '"', "?": "?"}
+_ANSI_C_HEX = {"x": 2, "u": 4, "U": 8}
+_HEXDIGITS = "0123456789abcdefABCDEF"
+
+
+def _ansi_c(body: str) -> str:
+    """Decode the ANSI-C escapes bash processes inside `$'…'`.
+
+    An UNRECOGNISED escape keeps its backslash AND its character, which is what
+    bash does with one — the failure direction matters here, because a word this
+    function invents matches no rule at all."""
+    out, i, n = [], 0, len(body)
+    while i < n:
+        c = body[i]
+        if c != "\\" or i + 1 >= n:
+            out.append(c); i += 1; continue
+        e = body[i + 1]
+        if e in _ANSI_C_SIMPLE:
+            out.append(_ANSI_C_SIMPLE[e]); i += 2; continue
+        if e in _ANSI_C_HEX:                        # \xHH \uHHHH \UHHHHHHHH
+            j, stop = i + 2, i + 2 + _ANSI_C_HEX[e]
+            while j < n and j < stop and body[j] in _HEXDIGITS:
+                j += 1
+            if j > i + 2:
+                try:
+                    out.append(chr(int(body[i + 2:j], 16))); i = j; continue
+                except (ValueError, OverflowError):
+                    pass
+            out.append(c); out.append(e); i += 2; continue
+        if e in "01234567":                         # \nnn, up to three octal
+            j = i + 1
+            while j < n and j < i + 4 and body[j] in "01234567":
+                j += 1
+            try:
+                out.append(chr(int(body[i + 1:j], 8) & 0xFF)); i = j; continue
+            except (ValueError, OverflowError):
+                pass
+        if e == "c" and i + 2 < n:                  # \cX — a control character
+            x = body[i + 2]
+            if x.isalpha() and x.isascii():
+                out.append(chr(ord(x.upper()) ^ 0x40)); i += 3; continue
+        out.append(c); out.append(e); i += 2        # unrecognised: keep both
+    return "".join(out)
+
+
+def unquote(w: str) -> str:
     out, i = [], 0
-    while i < len(word):
-        c = word[i]
-        if c in "\"'":
-            j = word.find(c, i + 1)
+    while i < len(w):
+        c = w[i]
+        if c == "$" and i + 1 < len(w) and w[i + 1] in "\"'":
+            q = w[i + 1]                    # `$'…'` / `$"…"`: `$` is SYNTAX
+            if q == "'":
+                j, esc = i + 2, False       # inside `$'…'` a `\'` does not close
+                while j < len(w):
+                    if esc:
+                        esc = False
+                    elif w[j] == "\\":
+                        esc = True
+                    elif w[j] == "'":
+                        break
+                    j += 1
+                if j >= len(w):
+                    out.append(_ansi_c(w[i + 2:])); break
+                out.append(_ansi_c(w[i + 2:j])); i = j + 1
+                continue
+            j = w.find(q, i + 2)
             if j == -1:
-                out.append(word[i + 1:])
-                break
-            out.append(word[i + 1:j])
-            i = j + 1
-        elif c == "\\" and i + 1 < len(word):
-            out.append(word[i + 1])
-            i += 2
+                out.append(w[i + 2:]); break
+            out.append(w[i + 2:j]); i = j + 1
+        elif c in "\"'":
+            j = w.find(c, i + 1)
+            if j == -1:
+                out.append(w[i + 1:]); break
+            out.append(w[i + 1:j]); i = j + 1
+        elif c == "\\" and i + 1 < len(w):
+            out.append(w[i + 1]); i += 2
         else:
-            out.append(c)
-            i += 1
+            out.append(c); i += 1
     return "".join(out)
 
 
@@ -1179,7 +1327,23 @@ def git_write_target(args: list[str]) -> tuple[str, str] | None:
 
 
 def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
-    """Return (protected_path, how) for the first write found, else None."""
+    """Return (protected_path, how) for the first write found, else None.
+
+    r19 — THE WRITER-PROGRAM BASENAME IS MATCHED CASE-INSENSITIVELY. This
+    function tested `os.path.basename(...)` against ANY_ARG / DEST_LAST /
+    INPLACE and against `git`/`dd`/`find`/`tar` with `==` and `in`, and on a
+    case-insensitive filesystem — APFS, the macOS default — the uppercase
+    spelling really runs the program. Measured 2026-08-24 on a throwaway project
+    fixture, `RM -f .claude/hooks/git-guardrails.py` was ALLOWED (silent) while
+    `rm -f` on the same path DENIED. `key` is the folded name used for every
+    table lookup; `name` stays AS WRITTEN so the deny message quotes the
+    spelling the caller actually used. Unconditional, and erring toward denying,
+    for the reasons in `normalize`.
+
+    Residual, disclosed rather than half-closed: the WRAPPERS and SHELLS tables
+    (`skip_wrappers`, `shell_c_payload`) are still matched case-sensitively, so
+    `NICE rm .claude/hooks/x` reaches this function with `NICE` as the command
+    word and is not scanned. That class predates r19 and is unchanged by it."""
     words = [t for k, t in seg if k == "word"]
 
     # 1. Output redirection — the target is the token right after the operator.
@@ -1207,21 +1371,22 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
     if i >= len(words):
         return None
     name = os.path.basename(words[i])
+    key = name.lower()                       # r19: see the docstring above
     args = words[i + 1:]
     plain = [a for a in args if a != "--" and not a.startswith("-")]
     flags = [a for a in args if a.startswith("-")]
 
-    if name == "git":
+    if key == "git":
         hit = git_write_target(args)
         if hit:
             return hit
 
-    if name in ANY_ARG:
+    if key in ANY_ARG:
         for a in plain:
             if is_protected(a):
                 return a, f"`{name}`"
 
-    if name in DEST_LAST:
+    if key in DEST_LAST:
         for f in flags:
             m = _TARGET_DIR.match(f)
             if m and is_protected(m.group(1)):
@@ -1231,17 +1396,17 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
         if plain and is_protected(plain[-1]):
             return plain[-1], f"`{name}` destination"
 
-    if name in INPLACE and any(is_inplace(f) for f in flags):
+    if key in INPLACE and any(is_inplace(f) for f in flags):
         for a in plain:
             if is_protected(a):
                 return a, f"in-place `{name} -i`"
 
-    if name == "dd":
+    if key == "dd":
         for a in args:
             if a.startswith("of=") and is_protected(a[3:]):
                 return a[3:], "`dd of=`"
 
-    if name == "find":
+    if key == "find":
         # A find that deletes: `-delete`, or `-exec/-execdir <deleter> ...`.
         deleters = {"rm", "mv", "truncate", "shred", "unlink"}
         destructive = False
@@ -1250,7 +1415,7 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
                 destructive = True
                 break
             if a in ("-exec", "-execdir") and k + 1 < len(args) \
-                    and os.path.basename(args[k + 1]) in deleters:
+                    and os.path.basename(args[k + 1]).lower() in deleters:
                 destructive = True
                 break
         if destructive:
@@ -1261,7 +1426,7 @@ def scan_segment(seg: list[tuple[str, str]]) -> tuple[str, str] | None:
                 if is_protected(a):
                     return a, "`find ... -delete/-exec`"
 
-    if name == "tar":
+    if key == "tar":
         # Extraction WRITES files into the -C/--directory destination; creating
         # an archive only reads it, so gate on an extract mode being present.
         extracting = any(
@@ -1482,8 +1647,29 @@ def _may_name_a_protected_path(cmd: str) -> bool:
     containing a `*` is now tokenised and scored; that is pure string work
     (the pattern half touches no filesystem, and `in_project` runs only once a
     pattern has matched), and it is the same work the scan already did for
-    every command mentioning `.claude`."""
-    if ".claude" in cmd or ".githooks" in cmd:
+    every command mentioning `.claude`.
+
+    r19 — THE SAME DEFECT AGAIN, TWICE, AND FOR THE SAME REASON: this literal
+    test stands in front of the whole scan, so a fix below it is dead code for
+    any command line the test rejects.
+
+      * CASE. The substring test was case-SENSITIVE while the filesystem this
+        repository lives on is not (APFS). With `_segment_matches` already
+        folded, `echo X > .CLAUDE/settings.json` STILL returned here before
+        anything looked at it — measured 2026-08-24 on a throwaway project
+        fixture, ALLOW (silent), while the lowercase twin DENIED. The line is
+        folded before the test now.
+      * ANSI-C QUOTING. `$'\\x2eclaude/settings.json'` names the protected file
+        to bash and carries none of its literal characters, so neither substring
+        appears. A line carrying a `$'` or `$"` opener therefore always goes
+        through to the scan, where `unquote` decodes it.
+
+    Both widenings fail toward SCANNING, which costs string work and can only
+    add denials."""
+    low = cmd.lower()
+    if ".claude" in low or ".githooks" in low:
+        return True
+    if "$'" in cmd or '$"' in cmd:      # ANSI-C / locale quoting: see above
         return True
     return any(ch in cmd for ch in "*?[{")
 

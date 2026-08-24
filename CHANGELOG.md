@@ -25,7 +25,7 @@ claims were true, v2.6 asks whether the things that check them still work.
   typo can no longer disable a hook silently while every gate stays green. The registered set
   is derived live from the gate runner, the session settings, and the commit entry point;
   grepping the ledger cannot know what actually runs.
-- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (169 cases, seconds to run)
+- **Gate 10 — `scripts/hook-battery.sh`.** A standing seeded battery (198 cases, seconds to run)
   that re-fires every active guard hook's target failure on **every backtest run**: the deny
   cases, the clean controls that must stay silent, fail-open on a malformed event, and the
   documented escape hatches. Gate 9 proves a hook is *wired*; gate 10 proves it still *acts*.
@@ -61,8 +61,9 @@ claims were true, v2.6 asks whether the things that check them still work.
   repository it belongs to. **The accepted cost is one extra tool call** — with its own hook
   cycle and agent round trip, not "one extra keystroke", as an earlier draft of the hook's own
   docstring claimed.
-- **The hook layer is qualified, not assumed.** Five new ledger rows carry **recall and
-  false-positive rate** measured against seeded defects *and* clean controls — including a
+- **The hook layer is qualified, not assumed.** Every guard hook and every gate this release
+  adds carries a ledger row with **recall and false-positive rate** measured against seeded
+  defects *and* clean controls — gate 9 fails the build if one is missing — including a
   *grading-the-grader* row that stubs a guard hook to always-allow in a copied hook directory
   and confirms the battery goes red and names the failing case. Six further rows record
   **visible debt**: the five passive hooks and the pre-commit entry point, unmeasured and
@@ -228,6 +229,96 @@ either way the absence is visible rather than mysterious. The ruling is
 recorded in `.claude/rules/meta-governance.md` (2026-08-23) and the lesson extended in
 `MEMORY.md`. Method **diagrams** — the `did-two-period` and `event-study` TikZ snippets — are
 drawings, not usage guidance; they are kept, flagged for a later ruling.
+
+### Verification of this release
+
+Three independent kinds of review ran against this branch, and **each found defects the other
+two could not.** That is the finding worth carrying forward: no single method was sufficient,
+and the one that mattered most was the one that asked a different question.
+
+**The adversarial rounds** — fresh-context lenses, refute-biased verification of every finding,
+fix, re-audit, repeat until two consecutive rounds came back dry — drove the mechanical surface.
+They were good at what they were pointed at: counts recomputed from source, links, staleness,
+guard bypasses. They were also their own worst enemy in a useful way: **round after round, the
+defect found was one the previous round's own fix had introduced** — which is the argument for
+re-auditing in fresh context rather than trusting a fixer's report of its own work. Two findings
+are worth naming because the class generalizes. A guard folded a path's parent segments by string
+while the tool it guards folds them through the kernel; the two agree until a symlink sits in
+front, and then they name different repositories — so the guard read one tree and the command
+changed another. And a docstring enumerated four spellings of a redirection while the shell
+accepts five; the code implemented exactly what the docstring listed, so the list *was* the bug.
+Both were found by running the command, not by reading the code.
+
+**And the rounds measured something about themselves worth more than any single fix.** Four
+consecutive rounds each found a *new* class of spelling that reaches the same file: a comment
+that merely mentions a heredoc, a path folded through a symlink, a redirection operator absent
+from the list, ANSI-C `$'…'` quoting that survives unquoting as a stray `$`, an uppercase command
+word that a case-insensitive filesystem resolves to the same binary. Each fix was correct and
+each was followed by another class. That is not bad luck; it is a measurement, and the honest
+reading is that **a textual recognizer over an adversarial spelling space does not converge.**
+"The last round found nothing" would be evidence about the round, not about the guard. So the
+release stops claiming the recognizer is closing, and the guards' own docstrings say what they
+have always been asked to say: these lists record where the parser has been *probed*, not where
+it is complete. A guard whose advertised coverage exceeds its actual coverage is worse than none,
+because you stop looking — which is this repository's own rule, now applied to itself.
+
+**The template's own skills, run against the template**, found what those rounds structurally
+could not — the rounds asked *"is this correct?"*, never *"what does this do to a user?"*
+`/blast-radius` reproduced, end to end using this guide's own worktree recipe, that a gate added
+by this release **committed to the user's branch and then blocked every retry**: git exports an
+absolute `GIT_DIR` into hooks from a linked worktree, and `git -C` does not isolate against it.
+The same defect meant a block of battery cases had been passing by reading the *outer*
+repository — green for the wrong reason — so they were re-qualified rather than assumed.
+`/verify-claims` measured that the story motivating gate 9 was false: a mistyped hook path does
+not fail silently. `/humanize` found the release's own teaching illustrations were one template
+run five times.
+
+**An independent frontier-model referee returned HOLD.** Its lead finding was reachable by
+neither of the above: the clean-tree guard read the tree at `PreToolUse`, *before* the shell
+command ran, so a command that dirtied the tree and then ran a history operation was allowed.
+Every internal round had tested chains in one direction only. The release was paying the guard's
+full usability cost while the guarantee it advertised did not hold in the direction that
+mattered. Its findings were reproduced against real git before being accepted, and every one is
+answered — including several where the right response was to *delete* a claim rather than soften it. The consult is
+archived at `quality_reports/oracle_audits/2026-08-23_v2.6-guard-design/` with the prompt as
+asked, the answer unedited, and a bound on its coverage stated by the referee itself: it read the
+guards' documented design, not their source, so it is evidence about what the design claims and
+not about whether the code matches.
+
+**Claims withdrawn rather than softened.** A release that argues for verification should say
+plainly what it got wrong:
+
+- *"No textual feature of the command can make a dirty tree read as clean"* — falsified in
+  review; the guard identifies forms, and an unidentified invocation passes outside the rule.
+- *"A closed allowlist over the whole command"* — it is a best-effort recognizer.
+- *"One extra keystroke"* — it is another tool call, hook cycle and round trip.
+- *`reflog`/`ORIG_HEAD` backstop a bad merge* — they recover **commits**; this protects exactly
+  what is not committed.
+- *Law 19: every task ends pushed* — deleted. A collaborator who asks for a working-tree diff
+  completes their task.
+- *Law 21: EXCLUDE is the default verdict* — deleted for a recall-first screen, where it
+  silently drops relevant evidence and nothing downstream ever surfaces the loss.
+
+**Qualification.** Every gate carries a row in `quality_reports/qualification/LEDGER.md` with the
+defect classes seeded, recall, false-positive rate against a clean control, and a reproduction
+command. The hook battery is itself graded: stubbing each guard to always-allow must turn it red,
+and the per-guard failing-case counts are gated against the battery's own source. Each fix in
+this release was qualified in both directions — reverted in a copy to confirm its own cases go
+red, and run against the clean control to confirm no others do.
+
+**Disclosed rather than claimed closed.** The guards are defense-in-depth over a deliberate
+bypass posture, not proofs, and each docstring names what it cannot see. One seam is left open
+and recorded, and it is narrower than an earlier draft of this section said: the destructive-verb
+deny list is now **shared** across the two hooks, so a `reset --hard` or a `clean -fdx` carried
+inside a shell payload is caught. What is not shared is the **dirty-tree** check, so a merge,
+rebase or pull inside such a payload is still seen by neither hook. That half stays open on
+purpose — it needs a resolved repository and a live `git status`, and duplicating
+repository-identity resolution is exactly the surface review showed was wrong twice.
+The referee's preferred design, a trusted runtime wrapper, was consciously deferred in favour of
+its own cheaper fallback. Nothing gates a docstring against the code it describes; that is
+recorded as open debt, and it is how the redirection defect above survived. And this prose is
+model-drafted: `writing-with-ai.md` is explicit that no model pass changes what a neural detector
+sees, so the only real measurement is a detector run against the rendered guide.
 
 ### Provenance
 

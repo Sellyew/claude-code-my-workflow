@@ -811,6 +811,127 @@ expect_silent "a75 r18 CONTROL: a >& aimed at an UNPROTECTED path in the same pr
 fire root-of-trust-guard.py "$TMP/a76.json"
 expect_silent "a76 r18 CONTROL: a >& into a protected path that appears only INSIDE QUOTES writes nothing and stays allowed — the a7 prose rule survives the new operator"
 
+# a77-a91 (r19): TWO SPELLINGS OF A PROTECTED PATH THE GUARD COULD NOT SEE.
+#
+# (1) ANSI-C QUOTING AND LOCALE TRANSLATION. `unquote()` knew `'…'`, `"…"` and
+# backslash escapes and nothing else. Bash has two more quote openers and both
+# put a `$` immediately in front of the quote — `$'…'` (ANSI-C, escapes
+# decoded) and `$"…"` (locale translation). The `$` survived into the unquoted
+# word, so `$'.claude/settings.json'` became `$.claude/settings.json`, which
+# matches no protected segment. Measured 2026-08-24 against the shipped guard,
+# event cwd = the project:
+#
+#     echo X > .claude/settings.json             DENY   (control)
+#     echo X > $'.claude/settings.json'          ALLOW (silent)
+#     echo X > $".claude/settings.json"          ALLOW (silent)
+#     rm -f $'.claude/hooks/git-guardrails.py'   ALLOW (silent)
+#
+# a80 is the sharper one: `$'\x2eclaude/…'` carries NONE of the literal
+# characters of `.claude`, so it also had to get past `_may_name_a_protected_
+# path`, the literal substring fast path that stands in front of the whole scan
+# — the r15 defect one level up, and the same shape as it. What bash really
+# decodes these to was measured with `printf '%s'` on bash 5.3.9, not assumed:
+# `$'\x2eclaude/hooks/x'` -> `.claude/hooks/x`.
+#
+# (2) CASE. This repository lives on APFS, which is case-INSENSITIVE by default,
+# so `.CLAUDE/settings.json` and `.claude/settings.json` are ONE file and `RM`
+# really runs rm (`command -v RM` resolves). The segment comparison, the
+# writer-program basename lookups and the fast path were all case-sensitive:
+#
+#     echo X > .CLAUDE/settings.json             ALLOW (silent)
+#     RM -f .claude/hooks/git-guardrails.py      ALLOW (silent)
+#
+# while both lowercase twins DENIED. The fold is UNCONDITIONAL — no filesystem
+# probe — by the same ruling the r15 glob fix made, so its cost is a false DENY
+# on a case-SENSITIVE filesystem for a directory literally spelled `.CLAUDE`
+# that is not the root of trust.
+#
+# THE CONTROLS ARE WHAT MAKE THE NEW RECALL MEAN ANYTHING, and each is aimed at
+# a specific way the fix could have been over-broad:
+#   a81/a90 — every READ is still allowed, through BOTH new spellings.
+#   a82/a91 — the r11 project SCOPE survives both: the same spelling aimed at a
+#             tree outside the project stays silent.
+#   a83     — a `$'…'` that is genuinely just TEXT does not become a deny.
+#   a88/a89 — an ordinary unprotected path is untouched, lowercase and upper.
+# The literal-twin denies these are measured against are a25 (redirection) and
+# a5/a20 (deleters), which stay green unchanged.
+cat > "$TMP/a77.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf disabled > \$'.claude/settings.json'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a78.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf disabled > \$\".claude/settings.json\""},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a79.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f \$'.claude/hooks/git-guardrails.py'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a80.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f \$'\\\\x2eclaude/hooks/git-guardrails.py'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a81.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"cat \$'.claude/settings.json'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a82.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f \$'$TMP/rot-clone/.claude/settings.json'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a83.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"echo \$'first line\\\\nsecond line'"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a84.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"printf disabled > .CLAUDE/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a85.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"RM -f .claude/hooks/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a86.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f .Claude/HOOKS/git-guardrails.py"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a87.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -rf .GITHOOKS/pre-commit"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a88.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f docs/tmp.txt"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a89.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"RM -f docs/tmp.txt"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a90.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"cat .CLAUDE/settings.json"},"cwd":"$ROOT"}
+EOF
+cat > "$TMP/a91.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"rm -f $TMP/rot-clone/.CLAUDE/settings.json"},"cwd":"$ROOT"}
+EOF
+
+fire root-of-trust-guard.py "$TMP/a77.json"
+expect_deny   "a77 r19: an ANSI-C quoted redirection target (> \$'.claude/settings.json') is denied — the \$ was surviving into the unquoted word, so the guard compared \$.claude against .claude and missed, while bash writes the byte-identical file"
+fire root-of-trust-guard.py "$TMP/a78.json"
+expect_deny   "a78 r19: the LOCALE-translation spelling (> \$\".claude/settings.json\") is denied — the second opener bash puts a \$ in front of, missed for the same reason"
+fire root-of-trust-guard.py "$TMP/a79.json"
+expect_deny   "a79 r19: a DELETE of a hook through the ANSI-C spelling (rm -f \$'.claude/hooks/…') is denied — the guard file itself was reachable this way"
+fire root-of-trust-guard.py "$TMP/a80.json"
+expect_deny   "a80 r19 THE SHARP ONE: an ANSI-C ESCAPE-ENCODED protected path (\$'\\x2eclaude/hooks/…') is denied. It carries none of the literal characters of '.claude', so it also had to get past the literal-substring fast path standing in front of the whole scan — the r15 defect one level up. Bash decodes it to .claude/hooks/… (measured with printf on bash 5.3.9)"
+fire root-of-trust-guard.py "$TMP/a81.json"
+expect_silent "a81 r19 CONTROL: a READ through the new ANSI-C spelling (cat \$'.claude/settings.json') stays allowed — 'every READ is untouched' survives the fix"
+fire root-of-trust-guard.py "$TMP/a82.json"
+expect_silent "a82 r19 CONTROL, and it fires in BOTH directions: the same ANSI-C spelling aimed at a fixture clone OUTSIDE the project stays allowed, so the r11 project scoping is not weakened by teaching the unquoter a new opener. Seeding the fix back out turns this case RED as well — with the \$ left in the word the ABSOLUTE path became the relative token '\$/…', which in_project() resolves against the project and denies. The quoting hole cost a false DENY here at the same time as it cost the false ALLOWs above"
+fire root-of-trust-guard.py "$TMP/a83.json"
+expect_silent "a83 r19 CONTROL: a \$'…' string that is genuinely just TEXT (echo \$'first line\\nsecond line') is not a write and stays silent — recognising the opener did not become denying every command that carries one"
+fire root-of-trust-guard.py "$TMP/a84.json"
+expect_deny   "a84 r19: a CASE-VARIED protected directory (> .CLAUDE/settings.json) is denied — APFS is case-insensitive by default, so this is the same file the lowercase twin names, and the twin DENIED while this went silent"
+fire root-of-trust-guard.py "$TMP/a85.json"
+expect_deny   "a85 r19: a CASE-VARIED writer program (RM -f .claude/hooks/…) is denied — 'command -v RM' resolves on this filesystem, so the uppercase spelling really runs rm"
+fire root-of-trust-guard.py "$TMP/a86.json"
+expect_deny   "a86 r19: case variance in BOTH the protected directory and the protected child (.Claude/HOOKS/…) is denied — the fold is per SEGMENT, not a special case for the top-level name"
+fire root-of-trust-guard.py "$TMP/a87.json"
+expect_deny   "a87 r19: the case-varied .githooks tree (.GITHOOKS/pre-commit) is denied — the second protected root folds the same way"
+fire root-of-trust-guard.py "$TMP/a88.json"
+expect_silent "a88 r19 CONTROL: an ordinary unprotected path with no case variance and no \$-quoting (rm -f docs/tmp.txt) behaves exactly as before"
+fire root-of-trust-guard.py "$TMP/a89.json"
+expect_silent "a89 r19 CONTROL: the UPPERCASE deleter aimed at an unprotected path (RM -f docs/tmp.txt) stays allowed — folding the program name added a spelling of rm, it did not make rm itself denied"
+fire root-of-trust-guard.py "$TMP/a90.json"
+expect_silent "a90 r19 CONTROL: a READ through the case-varied spelling (cat .CLAUDE/settings.json) stays allowed"
+fire root-of-trust-guard.py "$TMP/a91.json"
+expect_silent "a91 r19 CONTROL: the case-varied spelling aimed at a clone OUTSIDE the project stays allowed — the r11 scoping survives the case fold too"
+
 # ── (b) git-guardrails: the deny list ──────────────────────────────────────
 echo ""
 echo "  (b) git-guardrails.py — destructive git"
@@ -993,6 +1114,89 @@ fire git-guardrails.py "$TMP/b22.json"
 expect_deny   "b22 r17: a TRAILING comment naming a heredoc (echo hi # uses <<EOF here) no longer suppresses line 2 — the destructive clean is seen and denied"
 fire git-guardrails.py "$TMP/b23.json"
 expect_silent 'b23 r17 control: a REAL heredoc opener with a trailing comment after it still OPENS, so its body carrying `git push --force` is still dropped as prose'
+
+# b24-b33 (r19): THE r10 QUOTING HOLE HAD TWO SPELLINGS LEFT, AND A THIRD
+# DIMENSION NOBODY HAD LOOKED AT.
+#
+# r10 ported this deny list off raw-string regexes onto tokens precisely so that
+# quoting one word could not defeat it. It closed `"…"` and `'…'`. Bash has two
+# more openers — `$'…'` (ANSI-C) and `$"…"` (locale translation) — and the `$`
+# in front of the quote was falling through `_unquote` into the word, so
+# `$'--hard'` became `$--hard` and the whole-word comparison missed. Separately,
+# the command word itself was compared with `== "git"` while this filesystem is
+# case-insensitive (`command -v GIT` resolves to /usr/bin/GIT). Measured
+# 2026-08-24 against the shipped hook on a fixture repository:
+#
+#     git reset --hard HEAD        DENY   (control)
+#     git reset $'--hard' HEAD     ALLOW (silent)
+#     git $'merge' other           ALLOW (silent)
+#     git clean $'-fd'             ALLOW (silent)
+#     git reset $"--hard" HEAD     ALLOW (silent)
+#     GIT reset --hard HEAD        ALLOW (silent)
+#     Git merge other              ALLOW (silent)
+#
+# b27 is the one that needs the DECODER rather than just the opener: bash
+# expands `$'\x2dA'` to `-A`, so a guard that stripped the quotes but left the
+# escape would still compare `\x2dA` against `-A` and miss. What bash really
+# produces was measured with `printf '%s'` on bash 5.3.9.
+#
+# The SUBCOMMAND is deliberately not folded, and b32 is why that costs nothing:
+# git itself refuses a case-varied subcommand (`git STATUS` exits 128, "cannot
+# handle STATUS as a builtin", measured on git 2.50.1), so folding it would add
+# only false denies. The controls b30-b33 pin the other direction — the fix
+# recognises two more openers and one more spelling of the program name, it does
+# not deny every command carrying a `$'` or every word beginning with GIT.
+cat > "$TMP/b24.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git reset \$'--hard' HEAD~1"}}
+EOF
+cat > "$TMP/b25.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git \$'reset' --hard HEAD~1"}}
+EOF
+cat > "$TMP/b26.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git clean \$'-fd'"}}
+EOF
+cat > "$TMP/b27.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git add \$'\\\\x2dA'"}}
+EOF
+cat > "$TMP/b28.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git reset \$\"--hard\" HEAD~1"}}
+EOF
+cat > "$TMP/b29.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"GIT reset --hard HEAD~1"}}
+EOF
+cat > "$TMP/b30.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"Git push --force origin main"}}
+EOF
+cat > "$TMP/b31.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git push \$'--force-with-lease' origin main"}}
+EOF
+cat > "$TMP/b32.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"echo \$'never run git reset --hard here'"}}
+EOF
+cat > "$TMP/b33.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"GIT status --porcelain"}}
+EOF
+
+fire git-guardrails.py "$TMP/b24.json"
+expect_deny   "b24 r19: an ANSI-C quoted FLAG (git reset \$'--hard') is denied — r10 closed '…' and \"…\" and left bash's other two openers open, and the \$ was surviving into the unquoted word"
+fire git-guardrails.py "$TMP/b25.json"
+expect_deny   "b25 r19: an ANSI-C quoted SUBCOMMAND (git \$'reset' --hard) is denied — the same hole on the other half of the invocation"
+fire git-guardrails.py "$TMP/b26.json"
+expect_deny   "b26 r19: git clean \$'-fd' is denied — the destructive-clean rule was reachable through the same spelling, and it deletes untracked data no reflog holds"
+fire git-guardrails.py "$TMP/b27.json"
+expect_deny   "b27 r19 THE DECODER CASE: git add \$'\\x2dA' is denied. Stripping the quotes is not enough — bash DECODES the ANSI-C escape, so the word git receives is -A (measured with printf on bash 5.3.9), and a guard comparing the undecoded text would still miss"
+fire git-guardrails.py "$TMP/b28.json"
+expect_deny   "b28 r19: the LOCALE-translation spelling (git reset \$\"--hard\") is denied — bash's fourth quote opener, missed for the same reason as the third"
+fire git-guardrails.py "$TMP/b29.json"
+expect_deny   "b29 r19: a CASE-VARIED program word (GIT reset --hard) is denied — 'command -v GIT' resolves to /usr/bin/GIT on this case-insensitive filesystem, so the uppercase spelling really runs git"
+fire git-guardrails.py "$TMP/b30.json"
+expect_deny   "b30 r19: the title-case spelling (Git push --force) is denied too — the fold is on the whole basename, not on one alternative capitalisation"
+fire git-guardrails.py "$TMP/b31.json"
+expect_silent "b31 r19 CONTROL: an ALLOWED flag in the new spelling (git push \$'--force-with-lease') stays allowed — the unquoter learned an opener, it did not start denying every quoted flag"
+fire git-guardrails.py "$TMP/b32.json"
+expect_silent "b32 r19 CONTROL: a \$'…' that is a quoted MENTION (echo \$'never run git reset --hard here') is one word whose basename is not git, and stays silent — the b13 false-deny rule survives the new opener"
+fire git-guardrails.py "$TMP/b33.json"
+expect_silent "b33 r19 CONTROL: GIT status --porcelain stays silent — folding the program word did not make every uppercase git invocation destructive, and the SUBCOMMAND is deliberately not folded because git itself rejects a case-varied one (git STATUS exits 128 on 2.50.1)"
 
 # ── (c) git-guardrails: the clean-tree precondition ────────────────────────
 # Needs a real repository to answer `git status --porcelain`, so build a
@@ -1826,6 +2030,13 @@ expect_contains "c56 r16: git-guardrails.py's internal git-status budget is STRI
 # symlink but LANDS IN THE CLEAN REPOSITORY must stay allowed, because that is
 # where git will actually operate. A "deny whenever `..` follows a symlink"
 # repair passes c57-c61 and fails c63; the kernel-faithful fold passes both.
+#
+# CORRECTED AT r19: c60 (the ATTACHED `-Clink/..`) was recorded here as one of
+# the spellings that reached the r18 false ALLOW. It cannot have been — git
+# rejects an attached `-C<path>` outright (`git -C.` exits 129 on 2.50.1, while
+# `git -C .` exits 0), so that spelling never runs at all. It is relabelled
+# below as a DEFENSIVE CONTROL and is no longer counted as a reproduction; the
+# demonstrated r18 class is the FOUR separated spellings c57-c59 and c61.
 SYM_DIRTY="$TMP/sym-dirty"
 mkdir -p "$SYM_DIRTY/sub"
 git -C "$SYM_DIRTY" init -q >/dev/null 2>&1
@@ -1890,7 +2101,7 @@ if [ -n "$SYM_LANDS" ] && [ "$SYM_LANDS" = "$SYM_REAL_DIRTY" ] \
     fire git-guardrails.py "$TMP/c59.json"
     expect_deny   "c59 r18: a trailing . after the climb (-C link/../.) is denied — the class is the resolution, not one spelling"
     fire git-guardrails.py "$TMP/c60.json"
-    expect_deny   "c60 r18: the ATTACHED form (-Clink/..) is denied — the attached selector goes through the same fold"
+    expect_deny   "c60 r19 DEFENSIVE CONTROL over a spelling GIT ITSELF REJECTS (relabelled at r19; it was recorded as an r18 reproduction). git does NOT accept an attached -C<path>: measured on the git this file's other numbers come from (2.50.1, Apple Git-155), 'git -C . status --porcelain' exits 0 while 'git -C. status --porcelain' exits 129, 'unknown option: -C.'. So -Clink/.. could never have reached the r18 false ALLOW, and counting it inflated that recall class by one spelling. The case stays because _walk_git_globals does parse the attached form and must keep denying it if a future git ever accepts it — but it demonstrates nothing about the r18 defect"
     fire git-guardrails.py "$TMP/c61.json"
     expect_deny   "c61 r18: the COMPOSED form (-C . -C link/..) is denied — the r15 left-to-right fold and the r18 kernel resolution hold together, not one at the other's expense"
     fire git-guardrails.py "$TMP/c62.json"
@@ -1904,12 +2115,62 @@ else
        "the sym fixtures are not in the defect state (kernel lands: ${SYM_LANDS:-<none>}, dirty realpath: ${SYM_REAL_DIRTY:-<none>}, lexical: ${SYM_LEXICAL:-<none>}, dirty porcelain: ${SYM_DIRTY_STATUS:-<empty>}, clean porcelain: ${SYM_CLEAN_STATUS:-<empty>})"
     no "c58 the ./-prefixed spelling of the same" "the sym fixtures are not in the defect state"
     no "c59 the trailing-dot spelling of the same" "the sym fixtures are not in the defect state"
-    no "c60 the attached -Clink/.. spelling of the same" "the sym fixtures are not in the defect state"
+    no "c60 defensive control: the attached -Clink/.. spelling git itself rejects" "the sym fixtures are not in the defect state"
     no "c61 the composed -C . -C link/.. spelling of the same" "the sym fixtures are not in the defect state"
     no "c62 control: an ordinary -C sub/.. stays allowed" "the sym fixtures are not in the defect state"
     no "c63 control: a .. past a symlink landing in the CLEAN repo stays allowed" "the sym fixtures are not in the defect state"
     no "c64 control: a -C through a symlink with no .. keeps its verdict" "the sym fixtures are not in the defect state"
 fi
+
+# ── (c) continued — r19: THE PARSER'S OWN SPELLINGS REACH THE TREE READING ──
+# The deny list (b24-b33) and the clean-tree precondition go through the SAME
+# `_segments` → `_unquote` → `_git_segment` parser, and r10 shared it precisely
+# so the two halves of one guard could not disagree about what a command says.
+# Both r19 spellings therefore have to be pinned on THIS side too, or the fix is
+# only known to hold on the half that was measured. Against the shipped hook on
+# a dirty fixture, `git $'merge' other` and `Git merge other` were both ALLOWED
+# (silent) while `git merge other` DENIED.
+#
+# c67 is the control that stops the case fold from being a blanket deny: the
+# SAME uppercase invocation in a CLEAN repository must still be allowed, because
+# the verdict is supposed to be the tree reading and not the spelling. c68 is
+# the other direction — a `$'…'` word that is not a history op at all stays
+# silent, so recognising the opener did not turn every quoted word into a merge.
+#
+# These need their OWN pair of fixtures: `$REPO` starts dirty but is committed
+# clean at the r15 block above (that is what its clean-tree controls need), so a
+# case placed down here that expected `$REPO` to be dirty would pass for the
+# wrong reason — or, as it did while this block was being written, fail for the
+# right one.
+R19_DIRTY="$TMP/r19-dirty"
+mkdir -p "$R19_DIRTY"
+git -C "$R19_DIRTY" init -q >/dev/null 2>&1
+: > "$R19_DIRTY/untracked.txt"     # one untracked file == a dirty tree
+R19_CLEAN="$TMP/r19-clean"
+mkdir -p "$R19_CLEAN"
+git -C "$R19_CLEAN" init -q >/dev/null 2>&1   # no files == a clean tree
+
+cat > "$TMP/c65.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git \$'merge' feature-x"},"cwd":"$R19_DIRTY"}
+EOF
+cat > "$TMP/c66.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"GIT merge feature-x"},"cwd":"$R19_DIRTY"}
+EOF
+cat > "$TMP/c67.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"GIT merge feature-x"},"cwd":"$R19_CLEAN"}
+EOF
+cat > "$TMP/c68.json" <<EOF
+{"tool_name":"Bash","tool_input":{"command":"git \$'log' --oneline -5"},"cwd":"$R19_DIRTY"}
+EOF
+
+fire git-guardrails.py "$TMP/c65.json"
+expect_deny   "c65 r19: an ANSI-C quoted history VERB (git \$'merge' feature-x) on a dirty tree is denied — the clean-tree precondition reads the same tokens the deny list does, so the \$-quoting hole silenced this half as well"
+fire git-guardrails.py "$TMP/c66.json"
+expect_deny   "c66 r19: the case-varied program word (GIT merge feature-x) on a dirty tree is denied — the uppercase spelling really runs git on a case-insensitive filesystem"
+fire git-guardrails.py "$TMP/c67.json"
+expect_silent "c67 r19 CONTROL: the SAME uppercase invocation in a CLEAN repository stays allowed — the verdict is still the live tree reading, not the spelling of the command word"
+fire git-guardrails.py "$TMP/c68.json"
+expect_silent "c68 r19 CONTROL: a \$'…' word that is not a history op (git \$'log' --oneline -5) stays silent on a dirty tree — teaching the unquoter an opener did not make every quoted word a merge"
 
 # ── (d) claim-reconcile ────────────────────────────────────────────────────
 # One synthetic passport, one claim: produced by an analysis script, shown in
